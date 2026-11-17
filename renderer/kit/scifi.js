@@ -466,14 +466,13 @@ const KitSciFi = (() => {
    * userData: levelMat (the glowing level window)
    */
   function canister(o = {}) {
-    const R = o.radius ?? 0.26, h = o.height ?? 1.05, col = o.color || '#c9ced4', acc = o.accent || PAL.trim, g = grp(), dk = '#2a3038', bh = h * 0.72, lv = o.glow === false ? null : glowM(o.glow || PAL.bio, 1.3);
-    cylB(R * 1.06, R * 1.1, 0.07, 10, dk, ME).to(g); cylB(R, R, bh, 10, col, PA).at(0, 0.07, 0).to(g); cylB(R * 1.035, R * 1.035, h * 0.09, 10, acc, PA).at(0, 0.07 + bh * 0.16, 0).to(g);
-    cylB(R * 1.03, R * 1.03, 0.03, 10, dk, ME).at(0, 0.07 + bh * 0.66, 0).to(g); cylB(R * 0.5, R, h * 0.1, 10, shade(col, 0.9), PA).at(0, 0.07 + bh, 0).to(g);
-    cylB(R * 0.28, R * 0.32, h * 0.07, 8, dk, ME).at(0, 0.07 + bh + h * 0.1, 0).to(g);
+    const R = o.radius ?? 0.26, h = o.height ?? 1.05, col = o.color || '#c9ced4', acc = o.accent || PAL.trim, g = grp(), b = grp().rot(0, PI / 10, 0).to(g), dk = '#2a3038', bh = h * 0.72, lv = o.glow === false ? null : glowM(o.glow || PAL.bio, 1.3), ri = R * 0.951;
+    cylB(R * 1.06, R * 1.1, 0.07, 10, dk, ME).to(b); cylB(R, R, bh, 10, col, PA).at(0, 0.07, 0).to(b); cylB(R * 1.035, R * 1.035, h * 0.09, 10, acc, PA).at(0, 0.07 + bh * 0.16, 0).to(b);
+    cylB(R * 1.03, R * 1.03, 0.03, 10, dk, ME).at(0, 0.07 + bh * 0.66, 0).to(b); cylB(R * 0.5, R, h * 0.1, 10, shade(col, 0.9), PA).at(0, 0.07 + bh, 0).to(b);
+    cylB(R * 0.28, R * 0.32, h * 0.07, 8, dk, ME).at(0, 0.07 + bh + h * 0.1, 0).to(b);
     const top = 0.07 + bh + h * 0.17; torus(R * 0.72, 0.02, dk, { rs: 4, ts: 10, ...ME }).rot(PI / 2, 0, 0).at(0, top - 0.02, 0).to(g); ring(3, a => rod([cos(a) * R * 0.72, 0.07 + bh + h * 0.03, sin(a) * R * 0.72], [cos(a) * R * 0.72, top - 0.02, sin(a) * R * 0.72], 0.016, dk, ME).to(g), 0.5);
-    if (lv) { box(R * 0.42, bh * 0.36, 0.03, dk, ME).at(0, 0.07 + bh * 0.44, R - 0.012).to(g); box(R * 0.2, bh * 0.3, 0.03, lv).at(0, 0.07 + bh * 0.44, R - 0.004).to(g); }
-    if (o.symbol !== false) decal('s_' + (o.symbol || 'warn'), R * 0.62).at(0, 0.07 + bh * 0.82, R + 0.004).rot(0, 0, 0).to(g).position.applyAxisAngle(_up, 0.9);
-    g.children[g.children.length - 1].rotation.y = o.symbol !== false ? 0.9 : 0;
+    if (lv) { box(R * 0.42, bh * 0.36, 0.03, dk, ME).at(0, 0.07 + bh * 0.44, ri - 0.008).to(g); box(R * 0.2, bh * 0.3, 0.03, lv).at(0, 0.07 + bh * 0.44, ri).to(g); }
+    if (o.symbol !== false) { const a = PI / 5, d = decal('s_' + (o.symbol || 'warn'), R * 0.56); d.position.set(sin(a) * (ri + 0.004), 0.07 + bh * 0.84, cos(a) * (ri + 0.004)); d.rotation.y = a; g.add(d); }
     g.userData.levelMat = lv; return fin(g, 'canister', o.seed || 1, 0.02);
   }
   /** A dressed pile of crates and canisters. o: {count: 6, spread: 2.2, colors: [...], seed}. Footprint about spread x spread. */
@@ -555,5 +554,5 @@ const KitSciFi = (() => {
     if (list.length) s.tick(lt => { for (const o of list) o.userData.update(lt); }); return roots[0];
   }
   return { PAL, animate, display, decal, bake, shade, mix,
-    corridor, door };
+    corridor, junction, door, airlock, crate, canister, crateStack, pipes, vent, cables };
 })();
