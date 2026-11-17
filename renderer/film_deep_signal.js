@@ -378,7 +378,8 @@ SCENES.ds_locker = (c, t, lt, d) => {
 SCENES.ds_podface = (c, t, lt, d, p) => {
   const wake = !!p.wake, S = wake ? strobe(t * 0.9) : 0, br = Math.sin(t * 0.9) * 4;
   const bg = c.createRadialGradient(440, 760, 60, 540, 900, 1250); bg.addColorStop(0, '#c9f4ff'); bg.addColorStop(0.35, '#4aa9c9'); bg.addColorStop(1, '#03202c'); c.fillStyle = bg; c.fillRect(-80, -80, W + 160, H + 160);
-  c.save(); c.filter = 'blur(2.2px)'; c.translate(0, br);
+  const face = cached('podface', W, 2000, c => {
+  c.filter = 'blur(2.2px)';
   // shoulders, neck
   c.fillStyle = metalG(c, 100, 1150, 980, 1900, '#28505f', '#0f2a36', '#041219'); c.beginPath(); c.moveTo(440, 1130); c.quadraticCurveTo(170, 1190, 70, 1420); c.lineTo(0, 2000); c.lineTo(1080, 2000); c.lineTo(1010, 1420); c.quadraticCurveTo(910, 1190, 640, 1130); c.closePath(); c.fill();
   const sk = c.createLinearGradient(330, 0, 760, 0); sk.addColorStop(0, '#cfe0e8'); sk.addColorStop(0.5, '#93abb8'); sk.addColorStop(1, '#3f5a69');
@@ -401,21 +402,22 @@ SCENES.ds_podface = (c, t, lt, d, p) => {
   const r = rng(8); for (let i = 0; i < 500; i++) { const a = 0.15 * Math.PI + r() * 0.7 * Math.PI, rr = 100 + r() * 78; c.fillStyle = `rgba(16,34,46,${0.25 * r()})`; c.fillRect(540 + Math.cos(a) * rr * 1.05, 900 + Math.sin(a) * rr * 1.05, 3, 4); }
   c.strokeStyle = 'rgba(240,250,255,.9)'; c.lineWidth = 6; c.beginPath(); c.moveTo(584, 1040); c.lineTo(612, 1082); c.stroke();
   nameTape(c, 590, 1500, 360, 118);
-  c.restore(); c.filter = 'none';
+  });
+  c.drawImage(face, 0, br);
   // frost layer with a hand-wiped clearing
-  const buf = cached('frostbuf', W, H, () => {}), b = buf.getContext('2d'); b.globalCompositeOperation = 'source-over'; b.shadowBlur = 0; b.clearRect(0, 0, W, H); b.fillStyle = 'rgba(214,238,250,.8)'; b.fillRect(0, 0, W, H);
-  b.drawImage(frostTex(), -260, 140, 1600, 1600); b.drawImage(frostTex(), 100, 500, 900, 900); b.drawImage(cached('frostn', 540, 960, (f, w, h) => { const q = rng(3); for (let i = 0; i < 9000; i++) { f.fillStyle = `rgba(255,255,255,${q() * 0.35})`; f.fillRect(q() * w, q() * h, 1 + q() * 3, 1 + q() * 3); } }), 0, 0, W, H);
+  const base = cached('frostbase', W, H, f => { f.fillStyle = 'rgba(214,238,250,.8)'; f.fillRect(0, 0, W, H); f.drawImage(frostTex(), -260, 140, 1600, 1600); f.drawImage(frostTex(), 100, 500, 900, 900); const q = rng(3); for (let i = 0; i < 36000; i++) { f.fillStyle = `rgba(255,255,255,${q() * 0.35})`; f.fillRect(q() * W, q() * H, 2 + q() * 6, 2 + q() * 6); } });
+  const buf = cached('frostbuf', W, H, () => {}), b = buf.getContext('2d'); b.globalCompositeOperation = 'source-over'; b.clearRect(0, 0, W, H); b.drawImage(base, 0, 0);
   const path = [[230, 640], [840, 720], [270, 900], [850, 1010], [330, 1120], [800, 1150]], w = wake ? 1 : sm((lt - 0.35) / 2.0);
   let hx = path[0][0], hy = path[0][1];
-  if (w > 0) { b.globalCompositeOperation = 'destination-out'; b.lineCap = 'round'; b.lineJoin = 'round'; b.lineWidth = 300; b.shadowColor = '#000'; b.shadowBlur = 70; b.strokeStyle = 'rgba(0,0,0,.93)'; b.beginPath(); b.moveTo(...path[0]); const seg = w * (path.length - 1); for (let i = 1; i < path.length; i++) { const f = clamp(seg - (i - 1)); if (f <= 0) break; hx = lerp(path[i - 1][0], path[i][0], f); hy = lerp(path[i - 1][1], path[i][1], f); b.lineTo(hx, hy); } b.stroke(); }
+  if (w > 0) { b.globalCompositeOperation = 'destination-out'; b.lineCap = 'round'; b.lineJoin = 'round'; b.beginPath(); b.moveTo(...path[0]); const seg = w * (path.length - 1); for (let i = 1; i < path.length; i++) { const f = clamp(seg - (i - 1)); if (f <= 0) break; hx = lerp(path[i - 1][0], path[i][0], f); hy = lerp(path[i - 1][1], path[i][1], f); b.lineTo(hx, hy); } for (const [lw, al] of [[390, 0.22], [350, 0.3], [310, 0.45], [270, 0.93]]) { b.lineWidth = lw; b.strokeStyle = `rgba(0,0,0,${al})`; b.stroke(); } }
   c.globalAlpha = wake ? 1 - 0.75 * sm(lt / d) : 1; c.drawImage(buf, 0, 0); c.globalAlpha = 1;
-  if (!wake && w > 0 && w < 1) { c.save(); c.filter = 'blur(9px)'; c.translate(hx + 30, hy + 60); c.rotate(-0.25); c.fillStyle = 'rgba(3,10,14,.9)'; rrect(c, -100, -60, 200, 260, 60); c.fill(); for (let i = 0; i < 4; i++) { rrect(c, -98 + i * 50, -210 + Math.abs(i - 1.5) * 26, 44, 190, 22); c.fill(); } c.fillRect(-90, 180, 180, 900); c.restore(); c.filter = 'none'; }
+  if (!wake && w > 0 && w < 1) { c.save(); c.translate(hx + 30, hy + 60); c.rotate(-0.25); c.fillStyle = 'rgba(3,10,14,.82)'; rrect(c, -100, -60, 200, 260, 60); c.fill(); for (let i = 0; i < 4; i++) { rrect(c, -98 + i * 50, -210 + Math.abs(i - 1.5) * 26, 44, 190, 22); c.fill(); } c.fillRect(-90, 180, 180, 900); c.restore(); }
   if (wake) { for (let i = 0; i < 14; i++) { const q = rng(i + 50), x = 120 + q() * 840, sp = 120 + q() * 260, y = mod(q() * H + lt * sp, H + 300) - 150; c.strokeStyle = 'rgba(235,250,255,.5)'; c.lineWidth = 5; c.lineCap = 'round'; c.beginPath(); c.moveTo(x, y - 70 - q() * 90); c.lineTo(x, y); c.stroke(); c.fillStyle = 'rgba(245,252,255,.8)'; c.beginPath(); c.arc(x, y, 7, 0, 7); c.fill(); }
     const fog = 0.5 + 0.5 * Math.sin(lt * 2.2); c.fillStyle = `rgba(240,250,255,${0.22 * fog})`; c.beginPath(); c.ellipse(540, 1030, 150 + fog * 50, 90 + fog * 30, 0, 0, 7); c.fill(); }
   poly(c, [[-80, 760], [760, -80], [980, -80], [-80, 1020]], 'rgba(255,255,255,.07)'); poly(c, [[300, 2000], [1160, 1100], [1160, 1220], [420, 2000]], 'rgba(255,255,255,.04)');
   c.strokeStyle = '#020a0e'; c.lineWidth = 150; rrect(c, 20, 250, 1040, 1700, 330); c.stroke(); c.strokeStyle = wake ? `rgba(255,${150 + 60 * S},90,.9)` : 'rgba(190,245,255,.8)'; c.lineWidth = 6; rrect(c, 96, 326, 888, 1548, 262); c.stroke();
   if (wake) { c.save(); c.globalCompositeOperation = 'lighter'; c.fillStyle = `rgba(255,120,30,${0.07 + 0.14 * S})`; c.fillRect(-80, -80, W + 160, H + 160); c.restore();
-    c.fillStyle = 'rgba(3,6,9,.88)'; rrect(c, 250, 290, 580, 190, 20); c.fill(); c.strokeStyle = '#ff5a64'; c.lineWidth = 4; c.stroke(); c.textAlign = 'center'; c.font = 'bold 32px "DejaVu Sans Mono"'; c.fillStyle = '#ffb23f'; c.fillText('REVIVAL STARTED · ABORT WINDOW', 540, 340);
+    c.fillStyle = 'rgba(3,6,9,.88)'; rrect(c, 250, 290, 580, 190, 20); c.fill(); c.strokeStyle = '#ff5a64'; c.lineWidth = 4; c.stroke(); c.textAlign = 'center'; c.font = 'bold 32px "DejaVu Sans Mono"'; c.fillStyle = '#ffb23f'; c.fillText('ABORT WINDOW', 540, 340);
     c.font = 'bold 104px "DejaVu Sans Mono"'; c.fillStyle = '#ff5a64'; c.shadowColor = '#ff3344'; c.shadowBlur = 30; c.fillText('00:' + String(Math.max(0, 60 - Math.floor(lt))).padStart(2, '0'), 540, 446); c.shadowBlur = 0;
     const bpm = Math.round(lerp(8, 46, sm(lt / d))), ph0 = lt * lerp(0.15, 0.8, sm(lt / d)); c.fillStyle = 'rgba(3,6,9,.88)'; rrect(c, 250, 496, 580, 96, 16); c.fill(); c.strokeStyle = '#58f29a'; c.lineWidth = 4; c.beginPath();
     for (let i = 0; i <= 380; i += 4) { const ph = mod(i / 380 * 2.2 - ph0 * 2, 1), y = ph < 0.07 ? -30 * Math.sin(ph / 0.07 * Math.PI) : ph < 0.12 ? 12 : 0; i ? c.lineTo(274 + i, 548 + y) : c.moveTo(274 + i, 548 + y); } c.stroke();
