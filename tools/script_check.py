@@ -37,7 +37,7 @@ def main(path):
         if not sc.get("shot"): notes.append(f"scene {i}: no shot description")
         if w > 30: notes.append(f"scene {i}: {w} words in one scene; consider splitting (a scene should be 4-9 seconds)")
         if w == 0: notes.append(f"scene {i}: no narration")
-    if not 150 <= total <= 175: problems.append(f"story narration is {total} words (need 150-175)")
+    if not 155 <= total <= 185: problems.append(f"story narration is {total} words (need 155-185)")
     if tagged > 3: problems.append(f"{tagged} tagged character lines (max 3)")
     ch = ep["choice"]
     cw = len(ch.get("narration", "").split())

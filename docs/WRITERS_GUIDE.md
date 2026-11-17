@@ -93,8 +93,9 @@ Avoid:
 ## 6. Length budget
 
 - 9 to 13 scenes. A scene is one shot or a short sequence in one location, 4 to 9 seconds of narration.
-- **150 to 175 words** of story narration in total, plus the final question (two short sentences,
-  at most 14 words together). This lands at about 68-80 seconds. Count the words.
+- **155 to 185 words** of story narration in total, plus the final question (two short sentences,
+  at most 14 words together). The narrator speaks about 2.9 words per second, so this lands at about
+  66-82 seconds including pauses and the choice card. Count the words.
 - Sentences of 1 or 2 words are spoken badly by the voice. Use at least 3 words per sentence.
 - Another character may speak a short line. Mark it inside the narration with a tag before the sentence:
   `[as:male2]`, `[as:female]`, `[as:old]`, optionally with an effect: `[as:male2,fx:radio]`, `fx:phone`,

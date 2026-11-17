@@ -185,7 +185,7 @@ def timeline(ep, draft=False):
         nonlocal t
         for s, voice, fx in lines_of(text, narrator):
             if draft:
-                d = 0.25 + 0.058 * len(re.sub(r"[^A-Za-z0-9]", "", s)) * VOICES[voice][2] / 0.8; a = None; wt = word_times(s, t, d)
+                d = 0.22 + 0.0742 * len(re.sub(r"[^A-Za-z0-9]", "", s)) * VOICES[voice][2] / VOICES["male"][2]; a = None; wt = word_times(s, t, d)   # fitted to real narration
             else:
                 a, hw, bad = take(SAY(s), voice)
                 if bad: report.append((s, " ".join(w for w, _, _ in hw)))
