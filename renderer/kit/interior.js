@@ -598,6 +598,10 @@ const KitInterior = (() => {
   /** Folded leaf (two triangles) from the origin along +Z, len long, wd wide, drooping. */
   function leafGeo(len, wd, droop = 0.15, curl = 0.12) { const g = new T.BufferGeometry(), a = [0, 0, 0], t = [0, -droop * len, len], l = [-wd / 2, curl * len - droop * len * 0.3, len * 0.5], r = [wd / 2, curl * len - droop * len * 0.3, len * 0.5], m = [0, curl * len * 0.25, len * 0.5]; g.setAttribute('position', new T.BufferAttribute(new Float32Array([...a, ...m, ...l, ...l, ...m, ...t, ...a, ...r, ...m, ...m, ...r, ...t]), 3)); g.computeVertexNormals(); return g; }
   const leaf = (len, wd, col, droop, curl) => { const m = mesh(leafGeo(len, wd, droop, curl), col, { side: 'double', rough: 0.8 }); m.userData.v = 0.14; return m; };
+  /** Arching palm frond in the YZ plane: rises at `up` radians, bends over by `bend`, len long, folded along its spine. */
+  function frond(len, wd, up, bend, col, n = 5) { const pos = [], sp = []; let y = 0, z = 0; for (let k = 0; k <= n; k++) { const u = k / n, a = up - bend * u * u, hw = wd / 2 * Math.sin(Math.min(1, u * 1.6 + 0.12) * PI) ** 0.7 * (1 - u * 0.25); sp.push([y, z, hw, a]); y += Math.sin(a) * len / n; z += Math.cos(a) * len / n; }
+    for (let k = 0; k < n; k++) { const [y0, z0, w0] = sp[k], [y1, z1, w1] = sp[k + 1], d0 = w0 * 0.35, d1 = w1 * 0.35, L0 = [-w0, y0 - d0, z0], R0 = [w0, y0 - d0, z0], L1 = [-w1, y1 - d1, z1], R1 = [w1, y1 - d1, z1], C0 = [0, y0, z0], C1 = [0, y1, z1]; pos.push(...C0, ...C1, ...L1, ...C0, ...L1, ...L0, ...C0, ...R1, ...C1, ...C0, ...R0, ...R1); }
+    const g = new T.BufferGeometry(); g.setAttribute('position', new T.BufferAttribute(new Float32Array(pos), 3)); g.computeVertexNormals(); const m = mesh(g, col, { side: 'double', rough: 0.8 }); m.userData.v = 0.12; return m; }
 
   // ---- what is on a screen: shared by tv(), monitors and the CCTV wall. All pure functions of t. ----
   function paintShow(c, t, W, Hh, show, o = {}) {
@@ -708,8 +712,8 @@ const KitInterior = (() => {
     const h = o.h ?? 1.6, sc = o.shade || '#e9dcc0', mc = o.metal || C.iron, lc = o.light || C.warm, g = grp(), sh = 0.28, rt = 0.15, rb = 0.22;
     g.add(cylB(0.14, 0.16, 0.025, 10, mc, IRON), cylB(0.03, 0.05, 0.05, 6, mc, IRON).at(0, 0.025, 0), rod(0.011, h - sh - 0.06, mc, IRON, 6).at(0, 0.07 + (h - sh - 0.06) / 2, 0), cylB(0.02, 0.02, 0.05, 6, C.brass, MET).at(0, h - sh - 0.02, 0));
     const sm = mat(sc, { emissive: lc, ei: 0.85, side: 'double', own: true, rough: 1 }), shd = keep(mesh(new T.CylinderGeometry(rt, rb, sh, 10, 1, true), sm)); shd.position.y = h - sh / 2; shd.castShadow = false; g.add(shd);
-    const bm = glow(lc, 1.7), bulb = keep(ball(0.045, bm, 0)); bulb.position.y = h - sh * 0.55; g.add(bulb); const fl = keep(flare(lc, 1.3, 0.3)); fl.position.y = h - sh * 0.5; g.add(fl);
-    g.userData.shade = shd; lampApi(g, [{ m: sm, kind: 'emissive', base: 0.85 }, { m: bm, kind: 'glow' }, { m: fl.material, kind: 'flare', base: 0.3 }], [0, h - sh * 0.5, 0], lc, 0.6, o.on);
+    const bm = glow(lc, 1.7), bulb = keep(ball(0.045, bm, 0)); bulb.position.y = h - sh * 0.55; g.add(bulb); const fl = keep(flare(lc, 1.0, 0.22)); fl.position.y = h - sh * 0.5; g.add(fl);
+    g.userData.shade = shd; lampApi(g, [{ m: sm, kind: 'emissive', base: 0.85 }, { m: bm, kind: 'glow' }, { m: fl.material, kind: 'flare', base: 0.22 }], [0, h - sh * 0.5, 0], lc, 0.6, o.on);
     return done(g, 'floorLamp', [rb * 2, h, rb * 2], o);
   }
   /** Table lamp. o: {h 0.52, color (base), shade, light, on true}. userData: setLit(k), lightPos */
@@ -717,8 +721,8 @@ const KitInterior = (() => {
     const h = o.h ?? 0.52, col = o.color || '#3f6f73', sc = o.shade || '#efe3c8', lc = o.light || C.warm, g = grp(), bh = h * 0.5, sh = h * 0.4, rt = 0.09, rb = 0.15;
     g.add(lathe([[0.001, 0], [0.075, 0], [0.085, 0.02], [0.05, bh * 0.25], [0.085, bh * 0.6], [0.06, bh * 0.92], [0.025, bh]], 8, col, GLOSS), cylB(0.014, 0.014, h - bh - sh * 0.5, 5, C.brass, MET).at(0, bh, 0));
     const sm = mat(sc, { emissive: lc, ei: 0.85, side: 'double', own: true, rough: 1 }), shd = keep(mesh(new T.CylinderGeometry(rt, rb, sh, 10, 1, true), sm)); shd.position.y = h - sh / 2; shd.castShadow = false; g.add(shd);
-    const bm = glow(lc, 1.7), bulb = keep(ball(0.032, bm, 0)); bulb.position.y = h - sh * 0.55; g.add(bulb); const fl = keep(flare(lc, 0.9, 0.28)); fl.position.y = h - sh * 0.5; g.add(fl);
-    g.userData.shade = shd; lampApi(g, [{ m: sm, kind: 'emissive', base: 0.85 }, { m: bm, kind: 'glow' }, { m: fl.material, kind: 'flare', base: 0.28 }], [0, h - sh * 0.5, 0], lc, 0.45, o.on);
+    const bm = glow(lc, 1.7), bulb = keep(ball(0.032, bm, 0)); bulb.position.y = h - sh * 0.55; g.add(bulb); const fl = keep(flare(lc, 0.7, 0.22)); fl.position.y = h - sh * 0.5; g.add(fl);
+    g.userData.shade = shd; lampApi(g, [{ m: sm, kind: 'emissive', base: 0.85 }, { m: bm, kind: 'glow' }, { m: fl.material, kind: 'flare', base: 0.22 }], [0, h - sh * 0.5, 0], lc, 0.45, o.on);
     return done(g, 'tableLamp', [rb * 2, h, rb * 2], o);
   }
   /**
@@ -793,9 +797,7 @@ const KitInterior = (() => {
     const pr = small ? 0.06 : 0.17, ph = small ? 0.09 : 0.3; g.add(cylB(pr, pr * 0.72, ph, 8, pc).at(0, 0, 0), cylB(pr * 1.08, pr * 1.08, ph * 0.14, 8, shade(pc, 1.08)).at(0, ph * 0.86, 0), cylB(pr * 0.9, pr * 0.9, 0.01, 8, '#3a2a1e').at(0, ph * 0.94, 0));
     const add = (m, x, y, z, ry, rx) => { m.rotation.order = 'YXZ'; m.rotation.y = ry; m.rotation.x = rx; m.position.set(x, y, z); g.add(m); };
     if (st === 'snake') { for (let i = 0; i < 9; i++) { const a = r() * TAU, lh = h * (0.55 + r() * 0.45) - ph, m = tbox(0.07, lh, 0.012, 0.012, 0.008, i % 3 ? lc : shade(lc, 1.25)); m.userData.v = 0.12; add(m, Math.cos(a) * pr * 0.45, ph * 0.9, Math.sin(a) * pr * 0.45, a, 0.08 + r() * 0.22); } }
-    else if (st === 'palm') { for (let i = 0; i < 9; i++) { const a = i / 9 * TAU + r() * 0.4, L = (h - ph) * (0.75 + r() * 0.35), up = 0.5 + r() * 0.5, stem = grp(); let px = 0, py = 0;
-        for (let k = 0; k < 4; k++) { const ang = up - k * 0.42, sl = L / 4, lf = leaf(sl * 1.12, 0.2 - k * 0.035, shade(lc, 0.9 + r() * 0.3), 0, 0.06); lf.rotation.x = -ang; lf.position.set(0, py, px); stem.add(lf); px += Math.cos(ang) * sl; py += Math.sin(ang) * sl; }
-        stem.rotation.y = a; stem.position.y = ph * 0.9; g.add(stem); } }
+    else if (st === 'palm') { g.add(cylB(0.035, 0.05, (h - ph) * 0.28, 6, '#6a5236').at(0, ph * 0.9, 0)); for (let i = 0; i < 9; i++) { const a = i / 9 * TAU + r() * 0.5, inner = i % 3 === 0, f = frond((h - ph) * (inner ? 0.8 : 0.95) * (0.85 + r() * 0.3), 0.26, inner ? 1.25 : 0.75 + r() * 0.3, inner ? 1.0 : 1.5 + r() * 0.4, shade(lc, 0.85 + r() * 0.35)); f.rotation.y = a; f.position.y = ph * 0.9 + (h - ph) * 0.26; g.add(f); } }
     else { const n = small ? 7 : 12, th = small ? 0.02 : (h - ph) * 0.55; if (!small) g.add(rodAB([0, ph * 0.9, 0], [0.03, ph + th, -0.02], 0.016, '#6a4a30', undefined, 5));
       for (let i = 0; i < n; i++) { const a = i * 2.4 + r() * 0.5, k = small ? 0 : i / (n - 1), y = ph * 0.9 + th * (0.35 + 0.65 * k), L = small ? 0.11 + r() * 0.07 : (0.3 + r() * 0.14) * (1.1 - k * 0.35), up = small ? 0.5 + r() * 0.5 : 0.25 + k * 0.7 + r() * 0.2;
         add(leaf(L, L * 0.55, shade(lc, 0.85 + r() * 0.35), 0.2, 0.14), 0.03 * k, y, -0.02 * k, a, -up); } }

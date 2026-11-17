@@ -8,6 +8,7 @@
     hero: { build: 'average', hair: { style: 'short', color: '#2a1c12' }, top: { type: 'jacket', color: '#6b4a32', color2: '#d9d4c8' }, bottom: { type: 'jeans' }, shoes: { type: 'boots', color: '#3a2c22' } },
     fem: { shape: 'f', height: 1.66, hair: { style: 'bob', color: '#2a1810' }, top: { type: 'longsleeve', color: '#a8443a' }, bottom: { type: 'jeans' } },
   };
+  window.NOMARK = true;
   const studio = (s, o = {}) => {
     s.sky({ top: o.top || '#5f86b8', horizon: o.hor || '#cfe0ee' }); s.fog(o.hor || '#cfe0ee', 60, 300);
     s.ground({ color: o.ground || '#8f9690', vary: 0.03, seg: 30 });

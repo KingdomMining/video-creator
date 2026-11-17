@@ -161,7 +161,8 @@ const ActorsC = (() => {
     id() { this.M.identity(); this.flip = false; return this; }
     tri(a, b, c, col) {
       if (this.flip) { const t = b; b = c; c = t; }
-      const k = 1 + (h1(this.f++, this.seed) - 0.5) * 2 * this.vary, cc = C(col);
+      const fi = this.f++, k = 1 + (h1(fi, this.seed) - 0.5) * 2 * this.vary; let cc = C(col);
+      if (this.stain && h1(fi * 1.7 + 3, this.seed + 9) < this.stain.p) cc = cc.clone().lerp(this.stain.col, this.stain.k * (0.5 + 0.5 * h1(fi, this.seed + 4)));
       for (const q of [a, b, c]) { _v.set(q[0], q[1], q[2]).applyMatrix4(this.M); this.p.push(_v.x, _v.y, _v.z); this.c.push(cc.r * k, cc.g * k, cc.b * k); }
       return this;
     }
@@ -175,7 +176,7 @@ const ActorsC = (() => {
       const n = o.n || 8, off = o.off ?? 0.5, V = [], up = rings[rings.length - 1].y >= rings[0].y;
       for (const r of rings) {
         const row = [], e = 2 + (r.sq || 0) * 5;
-        for (let j = 0; j < n; j++) { const th = (j + off) / n * TAU, ux = sin(th), uz = cos(th), s = e === 2 ? 1 : 1 / Math.pow(Math.pow(abs(ux), e) + Math.pow(abs(uz), e), 1 / e), zr = uz >= 0 ? (r.zf ?? r.rz) : (r.zb ?? r.rz); row.push([(r.x || 0) + r.rx * ux * s, r.y, (r.z || 0) + zr * uz * s]); }
+        for (let j = 0; j < n; j++) { const th = (j + off) / n * TAU, ux = sin(th), uz = cos(th), s = e === 2 ? 1 : 1 / Math.pow(Math.pow(abs(ux), e) + Math.pow(abs(uz), e), 1 / e), zr = uz >= 0 ? (r.zf ?? r.rz) : (r.zb ?? r.rz); row.push([(r.x || 0) + r.rx * ux * s, r.y + (r.jag ? (h1(j * 3.3 + r.y * 50, this.seed) - 0.5) * 2 * r.jag : 0), (r.z || 0) + zr * uz * s]); }
         V.push(row);
       }
       let bc = o.color;
