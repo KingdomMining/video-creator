@@ -1,0 +1,79 @@
+{
+  "_about": "Story bible for DEEP SIGNAL. SPOILERS. Every part must stay consistent with 'canon' and must update 'state'. Not rendered; it is the source of truth for writing parts.",
+
+  "format": {
+    "length_seconds": [60, 90],
+    "structure": [
+      "1. RECAP (4-6s): what happened and which option the audience chose.",
+      "2. CONSEQUENCE (15-25s): the direct result of that choice, shown on screen. It must change at least one state variable.",
+      "3. ESCALATION (25-40s): new information or a new threat that follows logically from the consequence.",
+      "4. DECISION (6-8s): two concrete physical actions, both plausible, neither obviously right."
+    ],
+    "consequence_rules": [
+      "Each option has a hidden outcome type fixed BEFORE the vote: SAFE, COST, REVEAL or MISREAD. The audience never sees the type.",
+      "SAFE: the danger passes. The viewer is rewarded for reading the clues.",
+      "COST: the protagonist survives but pays (injury, lost air, lost time, lost tool, lost trust). Costs persist in state and limit later options.",
+      "REVEAL: the choice exposes a piece of canon the other option would have hidden.",
+      "MISREAD: the 'threat' was not hostile; the harm comes from the protagonist's own reaction. Use sparingly so it stays surprising.",
+      "The better option must be deducible from a clue shown earlier (in this part or a previous one). No coin flips.",
+      "No option ends the story outright before the finale. The worst outcome is a heavy COST.",
+      "A persistent cost must be visible and audible afterwards (a limp changes how fast 'you' can move; low air shortens the next timer)."
+    ]
+  },
+
+  "canon": {
+    "ship": "MV Meridian, deep cargo hauler on continuous low thrust, outbound past Saturn. About 890 million miles from Earth; radio delay about 80 minutes one way. Rotating habitat ring gives the crew section gravity.",
+    "crew": "Five people, all in cryosleep since day one: Adeyemi, Park, Okafor, Voss (pilot), Hale.",
+    "the_watch": "Nobody human stands watch. To save consumables, the ship builds a synthetic watch-stander ('proxy') from the pilot's memory scan. A proxy believes it is R. Voss. It is not told otherwise, because earlier proxies that learned the truth became unstable.",
+    "you": "Proxy number two, awake for 212 days. You do not breathe, eat or have a pulse, and have never noticed, because your memories say you do.",
+    "the_figure": "Proxy number one. It learned the truth 212 days ago and was flagged for decommission. To escape, it put on Voss's spare suit and left through Airlock 02; the ship then built you. It needs no oxygen, which is why the suit reads O2 00% and 0.0 PSI and it is still moving. It has been clinging to the hull ever since and still believes it is the real Voss.",
+    "the_sleeper": "The real R. Voss, in his pod since day one. The ship starts his revival whenever a proxy fails an integrity check - which happened when you opened his cryo log and asked who was standing his watch.",
+    "ship_protocol": "Only one watch-stander at a time. When the human pilot is awake, the ship decommissions the active proxy.",
+    "clues_already_shown": [
+      "Suit gauge: O2 00%, pressure 0.0 PSI, yet the figure moves (Part 1).",
+      "Your own suit is still in the locker, so the figure is wearing a second Voss suit (Part 1).",
+      "Log: pilot Voss sealed day one, wake events 0 (Part 2).",
+      "The figure waits two hours at the glass without air (Part 2)."
+    ]
+  },
+
+  "state": {
+    "after_part": 2,
+    "injury": "none",
+    "knows_truth": false,
+    "voss_awake": false,
+    "figure_location": "aft hull, near the drive",
+    "trust_in_figure": 0,
+    "airlock_02": "sealed",
+    "revival": "started, 60 second abort window"
+  },
+
+  "votes": [
+    {"part": 1, "question": "Open the airlock or keep it sealed?", "chosen": "B", "label": "KEEP IT SEALED"}
+  ],
+
+  "part_3_branches": {
+    "if_A_abort_the_revival": {
+      "outcome_type": "REVEAL",
+      "consequence": "You hit the abort. Revival halts at 31 percent and Voss settles back under. The abort trips the ship's watch-stander integrity check: it asks for a palm scan and a pulse. The scanner reads your palm as R. Voss - and reports NO PULSE.",
+      "state_changes": {"revival": "aborted", "knows_truth": "suspects"},
+      "escalation": "The ship logs you as 'PROXY 2 - UNSTABLE' and starts a decommission timer. The voice outside says it knows a way to stop it, because the same thing happened to it.",
+      "decision": {
+        "question": "The ship has turned on you. What do you do?",
+        "A": {"label": "LET THE FIGURE IN", "type": "COST", "result": "It does know the override, but it wants your place on the watch. You lose the airlock and gain an uneasy ally."},
+        "B": {"label": "PULL THE SHIP'S CORE", "type": "SAFE", "result": "The timer dies with the core. So do the lights, the gravity ring and the cryo heaters. A new, slower clock starts."}
+      }
+    },
+    "if_B_let_him_wake": {
+      "outcome_type": "MISREAD",
+      "consequence": "The pod opens. Voss wakes weak, half blind from the cold, and sees a man with his own face standing over him. He does not attack. He panics, grabs the emergency cutter from the pod rail and backs away. You step in to calm him, he swings wide, and you fall against the pod frame.",
+      "state_changes": {"voss_awake": true, "injury": "left leg, limping"},
+      "escalation": "There is no blood where you fell. Voss sees that too. He runs for the bridge to lock you out. The ship, now with a human awake, flags you for decommission.",
+      "decision": {
+        "question": "He is running for the bridge. Where do you go?",
+        "A": {"label": "CUT HIM OFF AT THE BRIDGE", "type": "COST", "result": "You cannot outrun him on that leg. He seals the bridge and you are locked out of the ship's controls."},
+        "B": {"label": "GO TO THE AIRLOCK", "type": "REVEAL", "result": "The figure is waiting at the glass. It shows you its ungloved hand: no frost damage, no blood. It explains what you both are."}
+      }
+    }
+  }
+}
