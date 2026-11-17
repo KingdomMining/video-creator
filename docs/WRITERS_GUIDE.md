@@ -102,6 +102,9 @@ Avoid:
   Use at most 3 tagged lines per episode.
 - The narrator is male by default. Set `"narrator": "female"` when the hero should clearly be a woman.
 
+Check your script with `python tools/script_check.py episodes/<slug>/part01.json`: it counts words, checks the
+limits above and estimates the running time. It must print `RESULT: OK`.
+
 ## 7. Structure of a Part 1
 
 | Beat | Time | Job |
@@ -150,7 +153,8 @@ Plan Part 2 for both options before Part 1 is final.
   "genre": "...", "logline": "one sentence",
   "narrator": "male" | "female",
   "hook": "ON-SCREEN TEXT, at most 5 words, shown in the first 3 seconds",
-  "mood": "the feeling of the music and colour, e.g. cold dread, warm then uneasy",
+  "mood": "the feeling of the colour and light, e.g. cold dread, warm then uneasy",
+  "music": {"mood": "one of: dread, horror, tension, action, mystery, wonder, romance, melancholy, heist, epic, quirky, scifi, eerie"},
   "cast": [{"id": "hero", "look": "age, build, clothes, hair - simple and distinctive"}],
   "sets": [{"id": "kitchen", "look": "what it looks like, time of day, light"}],
   "scenes": [
