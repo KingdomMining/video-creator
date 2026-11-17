@@ -123,6 +123,18 @@ Choose the music mood, the ambience per scene and the effects from the lists in 
 action that would make a sound gets one (footsteps, doors, knocks, phone buzzes, thunder), placed with `on` or
 `at`. No sudden loud shrieks. The narration must stay the clearest thing in the mix.
 
+## 8b. The text the engine draws for you
+
+The header (series and part), the handle, the clock and meter row (`hud`), the hook, fact cards (`cards`),
+captions, the vote result, the choice card and the end card are all drawn automatically from the episode JSON.
+They occupy: a top band y 290-470 (header, handle, clock row), the hook at y 500-700 for the first 3 seconds, fact
+cards around y 570-710 when they appear, and captions at y 1050-1250. **Keep faces and the key action between
+y 480 and y 1040**, and never rely on anything below y 1250. Use `--guides` to see the zones.
+
+Pictures are bright on purpose: this is watched on phones, outdoors, at arm's length. A night scene is dark
+around the edges and clearly lit where the viewer must look. Give the hero one signature colour (a red jacket,
+a yellow raincoat) and keep it in every shot so "you" can be found instantly.
+
 ## 9. The channel handle
 
 The channel is **This or That Galaxy**, handle **@ThisOrThatGalaxy** (`brand.json`). The owner wants the handle in

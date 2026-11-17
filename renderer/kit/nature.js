@@ -505,13 +505,13 @@ const KitNature = (() => {
   const strata = (S, cols, band, seed, amt = 1) => { const list = [].concat(cols).map(C); return S.paint((ce, n, i, c) => { const b = flr(ce[1] / band + n2(ce[0] * 0.15, ce[2] * 0.15, seed) * 1.6 + 50); return new T.Color(c[i], c[i + 1], c[i + 2]).lerp(tone(list[b % list.length], 0.07, 0.006, S.r), amt); }); };
   /** A rock face. o: {width, height, depth, color (one or a list of strata colours), grass (top colour or false), ends: 'taper' | 'cut', rubble, seed}. */
   function cliff(o = {}) {
-    const seed = o.seed ?? 1, r = rng(seed * 269 + 7), W = o.width ?? 14, H = o.height ?? 9, D = o.depth ?? 5, cols = o.cols ?? Math.max(4, Math.round(W / 1.5)), rows = o.rows ?? Math.max(4, Math.round(H / 1.25));
-    const rockC = o.color || ['#8c8479', '#7c756c', '#989082', '#857c70'], S = new Soup(seed), taper = (o.ends || 'taper') === 'taper';
-    const setb = [0]; for (let j = 1; j <= rows; j++) setb.push(setb[j - 1] + (r() < 0.3 ? 0.45 + r() * 0.5 : (r() - 0.3) * 0.3));
-    const sc = Math.min(1, D * 0.5 / Math.max(0.01, Math.max(...setb))), G = [];
+    const seed = o.seed ?? 1, r = rng(seed * 269 + 7), W = o.width ?? 16, H = o.height ?? 10, D = o.depth ?? 6, cols = o.cols ?? Math.max(4, Math.round(W / 1.4)), rows = o.rows ?? Math.max(4, Math.round(H / 1.1));
+    const rockC = o.color || ['#8f867a', '#756e65', '#a0968a', '#6b655d', '#877e72'], S = new Soup(seed), taper = (o.ends || 'taper') === 'taper';
+    const setb = [0]; for (let j = 1; j <= rows; j++) setb.push(setb[j - 1] + (r() < 0.22 ? 0.5 + r() * 0.6 : (r() - 0.55) * 0.3));       // mostly sheer, a few ledges, slight overhangs
+    const lo = Math.min(...setb), sc = Math.min(1, D * 0.45 / Math.max(0.01, Math.max(...setb) - lo)), G = [];
     for (let i = 0; i <= cols; i++) {
-      G.push([]); const u = i / cols, e = Math.min(u, 1 - u), top = H * (taper ? 0.5 + 0.5 * sm(e / 0.28) : 1) * (0.9 + 0.2 * n2(u * 3.1, 0.5, seed)), bulge = (n2(u * cols * 0.45, 2.5, seed) - 0.5) * 1.5, x0 = (u - 0.5) * W;
-      for (let j = 0; j <= rows; j++) { const v = j / rows, jx = (i > 0 && i < cols) ? (r() - 0.5) * W / cols * 0.4 : 0, jy = (j > 0 && j < rows) ? (r() - 0.5) * top / rows * 0.3 : 0; G[i].push([x0 + jx, v * top + jy, D / 2 - setb[j] * sc + bulge * (0.4 + 0.6 * (1 - v)) + (r() - 0.5) * 0.3 - (taper ? (1 - sm(e / 0.15)) * D * 0.25 : 0)]); }
+      G.push([]); const u = i / cols, e = Math.min(u, 1 - u), top = H * (taper ? 0.7 + 0.3 * sm(e / 0.25) : 1) * (0.9 + 0.2 * n2(u * 3.1, 0.5, seed)), bulge = (n2(u * cols * 0.5, 2.5, seed) - 0.5) * 2.6, x0 = (u - 0.5) * W;
+      for (let j = 0; j <= rows; j++) { const v = j / rows, jx = (i > 0 && i < cols) ? (r() - 0.5) * W / cols * 0.45 : 0, jy = (j > 0 && j < rows) ? (r() - 0.5) * top / rows * 0.22 : 0; G[i].push([x0 + jx, v * top + jy, D / 2 - (setb[j] - lo) * sc - 0.3 + bulge * (0.55 + 0.45 * (1 - v)) + (r() - 0.5) * 0.3 - (taper ? (1 - sm(e / 0.12)) * D * 0.2 : 0)]); }
     }
     S.surf(cols, rows, (u, v, i, j) => G[i][j], rockC[0], { vary: 0.1 });
     const zb = -D / 2, B = G.map(c => [c[rows][0], c[rows][1] + (r() - 0.5) * 0.4, zb]), M = G.map((c, i) => [c[rows][0], (c[rows][1] + B[i][1]) / 2 + (r() - 0.3) * 0.5, (c[rows][2] + zb) / 2]);
@@ -519,7 +519,7 @@ const KitNature = (() => {
     S.surf(1, rows, (u, v, i, j) => i === 0 ? [G[0][j][0], G[0][j][1], zb] : G[0][j], rockC[0], { vary: 0.1 });
     S.surf(1, rows, (u, v, i, j) => i === 0 ? G[cols][j] : [G[cols][j][0], G[cols][j][1], zb], rockC[0], { vary: 0.1 });
     S.surf(cols, 1, (u, v, i, j) => j === 0 ? [G[cols - i][0][0], 0, zb] : B[cols - i], rockC[0], {});
-    strata(S, rockC, H / 6, seed); S.lit(0, H, 0.8, 1.06, 0.16);
+    strata(S, rockC, H / 8, seed); S.lit(0, H, 0.78, 1.06, 0.2);
     if (o.grass !== false) S.top(o.grass || '#5f8540', 1, 0.62);
     if (o.snow) S.top('#f1f5fb', o.snow, 0.4);
     if (o.rubble !== false) { const n = Math.round(W / 2.6); for (let i = 0; i < n; i++) { const u = (i + r()) / n, c = G[Math.round(u * cols)][0], sz = 0.6 + r() * 1.3; const R2 = new Soup(seed + i + 3); rockInto(R2, sz, seed * 5 + i, { color: pick(rockC, r), detail: sz < 0.9 ? 0 : 1 }); R2.lit(0, sz * 0.5, 0.75, 1.05, 0.12); S.add(R2, { at: [c[0], 0, c[2] + sz * (0.2 + r() * 0.5)] }); } }
@@ -615,16 +615,26 @@ const KitNature = (() => {
     return W;
   }
   const waveH = (W, x, z, t) => { let y = 0; for (const w of W) y += w.a * sin((x * w.dx + z * w.dz) * w.k - t * w.w + w.p); return y; };
-  /** Animated faceted water from vertices [x, z, amp 0..1, shade 0 deep..1 shallow..2 foam] and index triples. Normals are exaggerated (choppy) so small waves still glitter. */
+  const _sky = new Map();
+  /** Tiny sky gradient the water reflects (equirectangular). */
+  function skyEnv(hor, top, under) {
+    const key = hor + top + under; let t = _sky.get(key); if (t) return t;
+    t = S3.canvasTex(8, 64, (c, w, h) => { const g = c.createLinearGradient(0, 0, 0, h), H = C(hor), Tp = C(top), st = (y, k) => g.addColorStop(y, '#' + H.clone().lerp(Tp, k).getHexString()); st(0, 1); st(0.25, 0.83); st(0.39, 0.55); st(0.455, 0.34); st(0.5, 0); g.addColorStop(0.505, under); g.addColorStop(1, under); c.fillStyle = g; c.fillRect(0, 0, w, h); });
+    t.mapping = T.EquirectangularReflectionMapping; _sky.set(key, t); return t;
+  }
+  /** Animated faceted water from vertices [x, z, amp 0..1, shade 0 deep..1 shallow..2 foam, far 0..1] and index triples. Normals are exaggerated (choppy) so small waves still glitter. */
   function waterMesh(verts, tris, o, seed) {
     for (const t of tris) { const a = verts[t[0]], b = verts[t[1]], c = verts[t[2]]; if ((b[1] - a[1]) * (c[0] - a[0]) - (b[0] - a[0]) * (c[1] - a[1]) < 0) { const q = t[1]; t[1] = t[2]; t[2] = q; } }
     const nT = tris.length, pos = new Float32Array(nT * 9), nor = new Float32Array(nT * 9), col = new Float32Array(nT * 9), hg = new Float32Array(verts.length), r = rng(seed * 89 + 1);
-    const deep = C(o.color || '#2c6a8a'), shal = C(o.shallow || '#5fb3ad'), foam = C(o.foam || '#eef7f6'), tmp = new T.Color();
-    for (let i = 0; i < nT; i++) { const f = 1 + (r() - 0.5) * 2 * (o.vary ?? 0.05); for (let j = 0; j < 3; j++) { const v = verts[tris[i][j]], q = i * 9 + j * 3, sh = v[3] || 0; pos[q] = v[0]; pos[q + 2] = v[1]; tmp.copy(deep).lerp(shal, clamp(sh)); if (sh > 1) tmp.lerp(foam, clamp(sh - 1)); col[q] = tmp.r * f; col[q + 1] = tmp.g * f; col[q + 2] = tmp.b * f; nor[q + 1] = 1; } }
+    const deep = C(o.color || '#2c6a8a'), shal = C(o.shallow || '#5fb3ad'), foam = C(o.foam || '#eef7f6'), farC = C(o.horizon || '#8fb6cc'), tmp = new T.Color(), crest = o.crest ?? 0, crestC = C(o.crestColor || o.shallow || '#5fb3ad');
+    for (let i = 0; i < nT; i++) { const f = 1 + (r() - 0.5) * 2 * (o.vary ?? 0.05); for (let j = 0; j < 3; j++) { const v = verts[tris[i][j]], q = i * 9 + j * 3, sh = v[3] || 0; pos[q] = v[0]; pos[q + 2] = v[1]; tmp.copy(deep).lerp(shal, clamp(sh)); if (sh > 1) tmp.lerp(foam, clamp(sh - 1)); if (v[4]) tmp.lerp(farC, v[4]); col[q] = tmp.r * f; col[q + 1] = tmp.g * f; col[q + 2] = tmp.b * f; nor[q + 1] = 1; } }
+    const col0 = crest ? col.slice() : null;
     const g = new T.BufferGeometry(); g.setAttribute('position', new T.BufferAttribute(pos, 3)); g.setAttribute('normal', new T.BufferAttribute(nor, 3)); g.setAttribute('color', new T.BufferAttribute(col, 3)); g.computeBoundingSphere();
-    const mat = new T.MeshStandardMaterial({ vertexColors: true, roughness: o.rough ?? 0.22, metalness: o.metal ?? 0.08, transparent: true, opacity: o.opacity ?? 0.86, depthWrite: false });
+    const sky = o.sky || ['#bcd9ec', '#3f78b8'], refl = o.reflect ?? 1;
+    const mat = new T.MeshStandardMaterial({ vertexColors: true, roughness: o.rough ?? 0.16, metalness: o.metal ?? 0.3, transparent: true, opacity: o.opacity ?? 0.86, depthWrite: false });
+    if (refl > 0) { mat.envMap = skyEnv(sky[0], sky[1], '#' + deep.getHexString()); mat.envMapIntensity = refl; }
     const m = new T.Mesh(g, mat); m.receiveShadow = true; m.renderOrder = 2;
-    const W = waveSet(o, seed), chop = o.choppy ?? 4, cen = tris.map(t => { const a = verts[t[0]], b = verts[t[1]], c = verts[t[2]]; return [(a[0] + b[0] + c[0]) / 3, (a[1] + b[1] + c[1]) / 3, (a[2] + b[2] + c[2]) / 3]; });
+    const W = waveSet(o, seed), chop = o.choppy ?? 4, top = W.reduce((a, w) => a + w.a, 0) * 0.8 || 1, cen = tris.map(t => { const a = verts[t[0]], b = verts[t[1]], c = verts[t[2]]; return [(a[0] + b[0] + c[0]) / 3, (a[1] + b[1] + c[1]) / 3, (a[2] + b[2] + c[2]) / 3]; });
     const animate = lt => {
       for (let i = 0; i < verts.length; i++) hg[i] = verts[i][2] * waveH(W, verts[i][0], verts[i][1], lt);
       for (let i = 0; i < nT; i++) {
@@ -632,8 +642,9 @@ const KitNature = (() => {
         let gx = 0, gz = 0; for (const w of W) { const cc = w.a * w.k * cos((c[0] * w.dx + c[1] * w.dz) * w.k - lt * w.w + w.p); gx += cc * w.dx; gz += cc * w.dz; }
         gx *= c[2] * chop; gz *= c[2] * chop; const l = 1 / Math.sqrt(gx * gx + gz * gz + 1);
         for (let j = 0; j < 9; j += 3) { nor[q + j] = -gx * l; nor[q + j + 1] = l; nor[q + j + 2] = -gz * l; }
+        if (crest) { const k = crest * sm(((pos[q + 1] + pos[q + 4] + pos[q + 7]) / 3 / top - 0.42) / 0.4); for (let j = 0; j < 9; j += 3) { col[q + j] = col0[q + j] + (crestC.r - col0[q + j]) * k; col[q + j + 1] = col0[q + j + 1] + (crestC.g - col0[q + j + 1]) * k; col[q + j + 2] = col0[q + j + 2] + (crestC.b - col0[q + j + 2]) * k; } }
       }
-      g.attributes.position.needsUpdate = true; g.attributes.normal.needsUpdate = true;
+      g.attributes.position.needsUpdate = true; g.attributes.normal.needsUpdate = true; if (crest) g.attributes.color.needsUpdate = true;
     };
     animate(0); m.userData.animate = animate; m.userData.heightAt = (x, z, lt) => waveH(W, x, z, lt);
     return m;
@@ -652,17 +663,19 @@ const KitNature = (() => {
     const ang = (x, z) => Math.atan2(x, z);
     const gr = gridTris(-R * 1.2, R * 1.2, -R * 1.2, R * 1.2, n, n, r, (x, z) => { const dd = hyp(x, z), lim = Rf(ang(x, z)) * 1.04; if (dd > lim + cell * 1.5) return null; const k = dd > lim ? lim / dd : 1, u = Math.min(1, dd / lim); return [x * k, z * k, 1 - 0.75 * sm((u - 0.6) / 0.4), sm((u - 0.5) / 0.45) * 1.0]; });
     const water = waterMesh(gr.verts, gr.tris, { amp: d.amp, len: d.len, choppy: d.choppy, ...o }, seed); water.position.y = wl;
-    const S = new Soup(seed), ns = Math.max(14, Math.round(R * 1.6)), rm = [0, 0.5, 0.8, 0.93, 1.02, 1.1, 1.3 + 0.6 / R], ys = [0.012, 0.012, 0.012, wl - 0.015, crest, crest * 0.8, -0.03];
+    const S = new Soup(seed), ns = Math.max(14, Math.round(R * 1.6)), rm = [0, 0.5, 0.8, 0.93, 1.0, 1.05, 1.13 + 0.5 / R], ys = [0.012, 0.012, 0.012, wl - 0.015, crest, crest * 0.8, -0.03];
     const bed = C(o.bed || d.bed), wet = C(o.wet || d.wet), dry = C(o.shore || d.shore), bandC = [bed, bed.clone().lerp(wet, 0.6), wet, wet.clone().lerp(dry, 0.5), dry, dry.clone().multiplyScalar(0.92)];
     S.surf(ns, 6, (u, v, i, j) => { const a = (i % ns) / ns * TAU, e = j >= 4 ? 1 + ((i * 7 + j * 3) % 5 - 2) * 0.02 : 1, dd = Rf(a) * rm[j] * e; return [sin(a) * dd, ys[j] * (j === 4 ? 0.8 + ((i * 13) % 7) / 14 : 1), cos(a) * dd]; }, null, { flip: true, col: (u, v, i, j) => bandC[j], vary: 0.07 });
     const shore = S.mesh(MATDECAL()); shore.castShadow = false;
-    const g = group(type, shore, water);
+    const g = group(type, shore, water), G2 = new Soup(seed + 3), nt = o.tufts ?? Math.round(8 + R * 2.2);
+    for (let i = 0; i < nt; i++) { const a = r() * TAU, dd = Rf(a) * (1.04 + r() * (0.1 + 0.5 / R)), th = (d.tuft || 0.3) * (0.7 + r() * 0.7); G2.add(tuftSoup(seed * 17 + i, th, o.grass || '#4d7b39', o.grass2 || '#93b556', 7, 0.1), { at: [sin(a) * dd, 0.02, cos(a) * dd], rot: [0, r() * TAU, 0] }); }
+    if (G2.tris) { const gm = G2.mesh(MAT2()); gm.castShadow = false; g.add(gm); }
     Object.assign(g.userData, { water, radius: R, level: wl, outline: Rf, animate: lt => water.userData.animate(lt), heightAt: (x, z, lt) => wl + water.userData.heightAt(x, z, lt), edge: a => { const dd = Rf(a); return [sin(a) * dd, 0, cos(a) * dd]; } });
     return g;
   }
   /** Small pond with a muddy bank, reeds, stones and lily pads. o: {radius, color, shallow, shore, wet, bed, reeds, lilies, stones, amp, len, speed, seed}. userData.animate(lt). */
   function pond(o = {}) {
-    const seed = o.seed ?? 1, r = rng(seed * 311 + 7), g = basin('pond', o, { radius: 3.6, level: 0.07, bank: 0.09, cell: 0.75, amp: 0.012, len: 1.5, choppy: 9, bed: '#1f3b3d', wet: '#4b4334', shore: '#6f6247' }), U = g.userData, R = U.radius;
+    const seed = o.seed ?? 1, r = rng(seed * 311 + 7), g = basin('pond', o, { radius: 3.6, level: 0.07, bank: 0.09, cell: 0.75, amp: 0.012, len: 1.5, choppy: 9, bed: '#1f3b3d', wet: '#4b4334', shore: '#6d6748', tuft: 0.34 }), U = g.userData, R = U.radius;
     const sw = [];
     for (let i = 0, n = o.reeds ?? 4; i < n; i++) { const a = seed + i * 1.9 + r() * 0.8, p = U.edge(a), k = 0.9 + r() * 0.08, rd = reeds({ seed: seed * 3 + i, count: 9 + flr(r() * 6), size: 0.4 + r() * 0.25, height: 1.2 + r() * 0.5 }); rd.position.set(p[0] * k, 0.04, p[2] * k); g.add(rd); sw.push(rd); }
     const S = new Soup(seed + 1);
@@ -675,7 +688,7 @@ const KitNature = (() => {
     return g;
   }
   /** A lake with a pebbly shore. o: {radius, color, shallow, shore, wet, bed, amp, len, speed, wobble, seed}. userData.animate(lt), heightAt(x, z, lt), edge(angle). */
-  const lake = (o = {}) => basin('lake', o, { radius: 30, level: 0.12, bank: 0.16, cell: 2.2, amp: 0.035, len: 5, choppy: 6, bed: '#17323c', wet: '#6d6756', shore: '#a39a80' });
+  const lake = (o = {}) => basin('lake', o, { radius: 30, level: 0.12, bank: 0.16, cell: 2.2, amp: 0.035, len: 5, choppy: 3.5, bed: '#17323c', wet: '#6d6756', shore: '#a39a80' });
   /** A river running along X (flowing toward +X), with banks. o: {length, width, meander, color, shallow, shore, wet, bed, amp, len, speed, seed}. userData.animate(lt), centre(x) -> z. */
   function river(o = {}) {
     const seed = o.seed ?? 1, r = rng(seed * 313 + 9), L = o.length ?? 60, Wd = o.width ?? 7, me = o.meander ?? 2.2, wl = o.level ?? 0.1, crest = wl + (o.bank ?? 0.16), ph = r() * TAU, per = o.period ?? 38;
@@ -692,10 +705,11 @@ const KitNature = (() => {
   }
   /** Open sea out to the horizon, with real swell near the origin. Do not add s.ground() above it. o: {size, level, color, shallow, amp, len, speed, dir, detail (m of fine waves), seed}. userData.animate(lt), heightAt(x, z, lt). */
   function sea(o = {}) {
-    const seed = o.seed ?? 1, r = rng(seed * 317 + 1), size = o.size ?? 1400, n = o.seg ?? 46, half = size / 2, fine = o.detail ?? 45, lvl = o.level ?? 0, pw = Math.log(fine / half) / Math.log(0.42);
-    const warp = t => Math.sign(t) * Math.pow(Math.abs(t), pw) * half;
-    const gr = gridTris(-1, 1, -1, 1, n, n, r, (u, v) => { const x = warp(u), z = warp(v), d = hyp(x, z); return [x, z, 1 / (1 + Math.pow(d / (fine * 1.6), 2)), 0]; }, 0.22);
-    const water = waterMesh(gr.verts, gr.tris, { amp: 0.22, len: 9, choppy: 1.6, dir: 0.5, rough: 0.28, opacity: 0.93, color: '#1f5f80', vary: 0.06, ...o }, seed); water.position.y = lvl;
+    const seed = o.seed ?? 1, r = rng(seed * 317 + 1), size = o.size ?? 1400, n = o.seg ?? 48, half = size / 2, cell = o.cell ?? 2, lvl = o.level ?? 0, fade = o.fade ?? 70;
+    let B = 3; for (let i = 0; i < 30; i++) B = Math.asinh(half * B / (cell * n / 2));           // x = A sinh(B m): `cell` metres at the centre, `half` at the rim
+    const A = cell * n / 2 / B;
+    const gr = gridTris(-1, 1, -1, 1, n, n, r, (u, v) => { const m = Math.max(Math.abs(u), Math.abs(v)) || 1e-6, k = A * Math.sinh(B * m) / m, x = u * k, z = v * k, d = hyp(x, z); return [x, z, 1 / (1 + Math.pow(d / fade, 2)), 0, sm((d - 60) / 420)]; }, 0.24);
+    const water = waterMesh(gr.verts, gr.tris, { amp: 0.22, len: 9, choppy: 1.5, dir: 0.5, opacity: 0.94, color: '#1f6688', shallow: '#4fa3b4', vary: 0.05, crest: 0.45, ...o }, seed); water.position.y = lvl;
     const bed = S3.plane(size, size, o.bed || '#12374a', { rough: 1 }); bed.position.y = lvl - (o.depth ?? 2.5); bed.castShadow = false;
     const g = group('sea', bed, water);
     Object.assign(g.userData, { water, level: lvl, animate: lt => water.userData.animate(lt), heightAt: (x, z, lt) => lvl + water.userData.heightAt(x, z, lt) });
@@ -703,26 +717,30 @@ const KitNature = (() => {
   }
   /** A sandy shore: you stand on dry sand at the origin (y = 0) and the sea lies toward -Z. Brings its own ground and sea: do not add s.ground(). o: {length, sand, wet, inland, color (sea), shallow, amp, len, speed, seaLevel, seed}. userData.animate(lt), waterline (z). */
   function beach(o = {}) {
-    const seed = o.seed ?? 1, r = rng(seed * 331 + 3), L = o.length ?? 260, lvl = o.seaLevel ?? -0.45, slopeW = o.slope ?? 9, z0 = -3.5;      // sand starts to fall at z0
+    const seed = o.seed ?? 1, r = rng(seed * 331 + 3), L = o.length ?? 260, lvl = o.seaLevel ?? -0.45, slopeW = o.slope ?? 7, z0 = -1.2;      // sand starts to fall at z0
     const sandC = C(o.sand || '#dcc594'), wetC = C(o.wet || '#a8926a'), inC = C(o.inland || '#8f9a5c');
     const hS = z => z >= z0 ? 0.06 * (1 - Math.exp(-(z - z0) * 0.25)) - 0.06 * 0 : -Math.pow((z0 - z) / slopeW, 1.15) * 0.62;      // sand height profile
     const zs = [140, 60, 30, 16, 9, 4, 0, z0, z0 - 1.5, z0 - 3, z0 - 4.5, z0 - 6, z0 - 8, z0 - 11, z0 - 16, z0 - 30], nx = Math.round(L / 6), S = new Soup(seed);
     const wlz = z0 - slopeW * Math.pow(-lvl / 0.62, 1 / 1.15);     // where the sand meets the mean sea level
-    S.surf(nx, zs.length - 1, (u, v, i, j) => { const x = (u - 0.5) * L + ((i > 0 && i < nx) ? (r() - 0.5) * 2.5 : 0), z = zs[zs.length - 1 - j] + ((j > 0 && j < zs.length - 1) ? (r() - 0.5) * 0.5 : 0); return [x, hS(z) + (z > 6 ? (n2(x * 0.05, z * 0.05, seed) - 0.5) * Math.min(1.6, (z - 6) * 0.06) : 0) + (z > z0 ? (r() - 0.5) * 0.03 : 0), z]; }, null,
-      { vary: 0.05, col: (u, v, i, j) => { const z = (zs[zs.length - 1 - j] + zs[zs.length - 2 - j]) / 2; return z > 22 ? sandC.clone().lerp(inC, sm((z - 22) / 30)) : z < wlz + 2.6 ? sandC.clone().lerp(wetC, sm((wlz + 2.6 - z) / 1.6)) : sandC; } });
+    S.surf(nx, zs.length - 1, (u, v, i, j) => { const x = (u - 0.5) * L + ((i > 0 && i < nx) ? (r() - 0.5) * 2.5 : 0), z = zs[zs.length - 1 - j] + ((j > 0 && j < zs.length - 1) ? (r() - 0.5) * 0.5 : 0); return [x, hS(z) + (z > 6 ? (n2(x * 0.05, z * 0.05, seed) - 0.5) * Math.min(1.6, (z - 6) * 0.06) : 0) + (z > z0 + 1 ? (r() - 0.5) * 0.07 : 0), z]; }, null,
+      { flip: true, vary: 0.06, col: (u, v, i, j) => { const z = (zs[zs.length - 1 - j] + zs[zs.length - 2 - j]) / 2; return z > 22 ? sandC.clone().lerp(inC, sm((z - 22) / 30)) : z < wlz + 2.6 ? sandC.clone().lerp(wetC, sm((wlz + 2.6 - z) / 1.6)) : sandC; } });
     const sand = S.mesh(); sand.castShadow = false;
-    const sw = sea({ level: lvl, amp: 0.1, len: 7, dir: 0.15, detail: 40, shallow: '#58b9b4', color: '#1f6f8f', depth: 4, ...o, seed }); sw.position.z = -30;
-    // shallow tint + foam near the waterline: a strip that follows the swash
-    const nf = 56, fpos = new Float32Array(nf * 2 * 3 * 3), fg = new T.BufferGeometry(); fg.setAttribute('position', new T.BufferAttribute(fpos, 3));
-    const foam = new T.Mesh(fg, new T.MeshBasicMaterial({ color: '#f4fbfa', transparent: true, opacity: 0.85, depthWrite: false, toneMapped: false })); foam.renderOrder = 4; foam.frustumCulled = false;
-    const fx = i => (i / nf - 0.5) * Math.min(L, 120), slope = 0.62 * 1.15 / slopeW * Math.pow(-lvl / 0.62, 0.15 / 1.15);
+    const sw = sea({ level: lvl, amp: 0.1, len: 7, dir: 0.15, color: '#2a86a0', shallow: '#6cc7c2', depth: 4, crest: 0.35, opacity: 0.8, ...o, seed }); sw.position.z = -30;
+    // foam: two ragged white bands that ride the swash up and down the sand
+    const nf = 60, fpos = new Float32Array(nf * 2 * 18), fg = new T.BufferGeometry(); fg.setAttribute('position', new T.BufferAttribute(fpos, 3));
+    const foam = new T.Mesh(fg, new T.MeshBasicMaterial({ color: o.foam || '#f6fcfb', transparent: true, opacity: 0.9, depthWrite: false, toneMapped: false })); foam.renderOrder = 4; foam.frustumCulled = false;
+    const fx = i => (i / nf - 0.5) * Math.min(L, 130), slope = 0.62 * 1.15 / slopeW * Math.pow(-lvl / 0.62, 0.15 / 1.15), wave = sw.userData.water.userData.heightAt;
     const g = group('beach', sand, sw, foam);
     const animate = lt => {
       sw.userData.animate(lt);
-      const zl = i => { const x = fx(i); return wlz + clamp(sw.userData.water.userData.heightAt(x, wlz + 30, lt) / slope, -2.4, 2.4) + 0.25 * n1(x * 0.3 + lt * 0.2, seed); };
-      let prev = zl(0);
-      for (let i = 0; i < nf; i++) { const nxt = zl(i + 1), q = i * 18, x0 = fx(i), x1 = fx(i + 1), w0 = 0.22 + 0.16 * n1(x0 * 0.5, 3), w1 = 0.22 + 0.16 * n1(x1 * 0.5, 3), ya = hS(prev + 0.05) + 0.03, yb = hS(nxt + 0.05) + 0.03, yc = hS(prev - w0) + 0.03, yd = hS(nxt - w1) + 0.03;
-        fpos.set([x0, yc, prev - w0, x1, yd, nxt - w1, x1, yb, nxt + 0.05, x0, yc, prev - w0, x1, yb, nxt + 0.05, x0, ya, prev + 0.05], q); prev = nxt; }
+      for (let b = 0; b < 2; b++) {
+        const zl = i => { const x = fx(i); return wlz - b * (1.5 + 0.5 * n1(x * 0.11, 9)) + clamp(wave(x, wlz + 30, lt - b * 0.9) / slope, -2.2, 2.2) + 0.3 * n1(x * 0.3 + lt * 0.2, seed + b); }, wd = x => (b ? 0.28 : 0.5) * (1 + 0.6 * n1(x * 0.45 + b * 7, 3));
+        let prev = zl(0);
+        for (let i = 0; i < nf; i++) {
+          const nxt = zl(i + 1), q = (b * nf + i) * 18, x0 = fx(i), x1 = fx(i + 1), w0 = wd(x0), w1 = wd(x1), up = b ? 0.14 : 0.03;
+          fpos.set([x0, hS(prev - w0) + up, prev - w0, x1, hS(nxt - w1) + up, nxt - w1, x1, hS(nxt) + up, nxt, x0, hS(prev - w0) + up, prev - w0, x1, hS(nxt) + up, nxt, x0, hS(prev) + up, prev], q); prev = nxt;
+        }
+      }
       fg.attributes.position.needsUpdate = true;
     };
     animate(0); Object.assign(g.userData, { sea: sw, foam, waterline: wlz, seaLevel: lvl, animate, heightAt: (x, z) => hS(z) });

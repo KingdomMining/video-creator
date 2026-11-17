@@ -248,7 +248,11 @@ def timeline(ep, draft=False):
             events.append({"type": e["type"], "t": round(at, 3), **{k: e[k] for k in ("gain", "pan") if k in e}})
         scenes.append({"id": sc.get("id", f"s{i + 1:02d}"), "visual": sc["visual"], "params": sc.get("params", {}), "start": round(start, 3), "end": round(end, 3),
                        "words": [{"w": w["w"], "t": round(w["start"] - start, 3)} for w in mine],
-                       **{k: sc[k] for k in ("in", "post", "ambience", "space") if k in sc}})
+                       **{k: sc[k] for k in ("in", "post", "ambience", "space", "hud") if k in sc},
+                       **({"cards": [{"text": k["text"], "warn": bool(k.get("warn")),
+                                      "start": round((next((w["start"] for w in mine if norm(w["w"]) == norm(k["on"])), start) if "on" in k else start + k.get("at", 0)) + k.get("offset", 0), 3),
+                                      "end": 0} for k in sc["cards"]]} if sc.get("cards") else {})})
+        for k, src in zip(scenes[-1].get("cards", []), sc.get("cards", [])): k["end"] = round(k["start"] + src.get("dur", 2.6), 3)
     ch = ep["choice"]
     cstart = t + 0.1
     t = cstart + 0.45

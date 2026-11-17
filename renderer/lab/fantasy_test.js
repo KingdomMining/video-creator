@@ -33,32 +33,49 @@
   };
 
   /**
-   * A labelled catalogue page. items: [[name, () => Object3D, {rot, fig: false, lift}]...]
+   * A labelled catalogue page `name`, plus `name_tour`: a close-up of item i at time i (use --at 0,1,2,... for a contact sheet).
+   * items: [[label, () => Object3D, {rot, fig: false, lift, az, el}]...]
    * o: {cols: 2, cell: [dx, dz], az, el, fov, label (text height in m), figs: true (a figure beside every item) | false (one at the front left), title, stand: true (stepped display for small props)}
    */
   function catalogue(name, items, o = {}) {
     S3.shot(name, {
       post: { bloom: 0.25, vignette: 0.25, grain: 0 },
       build(s) {
-        const cols = o.cols || 2, [dx, dz] = o.cell || [4, 4], rows = Math.ceil(items.length / cols), lh = o.label || dx * 0.055, el = o.el ?? 34, az = o.az ?? 16, bb = new T.Box3(), all = grp(), bbs = [];
+        const cols = o.cols || 2, [dx, dz] = o.cell || [4, 4], rows = Math.ceil(items.length / cols), lh = o.label || dx * 0.07, el = o.el ?? 34, az = o.az ?? 14, all = grp(), bbs = [];
         daylight(s, Math.max(cols * dx, rows * dz) * 0.8 + 3, o);
-        const tiers = o.stand ? rows : 0, th = 0.36, td = o.stand ? dz : 0;
+        const th = o.step || 0.36, td = o.stand ? dz : 0;
         if (o.stand) for (let r = 0; r < rows; r++) s.add(boxB(cols * dx + 0.1, th * (rows - r), td, '#b9b4a8'), { pos: [0, 0, -(r + 0.5) * td] });
         items.forEach(([nm, make, io = {}], i) => {
           const c = i % cols, r = Math.floor(i / cols), x = (c - (cols - 1) / 2) * dx, y = o.stand ? th * (rows - r) : 0, z = o.stand ? -(r + 0.5) * td : (r - (rows - 1) / 2) * dz;
           const obj = make(); obj.position.set(x + (io.x || 0), y + (io.lift || 0), z + (io.z || 0)); if (io.rot != null) obj.rotation.y = io.rot; if (io.scale) obj.scale.setScalar(io.scale); all.add(obj);
-          const ob = new T.Box3().setFromObject(obj); bb.union(ob); bbs.push(ob);
-          const lb = label(nm, lh, { bg: 'rgba(18,22,28,.82)', color: '#ffffff' });
-          if (o.stand) lb.position.set(x, y - lh * 0.62, z + td / 2 + 0.006); else { lb.position.set(x, lh * 0.55, Math.max(ob.max.z, z + 0.2) + lh * 0.9); lb.rotation.x = -el * Math.PI / 180 * 0.7; }
+          const ob = new T.Box3().setFromObject(obj); bbs.push(ob);
+          const lb = label(nm, lh, { bg: 'rgba(18,22,28,.85)', color: '#ffffff' }), lw = lh * lb.geometry.parameters.width / lb.geometry.parameters.height;
+          if (o.stand) lb.position.set(x, y - lh * 0.62, z + td / 2 + 0.006); else { lb.position.set(Math.max(x - dx * 0.46 + lw / 2, Math.min(x, ob.min.x + lw / 2)), lh * 0.55, Math.max(ob.max.z, z + 0.2) + lh * 1.1); lb.rotation.x = -el * Math.PI / 180 * 0.7; }
           all.add(lb); bbs.push(new T.Box3().setFromObject(lb));
-          if (o.figs !== false && !o.stand && io.fig !== false) { const f = figure(); f.position.set(ob.max.x + 0.55, 0, Math.min(ob.max.z, z + dz * 0.3)); all.add(f); bbs.push(new T.Box3().setFromObject(f)); }
+          if (o.figs !== false && !o.stand && io.fig !== false) { const f = figure(); f.position.set(ob.max.x + 0.6, 0, Math.min(ob.max.z, z + dz * 0.3)); all.add(f); bbs.push(new T.Box3().setFromObject(f)); }
         });
-        if (o.figs === false || o.stand) { const f = figure(); f.position.set(bb.min.x - 0.45, 0, o.stand ? 0.15 : bb.max.z - 0.3); all.add(f); bbs.push(new T.Box3().setFromObject(f)); }
+        if (o.figs === false || o.stand) { const bb = new T.Box3(); bbs.forEach(b => bb.union(b)); const f = figure(); f.position.set(bb.min.x - 0.45, 0, o.stand ? 0.2 : bb.max.z - 0.3); all.add(f); bbs.push(new T.Box3().setFromObject(f)); }
         s.add(all); K.animate(s, all); this.cam = fit(bbs, az, el, o.fov || 22, 0.94);
-        if (o.night) { /* reserved */ }
       },
       update(s, lt) { s.cam.set(this.cam); },
       overlay(c) { if (!o.title) return; c.font = '800 40px Inter'; c.textAlign = 'left'; c.fillStyle = 'rgba(10,14,20,.78)'; const w = c.measureText(o.title).width; c.fillRect(28, 26, w + 44, 64); c.fillStyle = '#ffe9a8'; c.fillText(o.title, 50, 72); },
+    });
+    S3.shot(name + '_tour', {
+      post: { bloom: 0.3, vignette: 0.3, grain: 0 },
+      build(s, p) {
+        daylight(s, 10, { dir: p.dir }); this.sun = s._sun; this.objs = []; this.cams = []; this.fig = s.add(figure());
+        items.forEach(([nm, make, io = {}], i) => { const obj = make(); if (io.rot != null) obj.rotation.y = io.rot; s.add(obj); const bb = new T.Box3().setFromObject(obj), sz = bb.getSize(new T.Vector3()), ext = Math.max(sz.x, sz.y, sz.z); this.objs.push({ obj, bb, ext, nm });
+          this.cams.push(fit(bb, p.az ?? io.az ?? (i % 2 ? -24 : 24), p.el ?? io.el ?? 14, p.fov || 30, p.m || 0.88)); });
+        K.animate(s, ...this.objs.map(x => x.obj));
+      },
+      update(s, lt, d, t, p) {
+        const i = Math.min(items.length - 1, Math.floor(lt + 1e-6)), cur = this.objs[i]; this.objs.forEach((x, j) => { x.obj.visible = j === i; });
+        const a = cur.ext * 0.9 + 1.5, sc = this.sun.shadow.camera; sc.left = -a; sc.right = a; sc.top = a; sc.bottom = -a; sc.updateProjectionMatrix();
+        this.fig.position.set(cur.bb.max.x + 0.5, 0, cur.bb.max.z - 0.15); this.fig.visible = p.fig !== false; this.cur = cur;
+        const U = cur.obj.userData, k = p.k; if (k != null) { if (U.open) U.open(k); if (U.lower) U.lower(k); }
+        s.cam.set(this.cams[i]);
+      },
+      overlay(c) { c.font = '800 54px Inter'; c.textAlign = 'left'; c.fillStyle = 'rgba(10,14,20,.8)'; const w = c.measureText(this.cur.nm).width; c.fillRect(28, 26, w + 44, 82); c.fillStyle = '#ffe9a8'; c.fillText(this.cur.nm, 50, 86); },
     });
   }
 
@@ -71,7 +88,7 @@
     ['keep', () => K.keep()],
     ['drawbridge', () => K.drawbridge({ open: 0.75 })],
     ['towerSquare {top:"roof"}', () => K.towerSquare({ top: 'roof', height: 8, flag: null })],
-  ], { cols: 2, cell: [18, 24], title: 'KitFantasy 1 · castle', label: 0.8 });
+  ], { cols: 2, cell: [18, 24], title: 'KitFantasy 1 · castle', label: 0.9 });
 
   catalogue('fantasy_catL', [
     ['wallTorch', () => K.wallTorch()],
@@ -80,7 +97,7 @@
     ['well', () => K.well()],
     ['banner {mount:"pole"}', () => K.banner({ mount: 'pole' })],
     ['shield', () => K.shield({ mount: 'lean' })],
-  ], { cols: 3, cell: [2.4, 2.6], title: 'lights test', label: 0.14, figs: false, el: 18 });
+  ], { cols: 2, cell: [2.6, 3.2], title: 'lights test', figs: false });
 
   /** Any builder, close up: --params '{"b":"chest","o":{...},"k":1,"az":25,"el":15,"fov":30,"night":false,"fig":true}' */
   S3.shot('fantasy_close', {

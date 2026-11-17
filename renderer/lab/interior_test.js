@@ -52,12 +52,13 @@
   }
 
   // ---------------- catalogue ----------------
-  sheet('interior_cat1', { cols: 3, cell: [2.3, 2.6] }, [
-    ['door', () => K.door({ open: 0.35 }), { wall: 0 }], ['frontDoor', () => K.frontDoor({ number: '13' })], ['doubleDoors', () => K.doubleDoors({ open: 0.3 })],
-    ['slidingDoor', () => K.slidingDoor({ open: 0.4 })], ['cellarDoor', () => K.cellarDoor({ hatch: true, open: 0.2 })], ['slidingDoor barn', () => K.slidingDoor({ style: 'barn', open: 0.3 }), { dx: -0.5 }],
-    ['liftDoors', () => K.liftDoors({ open: 0.6, floor: '3' })], ['1.75 m', figure()], ['door glazed', () => K.door({ style: 'glazed', color: '#6f8f86', hinge: 'right', open: 0.5 })],
+  sheet('interior_cat1', { cols: 2, cell: [2.9, 4.4] }, [
+    ['door', () => K.door({ open: 0.35 })], ['frontDoor', () => K.frontDoor({ number: '13', open: 0.15 })],
+    ['doubleDoors', () => K.doubleDoors({ open: 0.3 })], ['slidingDoor', () => K.slidingDoor({ open: 0.4 })],
+    ['cellarDoor', () => K.cellarDoor({ hatch: true, open: 0.2 })], ['slidingDoor barn', () => K.slidingDoor({ style: 'barn', open: 0.3 }), { dx: -0.4 }],
+    ['liftDoors', () => K.liftDoors({ open: 0.6, floor: '3' })], ['1.75 m', figure()],
   ]);
-  sheet('interior_cat2', { cols: 2, cell: [3.3, 3.6] }, [
+  sheet('interior_cat2', { cols: 2, cell: [3.4, 4.6] }, [
     ['stairs', () => K.stairs({ runner: '#7a2e2e' })], ['stairs open', () => K.stairs({ style: 'open', h: 2.4, w: 0.9, rail: 'right' })],
     ['window', () => K.window({ curtains: true, view: 'day', spill: true })], ['window blinds', () => K.window({ blinds: 1, view: 'night', panes: [1, 1] })],
     ['ladder', () => K.ladder()], ['bars', () => K.bars({ w: 2.6, open: 0.4 })],

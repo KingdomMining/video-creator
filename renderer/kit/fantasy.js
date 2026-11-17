@@ -327,9 +327,11 @@ const KitFantasy = (() => {
   }
 
   // ---------- castle ----------
-  const stoneSet = (color, seed) => ({ sm: stoneMat(color, { seed }), lt: stoneMat(shade(color, 1.1), { seed: seed + 3 }), dk: stoneMat(shade(color, 0.82), { seed: seed + 5 }) });
+  const stoneSet = (color, seed) => ({ sm: stoneMat(color, { seed }), lt: stoneMat(shade(color, 1.1), { seed: seed + 3 }), dk: stoneMat(shade(color, 0.82), { seed: seed + 5 }), tc: shade(color, 1.24) });
   /** Arrow slit, back on z = 0, bottom at y = 0. */
-  const slit = (h = 1.0) => grp(box(0.1, h, 0.03, C.dark).at(0, h / 2, 0.016), box(0.34, 0.09, 0.07, C.stoneLt).at(0, -0.045, 0.02), box(0.3, 0.08, 0.06, C.stoneLt).at(0, h + 0.04, 0.02));
+  const slit = (h = 1.0, trim = C.stoneLt) => grp(box(0.1, h, 0.03, C.dark).at(0, h / 2, 0.016), box(0.34, 0.09, 0.07, trim).at(0, -0.045, 0.02), box(0.3, 0.08, 0.06, trim).at(0, h + 0.04, 0.02));
+  /** Plain extrusion centred on z = 0. */
+  const xtr = (pts, depth, col, o) => { const m = extrude(pts, depth, col, o); m.geometry.translate(0, 0, -depth / 2); return m; };
   /** Arched window in a stone surround, back on z = 0, sill at y = 0. o: {lit, arch: 'round' | 'point', border, stone, tint} */
   function archWin(w, h, o = {}) {
     const b = o.border ?? 0.14, kind = o.arch || 'round', dep = 0.14, inner = archPts(w, h, kind), outer = archPts(w + b * 2, h + b * 2, kind).map(p => [p[0], p[1] - b]);
@@ -364,10 +366,10 @@ const KitFantasy = (() => {
    */
   function wall(o = {}) {
     const { length = 8, height = 6, thick = 1.6, color = C.stone, seed = 1, parapet = 'outer', slits = true } = o, g = grp(), st = grp();
-    const s = length / Math.max(1, Math.round(length / 3)), { sm, lt } = stoneSet(color, seed), n = Math.max(1, Math.round(length / 1.6));
+    const s = length / Math.max(1, Math.round(length / 3)), { sm, lt, tc } = stoneSet(color, seed), n = Math.max(1, Math.round(length / 1.6));
     tbox(length, height, thick, sm, s).to(st); tbox(length, 0.75, thick + 0.36, sm, s).to(st); tbox(length, 0.16, thick + 0.2, lt, s, 0, 0.75, 0).to(st);
     tbox(length, 0.24, thick + 0.34, lt, s, 0, height - 0.24, 0).to(st);
-    if (parapet !== 'none') for (const sd of parapet === 'both' ? [1, -1] : [1]) { const pz = sd * (thick / 2 - 0.08); tbox(length, 0.95, 0.45, sm, s, 0, height, pz).to(st); merlons(st, length, n, height + 0.95, pz, sm, { s, cap: C.stoneLt, slits: slits && sd > 0 ? 1 : 0 }); }
+    if (parapet !== 'none') for (const sd of parapet === 'both' ? [1, -1] : [1]) { const pz = sd * (thick / 2 - 0.08); tbox(length, 0.95, 0.45, sm, s, 0, height, pz).to(st); merlons(st, length, n, height + 0.95, pz, sm, { s, cap: tc, slits: slits && sd > 0 ? 1 : 0 }); }
     if (parapet === 'outer') tbox(length, 0.22, 0.3, lt, s, 0, height, -thick / 2 + 0.15).to(st);
     g.add(bake(st)); g.userData = { length, height, thick, walkY: height }; return g;
   }
@@ -468,13 +470,13 @@ const KitFantasy = (() => {
     g.add(fl); g.userData.flag = fl; g.userData.update = t => parts.forEach((p, i) => { p.rotation.y = (i ? 0.55 : 0.3) * Math.sin(t * 3.4 - i * 1.2) + 0.15 * noise1(t * 1.3 + i, 3); }); g.userData.update(0); return g;
   }
   /**
-   * Round tower. o: {radius: 2.6, height: 11, top: 'battlement' | 'roof' | 'both', color, roofColor, lit: false (glowing windows),
+   * Round tower. o: {radius: 2.6, height: 11, top: 'battlement' | 'roof' | 'both', color, roofColor, windows: true, lit: false (glowing windows),
    *     door: 'front' | 'back' | 'none', flag: colour | null, sides: 12, seed}
    * userData: {radius, height, walkY, top: [0, y, 0], door, open(k), flag, update(t)}
    */
   function towerRound(o = {}) {
-    const { radius = 2.6, height = 11, top = 'battlement', color = C.stone, roofColor = C.slate, lit = false, door = 'front', flag = C.red, sides = 12, seed = 1 } = o;
-    const g = grp(), st = grp(), { sm, lt } = stoneSet(color, seed), ap = Math.cos(PI / sides), rAt = y => lerp(radius * 1.06, radius, y / height), R1 = radius + 0.42;
+    const { radius = 2.6, height = 11, top = 'battlement', color = C.stone, roofColor = C.slate, windows = true, lit = false, door = 'front', flag = C.red, sides = 12, seed = 1 } = o;
+    const g = grp(), st = grp(), { sm, lt, tc } = stoneSet(color, seed), ap = Math.cos(PI / sides), rAt = y => lerp(radius * 1.06, radius, y / height), R1 = radius + 0.42;
     tcyl(radius, radius * 1.06, height, sides, sm, 3).to(st); tcyl(radius * 1.1, radius * 1.17, 0.85, sides, sm, 3).to(st); tcyl(radius * 1.08, radius * 1.1, 0.16, sides, lt, 3, 0, 0.85, 0).to(st);
     tcyl(R1, radius, 0.7, sides, lt, 3, 0, height - 0.7, 0).to(st);
     const onFace = (obj, i, y, off = 0.01, r = rAt(y)) => { const a = i * TAU / sides; obj.position.set(Math.sin(a) * (r * ap + off), y, Math.cos(a) * (r * ap + off)); obj.rotation.y = a; st.add(obj); return obj; };
@@ -482,7 +484,7 @@ const KitFantasy = (() => {
     if (top !== 'roof') {
       const pr = tlathe([[R1, 0], [R1, 0.95], [R1 - 0.45, 0.95], [R1 - 0.45, 0]], sides, sm, 3); pr.position.y = height; st.add(pr);
       const cw = 2 * R1 * Math.sin(PI / sides);
-      for (let i = 0; i < sides; i += 2) { onFace(tbox(cw * 0.98, 0.85, 0.45, sm, 3), i, height + 0.95, -0.225, R1); onFace(box(cw * 0.98 + 0.07, 0.09, 0.53, C.stoneLt), i, height + 0.95 + 0.895, -0.225, R1); if (i % 4 === 0) onFace(box(0.08, 0.46, 0.03, C.dark), i, height + 0.95 + 0.42, 0.006, R1); }
+      for (let i = 0; i < sides; i += 2) { onFace(tbox(cw * 0.98, 0.85, 0.45, sm, 3), i, height + 0.95, -0.225, R1); onFace(box(cw * 0.98 + 0.07, 0.09, 0.53, tc), i, height + 0.95 + 0.895, -0.225, R1); if (i % 4 === 0) onFace(box(0.08, 0.46, 0.03, C.dark), i, height + 0.95 + 0.42, 0.006, R1); }
       topY = height + 1.8;
     }
     if (top !== 'battlement') {
@@ -492,10 +494,10 @@ const KitFantasy = (() => {
       topY = by + rh;
     }
     const lv = Math.max(1, Math.floor((height - 3.2) / 3.2));
-    for (let l = 0; l < lv; l++) { const y = 3.6 + l * 3.2; onFace(archWin(0.62, 1.25, { lit }), 0, y, 0); onFace(slit(0.95), l % 2 ? 3 : sides - 3, y + 0.3); onFace(slit(0.95), sides / 2 + (l % 2 ? -2 : 2), y - 0.6); }
+    for (let l = 0; l < lv; l++) { const y = 3.6 + l * 3.2; if (windows) onFace(archWin(0.62, 1.25, { lit, stone: tc }), 0, y, 0); else onFace(slit(0.95, tc), l % 2 ? 1 : sides - 1, y + 0.2); onFace(slit(0.95, tc), l % 2 ? 3 : sides - 3, y + 0.3); onFace(slit(0.95, tc), sides / 2 + (l % 2 ? -2 : 2), y - 0.6); }
     if (door !== 'none') {
       const dy = 1.01, pd = plankDoor(1.05, 2.15, { arch: 'round' });
-      const dg = grp(textr(archFrame(1.8, 2.62, 1.05, 2.15), 0.5, lt, 1.5), pd.at(0, 0, -0.06), stairs(1.9, dy, 5, 0.28, sm, 1.5).at(0, -dy, 0.25), tbox(1.9, dy, 0.5, sm, 1.5).at(0, -dy, 0));
+      const dg = grp(xtr(archFrame(1.8, 2.62, 1.05, 2.15), 0.5, tc), pd.at(0, 0, -0.06), stairs(1.9, dy, 5, 0.28, sm, 1.5).at(0, -dy, 0.25), tbox(1.9, dy, 0.5, sm, 1.5).at(0, -dy, 0));
       onFace(dg, door === 'back' ? sides / 2 : 0, dy, -0.02, radius * 1.1); g.userData.door = pd.userData.leaf; g.userData.open = pd.userData.open;
     }
     g.add(bake(st));
@@ -503,20 +505,20 @@ const KitFantasy = (() => {
     Object.assign(g.userData, { radius, height, walkY: height, top: [0, topY, 0] }); return compose(g);
   }
   /**
-   * Square tower. o: {width: 5, height: 10, top: 'battlement' | 'roof' | 'both', color, roofColor, lit: false, door: 'front' | 'back' | 'none', flag: colour | null, seed}
+   * Square tower. o: {width: 5, height: 10, top: 'battlement' | 'roof' | 'both', color, roofColor, windows: true, lit: false, door: 'front' | 'back' | 'none', flag: colour | null, seed}
    * userData: {width, height, walkY, top, door, open(k), flag, update(t)}
    */
   function towerSquare(o = {}) {
-    const { width = 5, height = 10, top = 'battlement', color = C.stone, roofColor = C.slate, lit = false, door = 'front', flag = C.red, seed = 1 } = o;
-    const g = grp(), st = grp(), { sm, lt } = stoneSet(color, seed), h2 = width / 2, W1 = width + 0.7;
+    const { width = 5, height = 10, top = 'battlement', color = C.stone, roofColor = C.slate, windows = true, lit = false, door = 'front', flag = C.red, seed = 1 } = o;
+    const g = grp(), st = grp(), { sm, lt, tc } = stoneSet(color, seed), h2 = width / 2, W1 = width + 0.7;
     tbox(width, height, width, sm, 3).to(st); tbox(width + 0.5, 0.85, width + 0.5, sm, 3).to(st); tbox(width + 0.3, 0.16, width + 0.3, lt, 3, 0, 0.85, 0).to(st); tbox(W1, 0.32, W1, lt, 3, 0, height - 0.32, 0).to(st);
     const onFace = (obj, sd, x, y, off = 0.01, half = h2) => { const a = sd * PI / 2; obj.position.set(Math.sin(a) * (half + off) + Math.cos(a) * x, y, Math.cos(a) * (half + off) - Math.sin(a) * x); obj.rotation.y = a; st.add(obj); return obj; };
-    const nc = Math.max(3, Math.round(width / 0.85)); for (let sd = 0; sd < 4; sd++) for (let i = 0; i < nc; i++) onFace(box(0.3, 0.36, 0.34, C.stoneLt), sd, -h2 + (i + 0.5) * width / nc, height - 0.5, 0.17);
+    const nc = Math.max(3, Math.round(width / 0.85)); for (let sd = 0; sd < 4; sd++) for (let i = 0; i < nc; i++) onFace(box(0.3, 0.36, 0.34, tc), sd, -h2 + (i + 0.5) * width / nc, height - 0.5, 0.17);
     let topY = height;
     if (top !== 'roof') {
       const e = W1 / 2 - 0.225, nm = Math.max(1, Math.round((W1 - 1.9) / 1.55)), mw = 0.85, gap = (W1 - 1.9 - nm * mw) / (nm + 1);
-      for (let sd = 0; sd < 4; sd++) { onFace(tbox(W1 - (sd % 2 ? 0.9 : 0), 0.95, 0.45, sm, 3), sd, 0, height, -0.225, W1 / 2); for (let i = 0; i < nm; i++) { const u = -(W1 / 2 - 0.95) + gap + mw / 2 + i * (mw + gap); onFace(tbox(mw, 0.85, 0.45, sm, 3), sd, u, height + 0.95, -0.225, W1 / 2); onFace(box(mw + 0.07, 0.09, 0.53, C.stoneLt), sd, u, height + 0.95 + 0.895, -0.225, W1 / 2); } }
-      for (const sx of [-1, 1]) for (const sz of [-1, 1]) { tbox(0.95, 0.85, 0.95, sm, 3, sx * (e - 0.25), height + 0.95, sz * (e - 0.25)).to(st); box(1.02, 0.09, 1.02, C.stoneLt).at(sx * (e - 0.25), height + 0.95 + 0.895, sz * (e - 0.25)).to(st); }
+      for (let sd = 0; sd < 4; sd++) { onFace(tbox(W1 - (sd % 2 ? 0.9 : 0), 0.95, 0.45, sm, 3), sd, 0, height, -0.225, W1 / 2); for (let i = 0; i < nm; i++) { const u = -(W1 / 2 - 0.95) + gap + mw / 2 + i * (mw + gap); onFace(tbox(mw, 0.85, 0.45, sm, 3), sd, u, height + 0.95, -0.225, W1 / 2); onFace(box(mw + 0.07, 0.09, 0.53, tc), sd, u, height + 0.95 + 0.895, -0.225, W1 / 2); } }
+      for (const sx of [-1, 1]) for (const sz of [-1, 1]) { tbox(0.95, 0.85, 0.95, sm, 3, sx * (e - 0.25), height + 0.95, sz * (e - 0.25)).to(st); box(1.02, 0.09, 1.02, tc).at(sx * (e - 0.25), height + 0.95 + 0.895, sz * (e - 0.25)).to(st); }
       topY = height + 1.8;
     }
     if (top !== 'battlement') {
@@ -526,10 +528,10 @@ const KitFantasy = (() => {
       topY = by + rh;
     }
     const lv = Math.max(1, Math.floor((height - 3.2) / 3.2));
-    for (let l = 0; l < lv; l++) { const y = 3.6 + l * 3.2; onFace(archWin(0.7, 1.35, { lit }), 0, 0, y, 0); onFace(slit(0.95), 1, l % 2 ? 0.8 : -0.8, y + 0.2); onFace(slit(0.95), 3, l % 2 ? -0.8 : 0.8, y - 0.3); onFace(slit(0.95), 2, 0, y); }
+    for (let l = 0; l < lv; l++) { const y = 3.6 + l * 3.2; if (windows) onFace(archWin(0.7, 1.35, { lit, stone: tc }), 0, 0, y, 0); else onFace(slit(0.95, tc), 0, l % 2 ? 0.7 : -0.7, y); onFace(slit(0.95, tc), 1, l % 2 ? 0.8 : -0.8, y + 0.2); onFace(slit(0.95, tc), 3, l % 2 ? -0.8 : 0.8, y - 0.3); onFace(slit(0.95, tc), 2, 0, y); }
     if (door !== 'none') {
       const dy = 1.01, pd = plankDoor(1.05, 2.15, { arch: 'round' });
-      const dg = grp(textr(archFrame(1.8, 2.62, 1.05, 2.15), 0.5, lt, 1.5), pd.at(0, 0, -0.1), stairs(1.9, dy, 5, 0.28, sm, 1.5).at(0, -dy, 0.25), tbox(1.9, dy, 0.5, sm, 1.5).at(0, -dy, 0));
+      const dg = grp(xtr(archFrame(1.8, 2.62, 1.05, 2.15), 0.5, tc), pd.at(0, 0, -0.1), stairs(1.9, dy, 5, 0.28, sm, 1.5).at(0, -dy, 0.25), tbox(1.9, dy, 0.5, sm, 1.5).at(0, -dy, 0));
       onFace(dg, door === 'back' ? 2 : 0, 0, dy, 0.2); g.userData.door = pd.userData.leaf; g.userData.open = pd.userData.open;
     }
     g.add(bake(st));
@@ -562,16 +564,16 @@ const KitFantasy = (() => {
    */
   function gatehouse(o = {}) {
     const { width = 14, height = 8.5, depth = 5, gateWidth = 3.6, gateHeight = 4.6, color = C.stone, seed = 1, lit = true, banner: bn = C.red, emblem = 'tower', doors = false, bridge = false, open = 0 } = o;
-    const g = grp(), st = grp(), { sm, lt } = stoneSet(color, seed), tr = 2.3, tx = width / 2 - tr, cw = tx * 2, hz = depth / 2, I = archPts(gateWidth, gateHeight, 'round', 8), a = gateWidth / 2, sy = gateHeight - a;
+    const g = grp(), st = grp(), { sm, lt, tc } = stoneSet(color, seed), tr = 2.3, tx = width / 2 - tr, cw = tx * 2, hz = depth / 2, I = archPts(gateWidth, gateHeight, 'round', 8), a = gateWidth / 2, sy = gateHeight - a;
     textr([[cw / 2, 0], [cw / 2, height], [-cw / 2, height], [-cw / 2, 0], I[0], ...I.slice(2).reverse(), I[1]], depth, sm, 3).to(st);
     tbox(cw, 0.26, depth + 0.3, lt, 3, 0, height - 0.26, 0).to(st); tbox(gateWidth, 0.05, depth + 1.2, paveMat('flag', shade(color, 0.9)), 2).to(st);
-    for (const sd of [1, -1]) { tbox(cw, 0.95, 0.45, sm, 3, 0, height, sd * (hz - 0.1)).to(st); merlons(st, cw, Math.round(cw / 1.6), height + 0.95, sd * (hz - 0.1), sm, { cap: C.stoneLt }); }
+    for (const sd of [1, -1]) { tbox(cw, 0.95, 0.45, sm, 3, 0, height, sd * (hz - 0.1)).to(st); merlons(st, cw, Math.round(cw / 1.6), height + 0.95, sd * (hz - 0.1), sm, { cap: tc }); }
     const nv = 9, vr = a + 0.25; for (let i = 0; i < nv; i++) { const an = (i + 0.5) / nv * PI, key = i === 4, rr = vr + (key ? 0.07 : 0); box(vr * PI / nv * 0.93, key ? 0.64 : 0.5, 0.16, shade(color, key ? 1.3 : i % 2 ? 1.1 : 1.2)).at(Math.cos(an) * rr, sy + Math.sin(an) * rr, hz + 0.05).rot(0, 0, an - PI / 2).to(st); }
     for (let j = 0; j * 0.52 < sy - 0.3; j++) for (const sx of [-1, 1]) box(j % 2 ? 0.56 : 0.4, 0.48, 0.16, shade(color, j % 2 ? 1.1 : 1.2)).at(sx * (a + (j % 2 ? 0.28 : 0.2)), 0.26 + j * 0.52, hz + 0.05).to(st);
-    for (const sx of [-1, 1]) slit(1.0).at(sx * 1.25, gateHeight + 1.75, hz + 0.01).to(st);
+    for (const sx of [-1, 1]) slit(1.0, tc).at(sx * 1.25, gateHeight + 1.75, hz + 0.01).to(st);
     if (bn) shield({ color: bn, emblem, size: 1.1, y: gateHeight + 0.75 }).at(0, 0, hz + 0.02).to(st);
     g.add(bake(st));
-    const tz = hz - tr + 1.0, tws = [-1, 1].map(sx => { const t = towerRound({ radius: tr, height: height + 2.4, color, seed: seed + (sx > 0 ? 2 : 1), door: 'none', flag: bn, lit: o.windows }); t.position.set(sx * tx, 0, tz); g.add(t); return t; });
+    const tz = hz - tr + 1.0, tws = [-1, 1].map(sx => { const t = towerRound({ radius: tr, height: height + 2.4, color, seed: seed + (sx > 0 ? 2 : 1), door: 'none', flag: bn, windows: false }); t.position.set(sx * tx, 0, tz); g.add(t); return t; });
     if (bn) for (const sx of [-1, 1]) { const b = banner({ color: bn, emblem, width: 1.0, height: 3.3, y: height - 0.6, seed: seed + sx }); b.position.set(sx * tx, 0, tz + tr * Math.cos(PI / 12) + 0.02); g.add(b); }
     const ts = [-1, 1].map(sx => { const t = wallTorch({ y: 2.7, lit, seed: seed + sx + 3 }); t.position.set(sx * (a + 0.82), 0, hz); g.add(t); return t; });
     // portcullis
@@ -591,29 +593,29 @@ const KitFantasy = (() => {
    */
   function keep(o = {}) {
     const { width = 11, depth = 9, height = 13, color = C.stone, roofColor = C.slate, lit = false, banner: bn = C.red, emblem = 'crown', flag = C.red, seed = 1 } = o;
-    const g = grp(), st = grp(), { sm, lt } = stoneSet(color, seed), hx = width / 2, hz = depth / 2, tw = 3, th = height + 2.6, W = width + 0.5, D = depth + 0.5;
+    const g = grp(), st = grp(), { sm, lt, tc } = stoneSet(color, seed), hx = width / 2, hz = depth / 2, tw = 3, th = height + 2.6, W = width + 0.5, D = depth + 0.5;
     tbox(width, height, depth, sm, 3).to(st); tbox(W, 0.9, D, sm, 3).to(st); tbox(width + 0.3, 0.16, depth + 0.3, lt, 3, 0, 0.9, 0).to(st);
     for (let y = 5; y < height - 2; y += 4) tbox(width + 0.16, 0.18, depth + 0.16, lt, 3, 0, y, 0).to(st);
     tbox(W, 0.3, D, lt, 3, 0, height - 0.3, 0).to(st);
-    for (const sd of [1, -1]) { tbox(W, 0.95, 0.45, sm, 3, 0, height, sd * (D / 2 - 0.225)).to(st); merlons(st, W, Math.round(W / 1.5), height + 0.95, sd * (D / 2 - 0.225), sm, { cap: C.stoneLt }); }
-    for (const sd of [1, -1]) { const side = grp(); tbox(D - 0.9, 0.95, 0.45, sm, 3).to(side); merlons(side, D - 0.9, Math.round((D - 0.9) / 1.5), 0.95, 0, sm, { cap: C.stoneLt }); side.position.set(sd * (W / 2 - 0.225), height, 0); side.rotation.y = sd * PI / 2; st.add(side); }
+    for (const sd of [1, -1]) { tbox(W, 0.95, 0.45, sm, 3, 0, height, sd * (D / 2 - 0.225)).to(st); merlons(st, W, Math.round(W / 1.5), height + 0.95, sd * (D / 2 - 0.225), sm, { cap: tc }); }
+    for (const sd of [1, -1]) { const side = grp(); tbox(D - 0.9, 0.95, 0.45, sm, 3).to(side); merlons(side, D - 0.9, Math.round((D - 0.9) / 1.5), 0.95, 0, sm, { cap: tc }); side.position.set(sd * (W / 2 - 0.225), height, 0); side.rotation.y = sd * PI / 2; st.add(side); }
     // corner turrets
     for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
       const x = sx * (hx - tw / 2 + 0.55), z = sz * (hz - tw / 2 + 0.55), t = grp().at(x, 0, z), e = tw / 2 + 0.3 - 0.2;
       tbox(tw, th, tw, sm, 3).to(t); tbox(tw + 0.4, 0.9, tw + 0.4, sm, 3).to(t); tbox(tw + 0.6, 0.3, tw + 0.6, lt, 3, 0, th - 0.3, 0).to(t);
       for (let sd = 0; sd < 4; sd++) { const an = sd * PI / 2, w1 = tbox(tw + 0.6 - (sd % 2 ? 0.8 : 0), 0.9, 0.4, sm, 3); w1.position.set(Math.sin(an) * e, th, Math.cos(an) * e); w1.rotation.y = an; t.add(w1); const m1 = tbox(0.8, 0.8, 0.4, sm, 3); m1.position.set(Math.sin(an) * e, th + 0.9, Math.cos(an) * e); m1.rotation.y = an; t.add(m1); }
       for (const cx of [-1, 1]) for (const cz of [-1, 1]) tbox(0.75, 0.8, 0.75, sm, 3, cx * (e - 0.175), th + 0.9, cz * (e - 0.175)).to(t);
-      const sl = slit(1.0); sl.position.set(sx * 0, th - 3, sz * (tw / 2 + 0.01)); if (sz < 0) sl.rotation.y = PI; t.add(sl);
-      const s2 = slit(1.0); s2.position.set(sx * (tw / 2 + 0.01), th - 6.5, 0); s2.rotation.y = sx * PI / 2; t.add(s2);
+      const sl = slit(1.0, tc); sl.position.set(sx * 0, th - 3, sz * (tw / 2 + 0.01)); if (sz < 0) sl.rotation.y = PI; t.add(sl);
+      const s2 = slit(1.0, tc); s2.position.set(sx * (tw / 2 + 0.01), th - 6.5, 0); s2.rotation.y = sx * PI / 2; t.add(s2);
       st.add(t);
     }
     // central roof behind the parapet
     const rb = Math.min(width, depth) - 1.6, rf = roofCone(rb / 2 * Math.SQRT2, 3.4, 4, roofMat('slate', roofColor)); rf.scale.set((width - 1.4) / rb, 1, (depth - 1.4) / rb); rf.position.y = height + 0.02; st.add(rf);
     // door at the head of a stair, windows, banners
     const dw = 2.1, dh = 3.3, dy = 1.06, dd = doubleDoor(dw, dh, { arch: 'point', color: C.woodDk });
-    textr(archFrame(dw + 1.1, dh + 0.62, dw, dh, 'point'), 0.6, lt, 1.5).at(0, dy, hz + 0.26).to(st); dd.position.set(0, dy, hz + 0.12); st.add(dd);
+    xtr(archFrame(dw + 0.9, dh + 0.52, dw, dh, 'point'), 0.6, tc).at(0, dy, hz + 0.26).to(st); dd.position.set(0, dy, hz + 0.12); st.add(dd);
     tbox(dw + 1.9, dy, 0.6, sm, 1.5, 0, 0, hz + 0.3).to(st); stairs(dw + 1.9, dy, 5, 0.34, sm, 1.5).at(0, 0, hz + 0.6).to(st);
-    for (let y = 5.9; y + 2.4 < height; y += 4) { for (const x of [-hx * 0.55, 0, hx * 0.55]) { archWin(0.85, 1.9, { lit, arch: 'point' }).at(x, y, hz + 0.005).to(st); archWin(0.85, 1.9, { lit, arch: 'point' }).at(x, y, -hz - 0.005).rot(0, PI, 0).to(st); } for (const z of [-hz * 0.3, hz * 0.3]) for (const sx of [-1, 1]) archWin(0.7, 1.7, { lit, arch: 'point' }).at(sx * (hx + 0.005), y, z).rot(0, sx * PI / 2, 0).to(st); }
+    for (let y = 5.9; y + 2.4 < height; y += 4) { for (const x of [-hx * 0.55, 0, hx * 0.55]) { archWin(0.85, 1.9, { lit, arch: 'point', stone: tc }).at(x, y, hz + 0.005).to(st); archWin(0.85, 1.9, { lit, arch: 'point', stone: tc }).at(x, y, -hz - 0.005).rot(0, PI, 0).to(st); } for (const z of [-hz * 0.3, hz * 0.3]) for (const sx of [-1, 1]) archWin(0.7, 1.7, { lit, arch: 'point', stone: tc }).at(sx * (hx + 0.005), y, z).rot(0, sx * PI / 2, 0).to(st); }
     g.add(bake(st));
     if (bn) for (const sx of [-1, 1]) { const b = banner({ color: bn, emblem, width: 1.15, height: 3.6, y: 5.2, seed: seed + sx }); b.position.set(sx * (dw / 2 + 1.5), 0, hz + 0.02); g.add(b); }
     const U = g.userData; U.doors = dd.userData.leaves; U.open = dd.userData.open; U.doorPos = [0, dy, hz + 1.2];

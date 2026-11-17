@@ -55,6 +55,12 @@ def main(path):
     print(f"{ep['series']} part {ep['episode']}: {len(scenes)} scenes, {total} story words, question {cw} words, estimated {dur:.0f}s")
     for sc in tl["scenes"]:
         print(f"  {sc['id']:<5} {sc['end'] - sc['start']:5.1f}s  {' '.join(w['w'] for w in sc['words'])[:90].lower()}")
+    sents = [x for sc in scenes for x in mv.sentences(TAG.sub(" ", sc.get("text", "")))]
+    avg = sum(len(x.split()) for x in sents) / max(1, len(sents))
+    if avg > 10.5: notes.append(f"average sentence is {avg:.1f} words; the proven channels average 4-9. Shorten.")
+    ncards = sum(len(sc.get("cards", [])) for sc in scenes)
+    if ncards > 4: problems.append(f"{ncards} fact cards (max 4)")
+    if not any("hud" in sc for sc in scenes): notes.append("no hud (clock / place / countdown) anywhere: consider one device that keeps score on screen")
     for p in problems: print("FAIL  " + p)
     for n in notes: print("note  " + n)
     print("RESULT:", "FAIL" if problems else "OK")

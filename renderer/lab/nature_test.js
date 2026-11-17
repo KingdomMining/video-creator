@@ -58,6 +58,32 @@
     },
   });
 
+  // Backdrops: mountains, hills and clouds around a small meadow.
+  S3.shot('nature_back', {
+    build(s, p) {
+      s.sky({ top: '#2f6fc0', horizon: '#c9dff0' }); s.skyDisc({ dir: [0.6, 0.45, -1] }); s.fog('#c9dff0', 40, 260);
+      s.ground({ color: '#5f8a48', vary: 0.05, seg: 60 });
+      s.sun({ dir: [5, 6, 3], intensity: 1.05 }); s.hemi('#cfe2ff', '#5a6a40', 0.55);
+      this.m = s.add(K.mountains({ seed: p.seed || 1 })); this.h = s.add(K.hills({ seed: p.seed || 1 })); this.c = s.add(K.clouds({ seed: p.seed || 1 }));
+      s.add(person(), { pos: [0, 0, 0] }); s.add(K.pine({ seed: 3 }), { pos: [-3, 0, -4] }); s.add(K.broadleaf({ seed: 2 }), { pos: [5, 0, -9] });
+    },
+    update(s, lt) { this.c.userData.drift(lt * 6); s.cam.set({ pos: [1.5, 1.7, 9], look: [0, 4.2, -10], fov: 58 }); },
+  });
+  // Winter: snow ground, drifts, snowy trees and rocks.
+  S3.shot('nature_snow', {
+    build(s) {
+      s.sky({ top: '#5f7fa8', horizon: '#dfe8f0' }); s.fog('#dfe8f0', 25, 160);
+      this.g = s.add(K.snowGround({ seed: 1 }));
+      s.sun({ dir: [-5, 5, 3], color: '#fff0dc', intensity: 1.0 }); s.hemi('#c9dcff', '#8a93a6', 0.6);
+      s.add(person(), { pos: [0, 0, 0] });
+      s.add(K.snowyPine({ seed: 1 }), { pos: [-3.2, 0, -3] }); s.add(K.snowyPine({ seed: 4, height: 9 }), { pos: [3.6, 0, -6] }); s.add(K.snowyPine({ seed: 5, height: 5 }), { pos: [-6, 0, -9] });
+      s.add(K.snowDrift({ seed: 1 }), { pos: [2.2, 0, 0.6], rot: [0, 0.4, 0] }); s.add(K.snowDrift({ seed: 2, length: 2.2, height: 0.35 }), { pos: [-2, 0, 1.8], rot: [0, -0.3, 0] });
+      s.add(K.boulder({ seed: 3, snow: 0.9, moss: 0, size: 1.8 }), { pos: [-1.8, 0, -1.2] }); s.add(K.log({ seed: 2, snow: 0.9, moss: 0 }), { pos: [1.6, 0, 2.6], rot: [0, 0.5, 0] }); s.add(K.stump({ seed: 2, snow: 0.9 }), { pos: [0.9, 0, -1.6] });
+      s.add(K.mountains({ seed: 2, haze: '#dfe8f0', hazeAmount: 0.5, snowLine: 0.3 }));
+    },
+    update(s, lt) { s.cam.set({ pos: [0.8, 1.9, 8.5], look: [0, 1.5, -2], fov: 50 }); },
+  });
+
   cat('nature_cat1', [
     { name: 'pine', make: () => K.pine({ seed: 1 }) },
     { name: 'snowyPine', make: () => K.snowyPine({ seed: 2 }) },

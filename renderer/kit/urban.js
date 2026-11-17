@@ -142,9 +142,9 @@ const KitUrban = (() => {
   const grimeTex = v => tex('grime' + v, 256, 128, c => {
     const r = rng(900 + v * 31); c.clearRect(0, 0, 256, 128);
     if (v === 0) { const g = c.createLinearGradient(0, 128, 0, 24); g.addColorStop(0, 'rgba(74,62,47,0.9)'); g.addColorStop(0.5, 'rgba(84,72,55,0.35)'); g.addColorStop(1, 'rgba(84,72,55,0)'); c.fillStyle = g; c.fillRect(0, 0, 256, 128); }
-    else { c.fillStyle = 'rgba(96,86,68,0.42)'; c.fillRect(0, 0, 256, 128); }
+    else { const g = c.createRadialGradient(128, 64, 10, 128, 64, 128); g.addColorStop(0, 'rgba(96,86,68,0.5)'); g.addColorStop(1, 'rgba(96,86,68,0)'); c.fillStyle = g; c.save(); c.scale(1, 0.5); c.fillRect(0, 0, 256, 256); c.restore(); }
     for (let i = 0; i < (v ? 20 : 12); i++) {
-      const x = r() * 256, y = 14 + r() * 110, s = 5 + r() * 15, rust = r() < 0.55;
+      const x = v ? 40 + r() * 176 : r() * 256, y = v ? 28 + r() * 72 : 14 + r() * 110, s = 5 + r() * (v ? 11 : 15), rust = r() < 0.55;
       c.fillStyle = rust ? `rgba(${98 + r() * 26 | 0},${52 + r() * 14 | 0},${30 + r() * 10 | 0},${0.45 + r() * 0.35})` : `rgba(52,46,38,${0.3 + r() * 0.3})`;
       for (let k = 0; k < 5; k++) { c.beginPath(); c.arc(x + (r() - 0.5) * s * 1.6, y + (r() - 0.5) * s, s * (0.35 + r() * 0.5), 0, TAU); c.fill(); }
       if (!v && rust) c.fillRect(x - 1, y, 2 + r() * 2, 10 + r() * 30);
@@ -185,7 +185,7 @@ const KitUrban = (() => {
   /** Shared state for one vehicle: paint, trim, damage level, random stream. */
   function vctx(o, defCol) {
     const seed = o.seed ?? 1, A = o.abandoned === true ? 1 : +o.abandoned || 0, r = rng(seed * 7919 + 13);
-    const base = o.color || defCol || CAR_COLS[seed % CAR_COLS.length], col = A ? mix(base, '#7d705d', 0.4 * A) : base;
+    const base = o.color || defCol || CAR_COLS[seed % CAR_COLS.length], col = A ? mix(mix(base, '#5f574c', 0.42 * A), '#8a8172', 0.18 * A) : base;
     return { o, seed, r, A, base, col, po: A ? { rough: 1, vary: 0.1, seed } : { rough: 0.42, metal: 0.1 }, pm: mat(col, A ? { rough: 1 } : { rough: 0.42, metal: 0.1 }),
       dark: mat('#1b1d20', { rough: 0.8 }), chrome: mat(A ? '#7c7a72' : '#c6cbd0', { rough: 0.3, metal: 0.25 }), trim: mat(mix(col, '#000000', 0.6), { rough: 0.7 }),
       lights: A ? 0 : (o.lights === true || o.night === true) ? 1 : +o.lights || 0, gt: () => !A ? 0 : (x => x < 0.3 ? 2 : x < 0.62 ? 1 : 3)(r()) };
@@ -271,7 +271,7 @@ const KitUrban = (() => {
     const [hx, hy, hwd, hh] = S.head, [tx, ty, twd, th] = S.tail;
     for (const sx of [-1, 1]) {
       const ind = sx > 0 ? lm.indL : lm.indR;
-      body.add(box(hwd, hh, 0.04, lm.head).at(sx * hx, hy, zF + 0.004), box(0.06, hh, 0.045, ind).at(sx * Math.min(hw - 0.04, hx + hwd / 2 + 0.035), hy, zF + 0.002));
+      body.add(box(hwd, hh, 0.04, lm.head).at(sx * hx, hy, zF + 0.004), box(0.06, hh, 0.045, ind).at(sx * Math.min(hw - 0.04, hx + hwd / 2 + 0.035), hy, zF + 0.002), box(hwd + 0.11, hh + 0.03, 0.03, dk).at(sx * Math.min(hw - 0.09 - hwd / 2, hx + 0.035), hy, zF));
       body.add(box(twd, th, 0.04, lm.tail).at(sx * tx, ty, zR - 0.004));
       body.add(th > twd ? box(twd, th * 0.26, 0.045, ind).at(sx * tx, ty + th * 0.37, zR - 0.004) : box(0.06, th, 0.045, ind).at(sx * (tx - twd / 2 - 0.035), ty, zR - 0.002));
       body.add(box(0.12, 0.05, 0.03, dk).at(sx * (hw - 0.2), S.sill + 0.25, zF + 0.004));
@@ -418,11 +418,15 @@ const KitUrban = (() => {
   function ambulance(o = {}) {
     const S = CARS.ambulance, c = chassis(S, vctx(o, '#ecebe6')), { body, P } = c, hw = S.W / 2, text = o.text || 'AMBULANCE', zR = -S.L / 2; faces(c); vanParts(c);
     const pulse = (cx, x, y, s) => { cx.beginPath(); cx.moveTo(x, y); [[14, 0], [20, -8], [27, 16], [36, -30], [45, 22], [52, -6], [58, 0], [76, 0]].forEach(p => cx.lineTo(x + p[0] * s, y + p[1] * s)); cx.stroke(); };
-    for (const sx of [-1, 1]) body.add(decal(4.6, 1.05, 'amb|' + text, 1024, 234, cx => {
-      cx.fillStyle = '#e4572e'; cx.fillRect(0, 150, 1024, 56); cx.fillStyle = '#17766f'; cx.fillRect(0, 212, 1024, 14); cx.fillRect(0, 134, 1024, 8);
-      cx.fillStyle = '#1b3f7a'; fit(cx, text, 520, 96, 'Archivo Black'); cx.textAlign = 'left'; cx.textBaseline = 'middle'; cx.fillText(text, 36, 70);
-      cx.strokeStyle = '#ffffff'; cx.lineWidth = 7; cx.lineJoin = 'round'; pulse(cx, 620, 178, 1.3); cx.strokeStyle = '#e4572e'; cx.lineWidth = 9; pulse(cx, 640, 76, 2.4);
-    }).at(sx * (hw + 0.008), 1.18, -0.42).rot(0, sx * PI / 2, 0));
+    for (const sx of [-1, 1]) {
+      // stripe band along the whole side (above the wheel arches), then the name and a pulse line on the cargo panel
+      body.add(decal(5.2, 0.36, 'ambstripe', 512, 36, cx => { cx.fillStyle = '#e4572e'; cx.fillRect(0, 10, 512, 26); cx.fillStyle = '#17766f'; cx.fillRect(0, 0, 512, 6); }, { opaque: true }).at(sx * (hw + 0.007), 1.04, -0.17).rot(0, sx * PI / 2, 0));
+      body.add(decal(2.9, 0.78, 'amb|' + text + sx, 640, 172, cx => {
+        const flip = sx > 0, X = x => flip ? 640 - x : x;                // keep the name toward the rear on both sides
+        cx.fillStyle = '#1b3f7a'; fit(cx, text, 420, 96, 'Archivo Black'); cx.textAlign = flip ? 'right' : 'left'; cx.textBaseline = 'middle'; cx.fillText(text, X(16), 112);
+        cx.strokeStyle = '#e4572e'; cx.lineWidth = 8; cx.lineJoin = 'round'; cx.save(); if (flip) { cx.translate(640, 0); cx.scale(-1, 1); } pulse(cx, 462, 104, 2.1); cx.restore();
+      }).at(sx * (hw + 0.008), 1.66, -1.2).rot(0, sx * PI / 2, 0));
+    }
     body.add(decal(1.5, 0.3, 'ambrear|' + text, 400, 80, cx => { cx.fillStyle = '#1b3f7a'; fit(cx, text, 380, 64, 'Archivo Black'); cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillText(text, 200, 44); }).at(0, 1.02, zR - 0.012).rot(0, PI, 0));
     const sm = texMat(tex('ambsign|' + text, 320, 48, cx => { cx.fillStyle = '#f4f1e6'; cx.fillRect(0, 0, 320, 48); cx.fillStyle = '#c4281c'; fit(cx, text, 300, 38, 'Archivo Black'); cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillText(text, 160, 26); }), { emissive: true, ei: 0 });
     body.add(box(1.5, 0.24, 0.16, '#ecebe6').at(0, S.H + 0.1, 0.72), quad(1.44, 0.2, sm).at(0, S.H + 0.1, 0.802));

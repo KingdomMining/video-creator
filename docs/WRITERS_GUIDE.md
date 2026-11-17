@@ -31,6 +31,33 @@ Also read `docs/PLATFORM_RULES.md` (hard content limits) and the `format` block 
    a once-in-a-lifetime chance.
 7. **Series legs.** The hidden truth can carry 5 to 8 parts without cheating.
 
+## 2b. What the proven channels do (from research on this format, November 2026)
+
+Read `/tmp/claude-0/-home-user-video-creator/e548f212-0b45-5a0d-a70c-5bfc98071b53/scratchpad/research/reference_channels.md`
+if it exists; it has transcripts and numbers. The patterns that separate the hits from the copies:
+
+- **The premise in one sentence, in the first 3 to 6 seconds.** Usually built on "Imagine you...":
+  "Imagine you barely catch the last train home." "Imagine your bus driver skips your stop and tells you it is
+  the only reason you are still alive." The first sentence is the whole situation.
+- **Short sentences.** Average 4 to 9 words. Present tense, second person, concrete nouns and numbers, almost no
+  adjectives. One fact per sentence.
+- **New information about every 5 seconds, a reversal about every 10.** Link beats with "but" and "so", never
+  "and then". If a sentence could be cut without losing a fact or a feeling, cut it.
+- **Numbers the viewer can check, used twice.** "Eight seats. There are nine of you." "Northgate is 22 miles
+  away, so you must leave by 5:35." A rule, then its exception: "Tyler turned five hours after his bite. Gus's
+  bite is almost eight hours old." A number is never decoration: it is the thing the choice turns on.
+- **One device per series** that keeps score in plain sight: a clock, a countdown, a head count that is never
+  wrong, a battery, a list of rules, a pen that turns black on fake money. Put it on screen with `hud` and
+  `cards` (below).
+- **The choice takes the last 4 to 10 seconds.** Two options of 2 to 5 words. Each is a physical action or a
+  person to trust, and the narration states the cost of each in one clause. Dilemmas about a named person beat
+  purely tactical ones.
+- **Ordinary places.** The hits are set on a bus, a train, a flat, a supermarket, a motel. The strange thing
+  arrives in a world the viewer knows. Exotic worlds must be explained in the same one sentence.
+- **Each part works for a stranger.** Later parts are often the ones that take off.
+- **Clone markers to avoid:** the clock time 3:12, and the names Maya, Mia, Danny, Tyler, Walt and Harlow
+  (they recur across copycat channels). Choose fresh names and times.
+
 ## 3. Sense-making rules (hard requirements)
 
 The owner of this channel rejected a script line because it stated a fact whose meaning was unclear
@@ -192,6 +219,16 @@ Plan Part 2 for both options before Part 1 is final.
            "hashtags": "#fiction plus 4-6 relevant tags"}
 }
 ```
+
+Optional per scene, for the on-screen facts (use them: they are how the viewer keeps track):
+```
+"hud":   {"clock": "11:42 PM", "place": "LAST TRAIN",                       top-left; stays until a later scene changes it
+          "meter": {"label": "BATTERY", "from": 30, "to": 12, "unit": "%", "low": 20}}     top-right: a draining resource...
+          "meter": {"label": "DOORS OPEN IN", "seconds": 95, "low": 20}}                    ...or a countdown that runs in real time
+"cards": [{"text": "8 SEATS. 9 PEOPLE.", "on": "nine", "dur": 2.6}]         a fact card that appears when the narrator says that word
+```
+Keep `hud` text short (clock up to 8 characters, place up to 14, meter label up to 14). At most 4 fact cards per
+episode, each at most 6 words, each restating a number or rule the choice depends on. None in the first 3 seconds.
 
 ### Series bible: `episodes/<slug>/series.json`
 Same shape as `episodes/deep-signal/series.json`: `canon` (the hidden truth, stated plainly, and the

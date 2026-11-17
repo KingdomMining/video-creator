@@ -108,7 +108,7 @@ const KitInterior = (() => {
     g.computeVertexNormals(); return mesh(g, col, o);
   }
   /** Open-ended prism (round bars, rails, pipes): cheap, no caps. Along Y, centred. */
-  const rod = (r, len, col, o, seg = 5) => mesh(new T.CylinderGeometry(r, r, len, seg, 1, true), col, o);
+  const rod = (r, len, col, o, seg = 5) => mesh(new T.CylinderGeometry(r, r, len, seg, 1, true), col, o || undefined);
   /** Rod between two points. */
   function rodAB(a, b, r, col, o, seg = 5) { const A = S3.V(a), B = S3.V(b), m = rod(r, A.distanceTo(B), col, o, seg); m.position.copy(A).add(B).multiplyScalar(0.5); m.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), B.clone().sub(A).normalize()); return m; }
   /** Flat disc facing +Z (dials, plates, portholes). */
@@ -428,7 +428,7 @@ const KitInterior = (() => {
     const w = o.w ?? 1.2, h = o.h ?? 1.3, sill = o.sill ?? 0.9, wt = o.wallT ?? 0.12, fc = o.frame || C.white, nc = (o.panes || [2, 2])[0], nr = (o.panes || [2, 2])[1], g = grp(), U = g.userData, ft = 0.045, y0 = sill, dz = wt + 0.012, zi = wt / 2;
     g.add(boxB(ft, h, dz, fc).at(-w / 2 + ft / 2, y0, 0), boxB(ft, h, dz, fc).at(w / 2 - ft / 2, y0, 0), boxB(w - ft * 2, ft, dz, fc).at(0, y0, 0), boxB(w - ft * 2, ft, dz, fc).at(0, y0 + h - ft, 0));
     const iw = w - ft * 2, ih = h - ft * 2;
-    for (let i = 1; i < nc; i++) g.add(boxB(0.028, ih, 0.035, fc).at(-iw / 2 + i * iw / nc, y0 + ft, 0)); for (let j = 1; j < nr; j++) g.add(box(iw, 0.028, 0.035, fc).at(0, y0 + ft + j * ih / nr, 0));
+    for (let i = 1; i < nc; i++) g.add(boxB(0.028, ih, 0.035, fc).at(-iw / 2 + i * iw / nc, y0 + ft, 0)); for (let j = 1; j < nr; j++) g.add(box(iw, 0.028, 0.031, fc).at(0, y0 + ft + j * ih / nr, 0));
     const glassM = o.glow ? glow(o.glow, o.glowK ?? 1) : mat(o.glass || C.glass, { opacity: o.glassA ?? 0.24, rough: 0.08, own: true }), gl = keep(mesh(new T.PlaneGeometry(iw, ih), glassM)); gl.material.side = T.DoubleSide; gl.castShadow = false; gl.position.set(0, y0 + h / 2, 0); g.add(gl); U.glass = gl;
     if (o.view) { const v = mesh(new T.PlaneGeometry(iw, ih), viewMat(o.view, o.seed || 1)); v.position.set(0, y0 + h / 2, -zi + 0.012); g.add(v); }
     g.add(box(w + 0.16, 0.03, 0.11, fc).at(0, y0 - 0.015, zi + 0.045), box(w + 0.06, 0.07, 0.016, fc).at(0, y0 - 0.065, zi + 0.008), box(w + 0.1, 0.035, 0.09, shade(fc, 0.9)).at(0, y0 - 0.0175, -zi - 0.035));   // sill board, apron, outer sill
@@ -439,7 +439,7 @@ const KitInterior = (() => {
       bl.position.z = zi - 0.035; g.add(bl); U.blinds = bl; }
     if (o.curtains) { const cc = o.curtains === true ? '#a0483f' : o.curtains, ry = y0 + h + 0.13, rz = zi + 0.09, half = w / 2 + 0.22, yb = o.curtainTo === 'sill' ? y0 - 0.25 : 0.03, ch = ry - yb - 0.012, dr = [];
       g.add(rodAB([-half - 0.08, ry, rz], [half + 0.08, ry, rz], 0.013, o.rodColor || C.woodDark, null, 6), ball(0.028, o.rodColor || C.woodDark, 0).at(-half - 0.09, ry, rz), ball(0.028, o.rodColor || C.woodDark, 0).at(half + 0.09, ry, rz), box(0.02, 0.02, rz - zi, C.woodDark).at(-half + 0.05, ry, (rz + zi) / 2), box(0.02, 0.02, rz - zi, C.woodDark).at(half - 0.05, ry, (rz + zi) / 2));
-      for (const s of [-1, 1]) { const d = keep(drape(ch, 7, 0.028, cc, { seed: (o.seed || 1) + (s > 0 ? 7 : 0), own: true })); d.position.set(s * half, yb, rz + (s > 0 ? 0.004 : 0)); d.userData.s = s; g.add(d); dr.push(d); }
+      for (const s of [-1, 1]) { const d = keep(drape(ch, 7, 0.028, cc, { seed: (o.seed || 1) + (s > 0 ? 7 : 0) })); d.position.set(s * half, yb, rz + (s > 0 ? 0.004 : 0)); d.userData.s = s; g.add(d); dr.push(d); }
       U.drapes = dr; U.curtain = k => { const cw = lerp(0.2, half + 0.012, clamp(k)); dr.forEach(d => d.scale.x = -d.userData.s * cw); return g; }; U.curtain(o.curtainOpen ?? 0.25); }
     const el = (o.spillAngle ?? 40) * PI / 180, az = o.spillYaw ?? 0.3, P = (x, y, lift = 0.02) => { const tt = y / Math.tan(el); return [x + tt * Math.sin(az), lift, zi + tt * Math.cos(az)]; };
     if (o.spill) { const sc = o.spill === true ? '#ffe2b0' : o.spill, k = o.spillK ?? 0.55, sp = keep(grp()), a = [-iw / 2, y0 + ft], b = [iw / 2, y0 + h - ft];
@@ -485,7 +485,7 @@ const KitInterior = (() => {
   }
   /** Ladder leaning toward -Z. o: {h 3 (height reached), w 0.42, lean 0.22 (radians), color, style:'wood'|'metal'}. userData: at(k), anchors bottom / top */
   function ladder(o = {}) {
-    const h = o.h ?? 3, w = o.w ?? 0.42, lean = o.lean ?? 0.22, metal = o.style === 'metal', col = o.color || (metal ? '#b9c0c6' : C.woodLight), m = metal ? MET : null, len = h / Math.cos(lean), dz = h * Math.tan(lean), g = grp(), inner = grp();
+    const h = o.h ?? 3, w = o.w ?? 0.42, lean = o.lean ?? 0.22, metal = o.style === 'metal', col = o.color || (metal ? '#b9c0c6' : C.woodLight), m = metal ? MET : undefined, len = h / Math.cos(lean), dz = h * Math.tan(lean), g = grp(), inner = grp();
     inner.add(boxB(0.028, len, 0.06, col, m).at(-w / 2, 0, 0), boxB(0.028, len, 0.06, col, m).at(w / 2, 0, 0));
     for (let y = 0.28; y < len - 0.12; y += 0.28) inner.add(metal ? box(w, 0.025, 0.035, shade(col, 0.9), m).at(0, y, 0) : rod(0.017, w, shade(col, 0.88), null, 6).rot(0, 0, HP).at(0, y, 0));
     if (metal) inner.add(box(0.05, 0.03, 0.08, C.rubber).at(-w / 2, 0.015, 0), box(0.05, 0.03, 0.08, C.rubber).at(w / 2, 0.015, 0));

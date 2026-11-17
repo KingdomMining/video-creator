@@ -475,19 +475,19 @@ const KitSciFi = (() => {
     if (o.symbol !== false) { const a = PI / 5, d = decal('s_' + (o.symbol || 'warn'), R * 0.56); d.position.set(sin(a) * (ri + 0.004), 0.07 + bh * 0.84, cos(a) * (ri + 0.004)); d.rotation.y = a; g.add(d); }
     g.userData.levelMat = lv; return fin(g, 'canister', o.seed || 1, 0.02);
   }
-  /** A dressed pile of crates and canisters. o: {count: 6, spread: 2.2, colors: [...], seed}. Footprint about spread x spread. */
+  /** A dressed pile of crates and canisters. o: {count: 6 (crates), spread: 2.4 (width of the pile), colors: [...], canisters: 2, seed}. Footprint about spread x 1.9. */
   function crateStack(o = {}) {
-    const n = o.count ?? 6, sp = o.spread ?? 2.2, seed = o.seed || 1, r = rng(seed * 29 + 3), g = grp(), cols = o.colors || ['#6c7b8d', '#8c6a3a', '#4d6a5c', '#7a8794', '#a2443a'], spots = [];
-    for (let i = 0; i < n; i++) {
-      const big = r() < 0.45, w = big ? 1.1 + r() * 0.3 : 0.6 + r() * 0.25, h = big ? 0.7 + r() * 0.25 : 0.45 + r() * 0.2, d = big ? 0.8 + r() * 0.2 : 0.55 + r() * 0.2; let x, z, y = 0, tries = 0;
-      const under = spots.find(s => !s.used && s.w > w + 0.05 && s.d > d + 0.05 && r() < 0.6);
-      if (under) { x = under.x + (r() - 0.5) * 0.1; z = under.z + (r() - 0.5) * 0.1; y = under.h; under.used = true; }
-      else do { x = (r() - 0.5) * (sp - w); z = (r() - 0.5) * (sp - d); tries++; } while (tries < 30 && spots.some(s => s.y === 0 && abs(s.x - x) < (s.w + w) / 2 + 0.06 && abs(s.z - z) < (s.d + d) / 2 + 0.06));
-      if (tries >= 30) continue;
-      if (!under) spots.push({ x, z, w, d, h, y: 0 });
-      crate({ w, h, d, color: cols[floor(r() * cols.length)], seed: seed * 10 + i, symbol: r() < 0.3 ? ['rad', 'bio', 'volt', 'warn'][floor(r() * 4)] : null }).at(x, y, z).rot(0, (r() - 0.5) * (under ? 0.5 : 0.24), 0).to(g);
+    const n = o.count ?? 6, sp = o.spread ?? 2.4, seed = o.seed || 1, r = rng(seed * 29 + 3), g = grp(), cols = o.colors || ['#6c7b8d', '#8c6a3a', '#4d6a5c', '#7a8794', '#a2443a'], base = [];
+    const mk = (w, h, d, x, y, z, ry) => crate({ w, h, d, color: cols[floor(r() * cols.length)], seed: seed * 10 + base.length + floor(y * 7), symbol: r() < 0.3 ? ['rad', 'bio', 'volt', 'warn'][floor(r() * 4)] : null }).at(x, y, z).rot(0, ry, 0).to(g);
+    let left = n, x = -sp / 2, row = 0;
+    while (left > 0 && row < 2) {                                                   // one or two rows of big crates on the floor
+      const w = 0.95 + r() * 0.4, h = 0.65 + r() * 0.3, d = 0.75 + r() * 0.2;
+      if (x + w > sp / 2 + 0.2) { row++; x = -sp / 2 + 0.25 + r() * 0.3; continue; }
+      const z = row ? -0.52 - r() * 0.06 : 0.42 + (r() - 0.5) * 0.12; mk(w, h, d, x + w / 2, 0, z, (r() - 0.5) * 0.16); base.push({ x: x + w / 2, z, w, h, d }); x += w + 0.06 + r() * 0.1; left--;
+      if (left > base.length && r() < 0.55) { const b = base[base.length - 1], w2 = b.w * (0.5 + r() * 0.3), d2 = b.d * (0.6 + r() * 0.25); mk(w2, 0.4 + r() * 0.2, d2, b.x + (r() - 0.5) * 0.12, b.h, b.z + (r() - 0.5) * 0.08, (r() - 0.5) * 0.5); left--; }
     }
-    for (let i = 0; i < 2; i++) { let x, z, tries = 0; do { x = (r() - 0.5) * (sp - 0.5); z = (r() - 0.5) * (sp - 0.5); tries++; } while (tries < 40 && spots.some(s => abs(s.x - x) < s.w / 2 + 0.34 && abs(s.z - z) < s.d / 2 + 0.34)); if (tries < 40) { canister({ color: i ? '#c9ced4' : '#d8b13a', glow: i ? PAL.bio : PAL.light, seed: i + 1 }).at(x, 0, z).rot(0, r() * 6, 0).to(g); spots.push({ x, z, w: 0.6, d: 0.6, h: 1, y: 0, used: true }); } }
+    for (let i = 0; i < (o.canisters ?? 2); i++) canister({ color: i ? '#c9ced4' : '#d8b13a', glow: i ? PAL.bio : PAL.light, symbol: i ? 'bio' : 'warn', seed: i + 1 }).at(sp / 2 - 0.15 + i * 0.5 - 0.3 * i * i, 0, 1.1 - i * 0.12).rot(0, r() * 6, 0).to(g);
+    const bb = new T.Box3().setFromObject(g), c = bb.getCenter(V3()); g.children.forEach(k => { k.position.x -= c.x; k.position.z -= c.z; });
     return fin(g, 'crateStack', seed, 0);
   }
 
