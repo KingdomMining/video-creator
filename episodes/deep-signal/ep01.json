@@ -3,13 +3,18 @@
   "hook": "WOULD YOU OPEN IT?",
   "scenes": [
     {"visual": "ds_exterior", "text": "Day two hundred twelve. You're the only one awake on the cargo ship Meridian."},
-    {"visual": "ds_cryo", "text": "The rest of the crew is frozen in cryosleep. The nearest human is four hundred million miles away."},
-    {"visual": "ds_alert", "sfx": [{"type": "alarm", "at": 0.05}], "text": "Then the proximity alarm goes off. Something is outside."},
-    {"visual": "ds_run", "hold": 0.25, "text": "You run for the airlock."},
-    {"visual": "ds_hatch", "hold": 1.35, "sfx": [{"type": "knock", "at": -1.3}], "text": "And then you hear it. Three slow knocks."},
-    {"visual": "ds_window", "hold": 0.3, "sfx": [{"type": "thud", "at": 2.3}], "text": "Through the glass, a figure in a spacesuit. Your ship's logo on its chest."},
-    {"visual": "ds_tag", "hold": 0.4, "sfx": [{"type": "beep", "at": 0.75}], "text": "The name tag... is yours."}
+    {"visual": "ds_cryo", "text": "Five crew. Four of them frozen in cryosleep. Your job is simple. Stay awake. Watch the ship. Wake no one."},
+    {"visual": "ds_alert", "params": {"calm": true, "lines": ["ON WATCH", "*R. VOSS  PILOT", "ALL SYSTEMS OK", "CONTACTS    0", "NEAREST HUMAN", "*400,000,000 MI"]}, "text": "For seven months, nothing has happened. No signals. No ships. The nearest human being is four hundred million miles away."},
+    {"visual": "ds_alert", "sfx": [{"type": "alarm", "at": 0.05}], "text": "Then, at three in the morning, the proximity alarm goes off. Something is touching the hull."},
+    {"visual": "ds_schematic", "params": {"lines": ["MASS: 94 KG", "!MOTION: SELF-PROPELLED", "!HEADING: AIRLOCK 02"]}, "sfx": [{"type": "beep", "at": 0.3}], "text": "It isn't debris. It isn't drifting. It's crawling along the outside of the ship, straight toward the airlock."},
+    {"visual": "ds_run", "hold": 0.3, "text": "You run."},
+    {"visual": "ds_hatch", "hold": 1.35, "sfx": [{"type": "knock", "at": -1.3}], "text": "And then you hear it."},
+    {"visual": "ds_hatch", "params": {"tight": true}, "hold": 1.3, "sfx": [{"type": "knock", "at": -1.25}], "text": "Three slow knocks. From the outside. Nothing out there should be alive."},
+    {"visual": "ds_window", "params": {"hand": 5.0}, "hold": 0.4, "sfx": [{"type": "thud", "at": 5.0}], "text": "You wipe the frost from the glass. A figure in a spacesuit. It lifts one hand, and presses it against the window."},
+    {"visual": "ds_tag", "hold": 0.3, "sfx": [{"type": "beep", "at": 0.75}], "text": "Then you read the name tag. R. Voss. Pilot. That is your name."},
+    {"visual": "ds_locker", "hold": 0.3, "text": "But your suit is hanging in the locker behind you. Exactly where you left it."},
+    {"visual": "ds_window", "params": {"still": true, "close": true, "radio": true}, "hold": 0.5, "sfx": [{"type": "static", "at": 0.0}], "text": "Then the radio crackles. And your own voice says: Please. Let me in. I'm the real one."}
   ],
-  "choice": {"narration": "Do you open the airlock? Or keep it sealed?", "question": "WHAT DO YOU DO?", "a": "OPEN THE AIRLOCK", "b": "KEEP IT SEALED", "hold": 3.1},
+  "choice": {"narration": "Do you open the airlock? Or keep it sealed?", "question": "WHAT DO YOU DO?", "a": "OPEN THE AIRLOCK", "b": "KEEP IT SEALED", "hold": 3.4},
   "hashtags": "#space #scifi #story #whatwouldyoudo #cliffhanger #choose"
 }

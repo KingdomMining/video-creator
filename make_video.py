@@ -142,8 +142,9 @@ def score(theme, dur, cstart, rs):
             out[0] += v * (1 - pan); out[1] += v * pan
     out *= 0.11
     bells = np.zeros(len(t))
-    for k, st in enumerate([14, 21, 17, 14, 12, 17, 13, 14, 9, 12]):
-        at = 1.2 + k * 2.9
+    seq = [14, 21, 17, 14, 12, 17, 13, 14, 9, 12, 14, 17, 21, 19, 17, 12]
+    for k in range(int(dur / 2.9)):
+        st = seq[k % len(seq)]; at = 1.2 + k * 2.9
         if at > dur - 1: break
         f = 293.66 * tr * 2 ** (st / 12); bt = env_t(int(SR * 2.4))
         b = (np.sin(2 * np.pi * f * bt) + 0.35 * np.sin(2 * np.pi * f * 2.01 * bt) + 0.12 * np.sin(2 * np.pi * f * 3.02 * bt)) * np.exp(-bt * 2.2) * np.minimum(1, bt * 300)
