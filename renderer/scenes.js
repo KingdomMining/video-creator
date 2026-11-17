@@ -226,7 +226,7 @@ function sty() { const P = PAL[TL.theme]; return Object.assign({}, STYLE0, P ? {
 const tfont = (S, size) => `${S.titleWeight} ${size}px "${S.titleFont}"`;
 
 function captions(c, t, S) {
-  const cov = TL.cover || 0; if (t >= TL.choice.start || t < cov) return;
+  const cov = TL.cover || 0; if (t >= TL.choice.start || t < cov || (TL.vote && t < TL.vote.end + 0.2)) return;
   const ch = TL.chunks.find(k => t >= k.start && t < k.end); if (!ch) return;
   c.font = '800 88px Inter'; c.textAlign = 'left'; c.lineJoin = 'round';
   const pop = 1 + 0.08 * (1 - ease((t - Math.max(ch.start, cov)) / 0.12));
@@ -241,11 +241,11 @@ function captions(c, t, S) {
 
 function header(c, t, S) {
   const cov = TL.cover || 0; if (t < cov) return;
-  const a = (t < TL.choice.start ? 1 : 1 - ease((t - TL.choice.start) / 0.3)) * ease((t - cov) / 0.25); if (a <= 0) return;
+  const v0 = TL.vote ? TL.vote.end + 0.25 : cov, a = (t < TL.choice.start ? 1 : 1 - ease((t - TL.choice.start) / 0.3)) * ease((t - v0) / 0.25); if (a <= 0) return;
   c.save(); c.globalAlpha = a; c.font = '800 36px Inter'; c.textAlign = 'center';
   const label = `${TL.series}  ·  PART ${TL.episode}`, tw = c.measureText(label).width + 56;
   c.fillStyle = 'rgba(0,0,0,.55)'; rrect(c, W / 2 - tw / 2, 262, tw, 64, 32); c.fill(); c.strokeStyle = A(S.accent, 0.9); c.lineWidth = 3; c.stroke(); c.fillStyle = '#fff'; c.fillText(label, W / 2, 307);
-  if (TL.hook && t < cov + 3.0) { const k = ease((t - cov) / 0.3) * (1 - ease((t - cov - 2.6) / 0.4)); c.globalAlpha = k * a; c.font = tfont(S, 84); const ls = wrap(c, String(TL.hook).toUpperCase(), 860); ls.forEach((l, i) => { c.strokeStyle = '#000'; c.lineWidth = 18; c.lineJoin = 'round'; c.strokeText(l, W / 2, 468 + i * 96); c.fillStyle = S.warn; c.fillText(l, W / 2, 468 + i * 96); }); }
+  if (TL.hook && t < v0 + 3.0) { const k = ease((t - v0) / 0.3) * (1 - ease((t - v0 - 2.6) / 0.4)); c.globalAlpha = k * a; c.font = tfont(S, 84); const ls = wrap(c, String(TL.hook).toUpperCase(), 860); ls.forEach((l, i) => { c.strokeStyle = '#000'; c.lineWidth = 18; c.lineJoin = 'round'; c.strokeText(l, W / 2, 468 + i * 96); c.fillStyle = S.warn; c.fillText(l, W / 2, 468 + i * 96); }); }
   c.restore();
 }
 
@@ -269,8 +269,62 @@ function choiceCard(c, t, S, soft) {
   a = ease((lt - 0.55) / 0.3); if (a > 0) { c.globalAlpha = a; c.fillStyle = '#0b0b0b'; c.beginPath(); c.arc(W / 2, y0 + PH + GAP / 2, 52, 0, 7); c.fill(); c.strokeStyle = '#fff'; c.lineWidth = 5; c.stroke(); c.fillStyle = '#fff'; c.font = '800 42px Inter'; c.textAlign = 'center'; c.fillText('OR', W / 2, y0 + PH + GAP / 2 + 15); }
   a = ease((lt - 1.0) / 0.4); if (a > 0) { const pu = 1 + 0.04 * Math.sin(lt * 7), CTA = soft ? 'WHAT WOULD YOU DO?' : 'COMMENT  A  OR  B', yc = yB + PH + 108; c.save(); c.globalAlpha = a; c.translate(W / 2, yc); c.scale(pu, pu); c.font = soft ? '800 66px Inter' : '800 76px Inter'; c.textAlign = 'center'; c.strokeStyle = '#000'; c.lineWidth = 16; c.strokeText(CTA, 0, 0); c.fillStyle = S.hi; c.fillText(CTA, 0, 0); c.restore();
     c.globalAlpha = a; c.font = '600 36px Inter'; c.fillStyle = 'rgba(255,255,255,.9)'; c.fillText(soft ? `Part ${TL.episode + 1} follows what most of you would do` : `Top answer decides Part ${TL.episode + 1}`, W / 2, yc + 58);
-    const rem = clamp(1 - lt / (TL.duration - ch.start)); c.fillStyle = 'rgba(255,255,255,.2)'; rrect(c, 190, yc + 86, 700, 14, 7); c.fill(); c.fillStyle = S.warn; rrect(c, 190, yc + 86, Math.max(14, 700 * rem), 14, 7); c.fill(); }
+    const rem = clamp(1 - lt / ((TL.outro ? TL.outro.start : TL.duration) - ch.start)); c.fillStyle = 'rgba(255,255,255,.2)'; rrect(c, 190, yc + 86, 700, 14, 7); c.fill(); c.fillStyle = S.warn; rrect(c, 190, yc + 86, Math.max(14, 700 * rem), 14, 7); c.fill(); }
   c.globalAlpha = 1;
+}
+
+// Part 2 onward opens with the result of the last vote: both options, the percentages filling up, and a tap on the winner.
+// TL.vote = {start, end, click, question, a, b, a_pct, b_pct, chosen: 'A'|'B'}
+function voteCard(c, t, S) {
+  const v = TL.vote; if (!v) return; const lt = t - v.start; if (lt < 0 || t > v.end + 0.45) return;
+  const al = ease(lt / 0.3) * (1 - ease((t - v.end) / 0.45)); if (al <= 0) return;
+  c.save(); c.globalAlpha = al; c.fillStyle = 'rgba(0,0,0,.76)'; c.fillRect(0, 0, W, H); c.textAlign = 'center'; c.lineJoin = 'round';
+  c.font = '800 38px Inter'; c.fillStyle = S.accent; c.fillText('THE VOTES ARE IN', W / 2, 300);
+  c.font = '800 66px Inter'; c.fillStyle = '#fff'; const ql = wrap(c, v.question, 860); ql.forEach((l, i) => c.fillText(l, W / 2, 432 + i * 76));
+  const PX = 140, PW = 800, PH = 196, GAP = 44, y0 = 432 + (ql.length - 1) * 76 + 64, tc = v.click - v.start, grow = ease((lt - 0.5) / 1.3), won = ease((lt - tc) / 0.25);
+  const panel = (y, letter, text, pct, c0, c1, win) => {
+    const pop = win ? 1 + 0.045 * Math.sin(clamp((lt - tc) / 0.35) * Math.PI) : 1, dim = win ? 1 : 1 - 0.6 * won;
+    c.save(); c.globalAlpha = al * dim; c.translate(W / 2, y + PH / 2); c.scale(pop, pop); c.translate(-W / 2, -(y + PH / 2));
+    c.fillStyle = 'rgba(255,255,255,.09)'; rrect(c, PX, y, PW, PH, 36); c.fill();
+    c.save(); rrect(c, PX, y, PW, PH, 36); c.clip(); const g = c.createLinearGradient(PX, y, PX + PW, y); g.addColorStop(0, c0); g.addColorStop(1, c1); c.fillStyle = g; c.fillRect(PX, y, PW * pct / 100 * grow, PH); c.restore();
+    if (win && won > 0) { c.shadowColor = c0; c.shadowBlur = 60 * won; } c.strokeStyle = win && won > 0 ? '#ffffff' : 'rgba(255,255,255,.6)'; c.lineWidth = win && won > 0 ? 7 : 4; rrect(c, PX, y, PW, PH, 36); c.stroke(); c.shadowBlur = 0;
+    c.fillStyle = '#fff'; c.beginPath(); c.arc(PX + 96, y + PH / 2, 60, 0, 7); c.fill(); c.fillStyle = c1; c.font = '800 82px Inter'; c.textAlign = 'center'; c.fillText(letter, PX + 96, y + PH / 2 + 29);
+    c.fillStyle = '#fff'; c.font = '800 46px Inter'; c.textAlign = 'left'; const ls = wrap(c, text, PW - 420); ls.forEach((l, i) => c.fillText(l, PX + 180, y + PH / 2 + 16 + (i - (ls.length - 1) / 2) * 54));
+    c.font = '800 96px Inter'; c.textAlign = 'right'; c.fillText(Math.round(pct * grow) + '%', PX + PW - 30, y + PH / 2 + 34); c.restore();
+  };
+  const yB = y0 + PH + GAP, wA = v.chosen === 'A';
+  panel(y0, 'A', v.a, v.a_pct, '#2f7bff', '#0a2f9c', wA); panel(yB, 'B', v.b, v.b_pct, '#ff4646', '#96101f', !wA);
+  c.font = '600 32px Inter'; c.fillStyle = 'rgba(255,255,255,.85)'; c.textAlign = 'center'; c.fillText('Votes from ' + ((TL.brand && TL.brand.platforms) || []).join(' · '), W / 2, yB + PH + 62);
+  // the tap: a pointer slides to the winner and presses it
+  const ty = (wA ? y0 : yB) + PH / 2 + 30, tx = PX + PW * 0.55, k = ease((lt - (tc - 0.7)) / 0.6), px = lerp(980, tx, k), py = lerp(1500, ty, k), press = 1 - 0.14 * Math.sin(clamp((lt - tc) / 0.3) * Math.PI);
+  if (lt > tc - 0.7) { if (lt > tc) { const r = (lt - tc) / 0.5; if (r < 1) { c.strokeStyle = `rgba(255,255,255,${1 - r})`; c.lineWidth = 8 * (1 - r) + 2; c.beginPath(); c.arc(px, py, 30 + r * 110, 0, 7); c.stroke(); } }
+    c.save(); c.translate(px, py); c.scale(press, press); c.fillStyle = '#ffffff'; c.strokeStyle = '#0a0c12'; c.lineWidth = 7; c.beginPath(); c.moveTo(0, 0); c.lineTo(0, 86); c.lineTo(22, 66); c.lineTo(38, 104); c.lineTo(56, 96); c.lineTo(40, 60); c.lineTo(70, 60); c.closePath(); c.stroke(); c.fill(); c.restore(); }
+  if (won > 0) { const s = 1 + 0.25 * (1 - ease((lt - tc) / 0.3)); c.save(); c.globalAlpha = al * won; c.translate(W / 2, yB + PH + 178); c.scale(s, s); c.font = '800 92px Inter'; c.strokeStyle = '#000'; c.lineWidth = 18; const m = `${v.chosen} IT IS`; c.strokeText(m, 0, 0); c.fillStyle = S.hi; c.fillText(m, 0, 0); c.restore(); }
+  c.restore();
+}
+
+// End card: where to find the channel. TL.outro = {start}; TL.brand = {name, handle, platforms, outro_text}
+function outroCard(c, t, S, soft) {
+  const o = TL.outro, b = TL.brand; if (!o || !b) return; const lt = t - o.start; if (lt < 0) return;
+  const k = ease(lt / 0.35), ch = TL.choice, up = (d0) => ease((lt - d0) / 0.35);
+  c.save(); c.fillStyle = `rgba(5,7,13,${(lt < 0.36 ? 1 : 0.9) * k})`; c.fillRect(0, 0, W, H); c.textAlign = 'center'; c.lineJoin = 'round';
+  c.globalAlpha = k; c.font = '800 38px Inter'; c.fillStyle = S.accent; c.fillText(`${TL.series}  ·  PART ${TL.episode}`, W / 2, 300);
+  // the two options stay on screen, small
+  const opt = (y, letter, text, c0, c1, d0) => { const a = up(d0); if (a <= 0) return; c.save(); c.globalAlpha = a; c.translate((1 - a) * -60, 0); const g = c.createLinearGradient(140, y, 940, y); g.addColorStop(0, c0); g.addColorStop(1, c1); c.fillStyle = g; rrect(c, 140, y, 800, 84, 26); c.fill(); c.strokeStyle = 'rgba(255,255,255,.8)'; c.lineWidth = 3; c.stroke();
+    c.fillStyle = '#fff'; c.font = '800 40px Inter'; if (!soft) { c.beginPath(); c.arc(190, y + 42, 28, 0, 7); c.fill(); c.fillStyle = c1; c.font = '800 38px Inter'; c.textAlign = 'center'; c.fillText(letter, 190, y + 56); c.fillStyle = '#fff'; c.font = '800 40px Inter'; c.textAlign = 'left'; c.fillText(text, 240, y + 56); } else { c.textAlign = 'center'; c.fillText(text, W / 2, y + 56); } c.restore(); };
+  opt(388, 'A', ch.a, '#2f7bff', '#0a2f9c', 0.05); opt(488, 'B', ch.b, '#ff4646', '#96101f', 0.12);
+  let a = up(0.2); c.globalAlpha = a; c.textAlign = 'center'; c.font = '800 52px Inter'; c.strokeStyle = '#000'; c.lineWidth = 12; const cta = soft ? 'WHAT WOULD YOU DO?' : 'COMMENT  A  OR  B'; c.strokeText(cta, W / 2, 648); c.fillStyle = S.hi; c.fillText(cta, W / 2, 648);
+  c.fillStyle = 'rgba(255,255,255,.25)'; c.fillRect(240, 700, 600, 3);
+  // the channel
+  const words = String(b.name).toUpperCase().split(' '), l1 = words.slice(0, -1).join(' '), l2 = words.slice(-1)[0];
+  a = up(0.3); c.globalAlpha = a; c.save(); c.translate(W / 2, 860); c.scale(1 + 0.12 * (1 - a), 1 + 0.12 * (1 - a)); c.font = tfont(STYLE0, 124); c.strokeStyle = '#000'; c.lineWidth = 16; c.strokeText(l1, 0, -40); c.fillStyle = '#ffffff'; c.fillText(l1, 0, -40); c.strokeText(l2, 0, 82); c.fillStyle = S.hi; c.fillText(l2, 0, 82); c.restore();
+  a = up(0.45); c.globalAlpha = a; c.font = '800 62px Inter'; c.fillStyle = S.accent; c.fillText(b.handle, W / 2, 1030);
+  a = up(0.6); c.globalAlpha = a; c.font = '600 38px Inter'; c.fillStyle = 'rgba(255,255,255,.92)'; c.fillText(b.outro_text || 'Find us on', W / 2, 1098);
+  const cols = { instagram: '#e1306c', facebook: '#1877f2', youtube: '#ff2b2b', tiktok: '#25d9e6' };
+  (b.platforms || []).slice(0, 4).forEach((pn, i) => { const d0 = 0.75 + i * 0.13, q = ease((lt - d0) / 0.3); if (q <= 0) return; const x = i % 2 ? 560 : 140, y = 1128 + Math.floor(i / 2) * 96, col = cols[pn.toLowerCase()] || S.accent, sc = 0.85 + 0.15 * q;
+    c.save(); c.globalAlpha = q; c.translate(x + 190, y + 39); c.scale(sc, sc); c.translate(-(x + 190), -(y + 39)); c.fillStyle = 'rgba(255,255,255,.08)'; rrect(c, x, y, 380, 78, 39); c.fill(); c.strokeStyle = col; c.lineWidth = 4; c.stroke(); c.fillStyle = col; c.beginPath(); c.arc(x + 44, y + 39, 13, 0, 7); c.fill(); c.fillStyle = '#fff'; c.font = '800 40px Inter'; c.textAlign = 'left'; c.fillText(pn, x + 74, y + 53); c.restore(); });
+  a = up(1.3); c.globalAlpha = a * 0.9; c.textAlign = 'center'; c.font = '600 34px Inter'; c.fillStyle = '#fff'; c.fillText(soft ? `Part ${TL.episode + 1} follows what most of you would do` : `Top answer decides Part ${TL.episode + 1}`, W / 2, 1368);
+  c.restore();
 }
 
 // Cover / thumbnail text. TL.thumb = {visual, params, title, tagline, layout:'top'|'center'|'bottom', colors:[..], size, lines:[..], text:false to draw your own in the shot overlay}
@@ -281,7 +335,7 @@ function thumbText(c, S) {
   const lh = size * 1.0, blockH = lines.length * lh, tagH = th.tagline ? 130 : 0, partH = 86;
   let y = lay === 'top' ? 380 + partH : lay === 'center' ? 960 - (blockH + tagH + partH) / 2 + partH : 1440 - tagH - blockH;
   c.save(); c.textAlign = 'center'; c.lineJoin = 'round';
-  c.font = '800 40px Inter'; const pl = `PART ${TL.episode}`, pw = c.measureText(pl).width + 56; c.fillStyle = S.accent; rrect(c, W / 2 - pw / 2, y - partH, pw, 62, 31); c.fill(); c.fillStyle = '#06080c'; c.fillText(pl, W / 2, y - partH + 45);
+  c.font = '800 40px Inter'; const pl = TL.partLabel || `PART ${TL.episode}`, pw = c.measureText(pl).width + 56; c.fillStyle = S.accent; rrect(c, W / 2 - pw / 2, y - partH, pw, 62, 31); c.fill(); c.fillStyle = '#06080c'; c.fillText(pl, W / 2, y - partH + 45);
   c.font = tfont(S, size);
   lines.forEach((l, i) => { const yy = y + size * 0.84 + i * lh; c.shadowColor = 'rgba(0,0,0,.65)'; c.shadowBlur = 34; c.shadowOffsetY = 12; c.lineWidth = Math.max(16, size * 0.15); c.strokeStyle = '#000'; c.strokeText(l, W / 2, yy); c.shadowColor = 'transparent'; c.shadowBlur = 0; c.shadowOffsetY = 0; c.fillStyle = (th.colors || ['#ffffff', S.hi])[i % 2]; c.fillText(l, W / 2, yy); });
   if (th.tagline) { c.font = '800 54px Inter'; const tl = wrap(c, String(th.tagline).toUpperCase(), 820), ty = y + blockH + 44; tl.forEach((l, i) => { const w = c.measureText(l).width + 60; c.fillStyle = th.tagBg || S.warn; rrect(c, W / 2 - w / 2, ty + i * 84, w, 76, 14); c.fill(); c.fillStyle = th.tagColor || '#ffffff'; c.fillText(l, W / 2, ty + i * 84 + 56); }); }
@@ -350,7 +404,7 @@ window.renderBase = t => {
 // Draw the text layer over the saved picture. soft = Facebook/Instagram cut (no "comment A or B").
 window.renderOver = (t, soft) => {
   const c = ctx, S = sty(); c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = 1; c.drawImage(_base, 0, 0);
-  if (!window.CLEAN) { header(c, t, S); captions(c, t, S); choiceCard(c, t, S, !!soft); }
+  if (!window.CLEAN) { header(c, t, S); captions(c, t, S); voteCard(c, t, S); if (!TL.outro || t < TL.outro.start + 0.36) choiceCard(c, t, S, !!soft); outroCard(c, t, S, !!soft); }
   if (!window.NOMARK) watermark(c, t, S);
   if (window.GUIDES) guides(c);
 };

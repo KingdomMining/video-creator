@@ -47,12 +47,14 @@
       const obj = this.obj = s.add(K[p.b](p.o || {})), bb = new THREE.Box3().setFromObject(obj), sz = bb.getSize(new THREE.Vector3());
       this.c = bb.getCenter(new THREE.Vector3()); this.w = Math.max(sz.x, sz.z); this.h = sz.y;
       s.sun({ dir: p.sun || [5, 8, 6], color: '#fff2dc', intensity: 1.05, area: Math.max(6, this.w, this.h) * 1.3, center: [this.c.x, 0, this.c.z] }); s.hemi('#d4e0f2', '#6c6a5c', 0.55);
-      if (p.person !== false) s.add(person(), { pos: [bb.max.x + 0.5, 0, bb.max.z * 0.5] });
+      if (p.person !== false) s.add(person(), { pos: p.personAt || [bb.max.x + 0.5, 0, bb.max.z * 0.5] });
+      if (p.sky) { s.sky({ top: '#3f79c4', horizon: '#cfe3f2' }); s.fog('#cfe3f2', 120, 900); s.skyDisc({ dir: [0.4, 0.5, -1] }); }
     },
     update(s, lt, d, t, p) {
       const o = this.obj.userData; if (o.animate) o.animate(lt * (p.speed || 1)); if (p.open != null && o.open) o.open(p.open);
       const fov = p.fov || 36, tn = Math.tan(fov * Math.PI / 360), w = this.w + (p.person !== false ? 1.4 : 0), D = Math.max(this.h / (2 * tn), w / (2 * tn * 0.5625)) * (p.zoom ? 1 / p.zoom : 1.2);
-      s.cam.set({ pos: S3.orbit([this.c.x, this.c.y, this.c.z], D, (p.a0 ?? 0.5) + lt * (p.spin ?? 1.4), D * (p.tilt ?? 0.3)), look: [this.c.x, this.c.y, this.c.z], fov });
+      if (p.cam) s.cam.set({ pos: p.cam, look: p.lookAt || [0, 1, 0], fov });
+      else s.cam.set({ pos: S3.orbit([this.c.x, this.c.y, this.c.z], D, (p.a0 ?? 0.5) + lt * (p.spin ?? 1.4), D * (p.tilt ?? 0.3)), look: [this.c.x, this.c.y, this.c.z], fov });
     },
   });
 

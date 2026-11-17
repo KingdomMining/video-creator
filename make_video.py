@@ -84,6 +84,7 @@ def norm(w):
 
 def toks(text):
     text = text.lower().replace("-", " ").replace("i'm", "i am").replace("’", "'")
+    text = re.sub(r"\boption ay\b", "option a", text).replace("%", " percent")
     return [norm(w) for w in text.split() if norm(w)]
 
 def misheard(script, hw):
@@ -171,22 +172,37 @@ def slug_of(ep):
     return f"{s}-part{ep['episode']}"
 
 
+ONES = "zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen".split()
+TENS = "twenty thirty forty fifty sixty seventy eighty ninety".split()
+def num_words(n):
+    """0-100 in words, for the narrator."""
+    n = int(round(n))
+    if n < 20: return ONES[n]
+    if n == 100: return "one hundred"
+    return TENS[n // 10 - 2] + ("" if n % 10 == 0 else " " + ONES[n % 10])
+
+
 def timeline(ep, draft=False):
-    """Lay out narration, scenes and sound events on the clock. Returns (timeline dict, voice clips, report)."""
+    """Lay out narration, scenes and sound events on the clock. Returns (timeline dict, voice clips, report).
+
+    Order: cover frame -> (Part 2+: result of the last vote) -> story scenes -> choice card -> end card."""
     narrator = ep.get("narrator", "male")
     respell = ep.get("say", {})                     # {"written": "spoken"} pronunciation fixes
     def SAY(s):
         for k, v in respell.items(): s = re.sub(rf"\b{re.escape(k)}(?!\w)", v, s)
         return s
     th = ep.get("thumbnail") or {}
+    brand = ep.get("brand") or BRAND
     cover = float(ep.get("cover", COVER if th.get("visual") else 0))
-    t, clips, words, scenes, events, report = LEAD, [], [], [], [], []
+    t, clips, scenes, events, report = LEAD, [], [], [], []
 
     def speak(text):
+        """Say text starting at the current time; returns its word list."""
         nonlocal t
+        said = []
         for s, voice, fx in lines_of(text, narrator):
             if draft:
-                d = 0.22 + 0.0742 * len(re.sub(r"[^A-Za-z0-9]", "", s)) * VOICES[voice][2] / VOICES["male"][2]; a = None; wt = word_times(s, t, d)   # fitted to real narration
+                d = 0.22 + 0.0742 * len(re.sub(r"[^A-Za-z0-9]", "", s)) * VOICES[voice][2] / VOICES["male"][2]; wt = word_times(s, t, d)   # fitted to real narration
             else:
                 a, hw, bad = take(SAY(s), voice)
                 if bad: report.append((s, " ".join(w for w, _, _ in hw)))
@@ -197,16 +213,32 @@ def timeline(ep, draft=False):
                 clips.append((t, a, {"fx": fx, "alt": voice != narrator}))
             if voice != narrator:
                 for w in wt: w["alt"] = True
-            words.extend(wt); t += d + GAP
+            said.extend(wt); t += d + GAP
+        return said
 
+    # Part 2 onward: reveal how the audience voted on the previous decision, then the story continues down that path
+    vote, prev = None, ep.get("previous")
+    if prev:
+        a_pct, b_pct = prev["a_pct"], prev["b_pct"]
+        chosen = prev.get("chosen") or ("A" if a_pct >= b_pct else "B")
+        line = prev.get("narration") or (f"You voted. {num_words(a_pct).capitalize()} percent chose option A. "
+                                         f"{num_words(b_pct).capitalize()} percent chose option B. So option {chosen} it is.")
+        vw = speak(line)
+        so = next((w for w in reversed(vw) if norm(w["w"]) == "so"), None)
+        click = so["start"] if so else t - 1.3
+        vote = {"start": cover, "end": round(t + 0.35, 3), "click": round(click, 3), "question": prev.get("question", "WHAT DO YOU DO?"),
+                "a": prev["a"], "b": prev["b"], "a_pct": a_pct, "b_pct": b_pct, "chosen": chosen}
+        events += [{"type": "whoosh", "t": round(cover, 3)}, {"type": "impact", "t": round(click, 3), "gain": 0.6}]
+        t += 0.6
+
+    words = []
     for i, sc in enumerate(ep["scenes"]):
         start = scenes[-1]["end"] if scenes else cover
-        w0 = len(words)
-        if scenes: t = max(t, start) + sc.get("pre", 0)
-        speak(sc.get("text", ""))
+        if scenes: t = max(t, start)
+        t += sc.get("pre", 0)
+        mine = speak(sc.get("text", "")); words.extend(mine)
         t += sc.get("hold", 0)
         end = max(t + 0.05, start + sc.get("min", 0)); t = max(t, end - 0.05)
-        mine = words[w0:]
         for e in sc.get("sfx", []):
             if "on" in e:
                 hit = next((w for w in mine if norm(w["w"]) == norm(e["on"])), None)
@@ -216,23 +248,31 @@ def timeline(ep, draft=False):
             events.append({"type": e["type"], "t": round(at, 3), **{k: e[k] for k in ("gain", "pan") if k in e}})
         scenes.append({"id": sc.get("id", f"s{i + 1:02d}"), "visual": sc["visual"], "params": sc.get("params", {}), "start": round(start, 3), "end": round(end, 3),
                        "words": [{"w": w["w"], "t": round(w["start"] - start, 3)} for w in mine],
-                       **{k: sc[k] for k in ("in", "post", "ambience") if k in sc}})
+                       **{k: sc[k] for k in ("in", "post", "ambience", "space") if k in sc}})
     ch = ep["choice"]
     cstart = t + 0.1
     t = cstart + 0.45
-    n_story = len(words)
     speak(ch["narration"])
-    duration = round(t + ch.get("hold", 3.4), 2)
+    t += ch.get("hold", 2.0)
+    outro = None
+    if brand and brand.get("platforms") and ep.get("outro", True):      # end card: where to find the channel
+        ostart = t; t = ostart + 0.5
+        speak(brand.get("outro_say", f"Find more from {brand['name']}."))
+        outro = {"start": round(ostart, 3)}
+        duration = round(t + 0.9, 2)
+    else:
+        ostart = None; duration = round(t + 1.4, 2)
     scenes[-1]["end"] = duration
     events += [{"type": "riser", "t": round(cstart - 1.6, 3)}, {"type": "impact", "t": round(cstart, 3)}]
-    events += [{"type": "tick", "t": round(float(x), 3)} for x in np.arange(cstart + 0.5, duration - 0.2, 0.5)]
+    events += [{"type": "tick", "t": round(float(x), 3)} for x in np.arange(cstart + 0.5, (ostart or duration) - 0.2, 0.5)]
+    if ostart: events.append({"type": "whoosh", "t": round(ostart - 0.15, 3)})
     if ep.get("cut_whoosh", True):
         events += [{"type": "whoosh", "t": round(sc["start"] - 0.25, 3), "gain": 0.6} for sc in scenes[1:]]
     if cover: events.append({"type": "whoosh", "t": round(max(0, cover - 0.3), 3)})
     tl = {"fps": FPS, "duration": duration, "theme": ep.get("theme", "space"), "series": ep["series"], "episode": ep["episode"], "hook": ep.get("hook"),
-          "cover": cover, "style": ep.get("style"), "scripts": ep.get("scripts", []), "soft": False, "brand": ep.get("brand") or BRAND,
+          "cover": cover, "style": ep.get("style"), "scripts": ep.get("scripts", []), "soft": False, "brand": brand, "vote": vote, "outro": outro,
           "thumb": ({**th, "title": th.get("title", ep["series"])} if th.get("visual") else None),
-          "scenes": scenes, "chunks": chunk(words[:n_story]), "sfx": sorted(events, key=lambda e: e["t"]),
+          "scenes": scenes, "chunks": chunk(words), "sfx": sorted(events, key=lambda e: e["t"]),
           "choice": {"start": round(cstart, 3), "question": ch["question"], "a": ch["a"], "b": ch["b"]}}
     return tl, clips, report
 
@@ -250,7 +290,8 @@ def build(ep_path, mode="full", arg=None, draft=False, flags=()):
     print(f"{slug}: {tl['duration']:.1f}s, {nwords} story words{' (DRAFT timings)' if draft else ''}   [{tl_path}]")
     for sc in tl["scenes"]:
         print(f"  {sc['id']:<5} {sc['visual']:<26} {sc['start']:6.2f} -> {sc['end']:6.2f}  ({sc['end'] - sc['start']:.2f}s)")
-    print(f"  choice card at {tl['choice']['start']:.2f}s" + (f", cover frame held {tl['cover']:.1f}s" if tl["cover"] else ""))
+    print(f"  choice card at {tl['choice']['start']:.2f}s" + (f", end card at {tl['outro']['start']:.2f}s" if tl["outro"] else "")
+          + (f", cover frame held {tl['cover']:.1f}s" if tl["cover"] else "") + (f", vote result until {tl['vote']['end']:.2f}s" if tl["vote"] else ""))
     for want, got in report: print(f"  HEARD DIFFERENTLY:\n    script: {want}\n    heard:  {got}")
     if not draft and not (61 <= tl["duration"] <= 90): print(f"  WARNING: length {tl['duration']:.1f}s is outside 61-90s")
 

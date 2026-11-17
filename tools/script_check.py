@@ -37,7 +37,8 @@ def main(path):
         if not sc.get("shot"): notes.append(f"scene {i}: no shot description")
         if w > 30: notes.append(f"scene {i}: {w} words in one scene; consider splitting (a scene should be 4-9 seconds)")
         if w == 0: notes.append(f"scene {i}: no narration")
-    if not 155 <= total <= 185: problems.append(f"story narration is {total} words (need 155-185)")
+    lo, hi = (135, 160) if ep.get("previous") or ep.get("episode", 1) > 1 else (150, 178)
+    if not lo <= total <= hi: problems.append(f"story narration is {total} words (need {lo}-{hi})")
     if tagged > 3: problems.append(f"{tagged} tagged character lines (max 3)")
     ch = ep["choice"]
     cw = len(ch.get("narration", "").split())
@@ -49,7 +50,7 @@ def main(path):
     for sc in probe["scenes"]: sc.setdefault("visual", "space")
     probe.pop("thumbnail", None)
     tl, _, _ = mv.timeline(probe, draft=True)
-    dur = tl["duration"] + 0.8          # plus the opening cover frame
+    dur = tl["duration"] + 0.8          # plus the opening cover frame (the end card is already included)
     if not 63 <= dur <= 88: problems.append(f"estimated length {dur:.0f}s (need 63-88s to be safely inside 61-90s)")
     print(f"{ep['series']} part {ep['episode']}: {len(scenes)} scenes, {total} story words, question {cw} words, estimated {dur:.0f}s")
     for sc in tl["scenes"]:

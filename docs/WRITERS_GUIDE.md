@@ -93,9 +93,10 @@ Avoid:
 ## 6. Length budget
 
 - 9 to 13 scenes. A scene is one shot or a short sequence in one location, 4 to 9 seconds of narration.
-- **155 to 185 words** of story narration in total, plus the final question (two short sentences,
-  at most 14 words together). The narrator speaks about 2.9 words per second, so this lands at about
-  66-82 seconds including pauses and the choice card. Count the words.
+- **150 to 178 words** of story narration in total, plus the final question (two short sentences,
+  at most 14 words together). The narrator speaks about 2.9 words per second. After the question the video
+  shows the choice for a moment and then a 5-second end card (where to find the channel), so the whole video
+  lands at about 68-80 seconds. Count the words.
 - Sentences of 1 or 2 words are spoken badly by the voice. Use at least 3 words per sentence.
 - Another character may speak a short line. Mark it inside the narration with a tag before the sentence:
   `[as:male2]`, `[as:female]`, `[as:old]`, optionally with an effect: `[as:male2,fx:radio]`, `fx:phone`,
@@ -116,6 +117,25 @@ limits above and estimates the running time. It must print `RESULT: OK`.
 | Turn 2 | 35-55s | It gets personal or closer. Plant clue 2. The obvious way out closes. |
 | Twist | 55-68s | One new fact that makes the choice hard. |
 | Decision | last 7s | The question. Two options. |
+
+### Part 2 and later
+
+A later part opens with the result of the vote before any story: the screen shows the last question, both
+options and the real percentages, the winner is tapped, and the narrator says (automatically) "You voted. Sixty
+percent chose option A. Forty percent chose option B. So option A it is." That takes about 6 seconds, so a
+later part has **135 to 160 words** of story. Its first scene is the consequence of the winning choice: start
+on the action, with one short line that reorients a new viewer. Do not write the vote line yourself; put the
+numbers in the `previous` block of the episode:
+
+```
+"previous": {"question": "WHAT DO YOU DO?", "a": "OPEN THE DOOR", "b": "KEEP IT SHUT", "a_pct": 60, "b_pct": 40}
+```
+The percentages are the combined real votes from Instagram, Facebook, YouTube and TikTok, supplied by the
+channel owner. Never invent them.
+
+Every five parts of a series are also merged into one long video (`make_compilation.py`), which plays each part's
+story, its choice, then the next part's vote result. So every part must make sense both alone and straight
+after the previous one: no long recaps, no "previously on".
 
 ## 8. Consequence design
 

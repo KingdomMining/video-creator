@@ -77,8 +77,12 @@ Pick a font and an accent colour that fit the genre; the ten films must not look
 - `d` (the shot length) changes when the voice is rendered. Write `update` so it works for any `d`: drive
   slow moves with `lt / d`, and timed actions with cues.
 - The video opens with the thumbnail held for 0.8 s while the first words are already being spoken; scene 1
-  starts at 0.8 s. The last scene continues under the choice card for about 7 s: keep it alive (a slow move,
-  a looming threat) and keep its key subject visible above y 1400.
+  starts at 0.8 s. The last scene continues under the choice card for about 6 s and then under the end card
+  (channel name, handle, platforms) for about 6 s more: keep it alive (a slow move, a looming threat). The
+  choice card dims the picture to 30 percent and the end card to 10 percent.
+- In Part 2 and later, the first 6 seconds of scene 1 play under the vote-result card (dimmed). Start scene 1
+  with a slow establishing move, and put its first real action after the card clears
+  (`s.cue('firstword')` of the scene's narration is the safe moment).
 
 ## 5. Looking at your work
 

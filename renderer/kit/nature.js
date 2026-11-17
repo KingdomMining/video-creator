@@ -501,9 +501,258 @@ const KitNature = (() => {
     return plant('reeds', { trunk: null, parts: [{ soup: S, pivot: [0, 0, 0], w: 1, mat: MAT2() }], flex: [0.03, 0.05, 1.4], height: h, radius: W }, o);
   }
 
+  // ---------- cliffs, arch, cave ----------
+  const strata = (S, cols, band, seed, amt = 1) => { const list = [].concat(cols).map(C); return S.paint((ce, n, i, c) => { const b = flr(ce[1] / band + n2(ce[0] * 0.15, ce[2] * 0.15, seed) * 1.6 + 50); return new T.Color(c[i], c[i + 1], c[i + 2]).lerp(tone(list[b % list.length], 0.07, 0.006, S.r), amt); }); };
+  /** A rock face. o: {width, height, depth, color (one or a list of strata colours), grass (top colour or false), ends: 'taper' | 'cut', rubble, seed}. */
+  function cliff(o = {}) {
+    const seed = o.seed ?? 1, r = rng(seed * 269 + 7), W = o.width ?? 14, H = o.height ?? 9, D = o.depth ?? 5, cols = o.cols ?? Math.max(4, Math.round(W / 1.5)), rows = o.rows ?? Math.max(4, Math.round(H / 1.25));
+    const rockC = o.color || ['#8c8479', '#7c756c', '#989082', '#857c70'], S = new Soup(seed), taper = (o.ends || 'taper') === 'taper';
+    const setb = [0]; for (let j = 1; j <= rows; j++) setb.push(setb[j - 1] + (r() < 0.3 ? 0.45 + r() * 0.5 : (r() - 0.3) * 0.3));
+    const sc = Math.min(1, D * 0.5 / Math.max(0.01, Math.max(...setb))), G = [];
+    for (let i = 0; i <= cols; i++) {
+      G.push([]); const u = i / cols, e = Math.min(u, 1 - u), top = H * (taper ? 0.5 + 0.5 * sm(e / 0.28) : 1) * (0.9 + 0.2 * n2(u * 3.1, 0.5, seed)), bulge = (n2(u * cols * 0.45, 2.5, seed) - 0.5) * 1.5, x0 = (u - 0.5) * W;
+      for (let j = 0; j <= rows; j++) { const v = j / rows, jx = (i > 0 && i < cols) ? (r() - 0.5) * W / cols * 0.4 : 0, jy = (j > 0 && j < rows) ? (r() - 0.5) * top / rows * 0.3 : 0; G[i].push([x0 + jx, v * top + jy, D / 2 - setb[j] * sc + bulge * (0.4 + 0.6 * (1 - v)) + (r() - 0.5) * 0.3 - (taper ? (1 - sm(e / 0.15)) * D * 0.25 : 0)]); }
+    }
+    S.surf(cols, rows, (u, v, i, j) => G[i][j], rockC[0], { vary: 0.1 });
+    const zb = -D / 2, B = G.map(c => [c[rows][0], c[rows][1] + (r() - 0.5) * 0.4, zb]), M = G.map((c, i) => [c[rows][0], (c[rows][1] + B[i][1]) / 2 + (r() - 0.3) * 0.5, (c[rows][2] + zb) / 2]);
+    S.surf(cols, 2, (u, v, i, j) => j === 0 ? G[i][rows] : j === 1 ? M[i] : B[i], rockC[0], { vary: 0.1 });
+    S.surf(1, rows, (u, v, i, j) => i === 0 ? [G[0][j][0], G[0][j][1], zb] : G[0][j], rockC[0], { vary: 0.1 });
+    S.surf(1, rows, (u, v, i, j) => i === 0 ? G[cols][j] : [G[cols][j][0], G[cols][j][1], zb], rockC[0], { vary: 0.1 });
+    S.surf(cols, 1, (u, v, i, j) => j === 0 ? [G[cols - i][0][0], 0, zb] : B[cols - i], rockC[0], {});
+    strata(S, rockC, H / 6, seed); S.lit(0, H, 0.8, 1.06, 0.16);
+    if (o.grass !== false) S.top(o.grass || '#5f8540', 1, 0.62);
+    if (o.snow) S.top('#f1f5fb', o.snow, 0.4);
+    if (o.rubble !== false) { const n = Math.round(W / 2.6); for (let i = 0; i < n; i++) { const u = (i + r()) / n, c = G[Math.round(u * cols)][0], sz = 0.6 + r() * 1.3; const R2 = new Soup(seed + i + 3); rockInto(R2, sz, seed * 5 + i, { color: pick(rockC, r), detail: sz < 0.9 ? 0 : 1 }); R2.lit(0, sz * 0.5, 0.75, 1.05, 0.12); S.add(R2, { at: [c[0], 0, c[2] + sz * (0.2 + r() * 0.5)] }); } }
+    const g = group('cliff', S.mesh()); Object.assign(g.userData, { width: W, height: H, depth: D }); return g;
+  }
+  /** Free-standing natural rock arch you can walk through. o: {span (opening width), height (top of the arch), thick, color (list = strata), grass, seed}. */
+  function rockArch(o = {}) {
+    const seed = o.seed ?? 1, r = rng(seed * 271 + 3), span = o.span ?? 4.5, H = o.height ?? 6, Tk = o.thick ?? 1.7, rockC = o.color || ['#9a8f80', '#877d70', '#a39887', '#7d7468'], S = new Soup(seed);
+    const N = 13, a = span / 2 + Tk * 0.55, b = H - Tk * 0.4, pts = [], rad = [], lop = (r() - 0.5) * 0.5;
+    for (let i = 0; i <= N; i++) { const th = i / N * PI, sx = -cos(th), sy = Math.pow(sin(th), 0.62); pts.push([sx * a * (1 + lop * sx * 0.25) + (r() - 0.5) * 0.25, i === 0 || i === N ? -0.5 : sy * b * (1 + lop * sx * 0.12), (r() - 0.5) * 0.5]); rad.push(Tk * (0.72 - 0.26 * sy + (sx < 0 ? 0.14 : 0) * (1 - sy)) * (0.88 + r() * 0.24)); }
+    S.sweep(pts, rad, 7, rockC[0], { vary: 0.1, jit: 0.13, flat: 1.25 });
+    const lump = (x, y, z, sz, i) => { const R2 = new Soup(seed + i); rockInto(R2, sz, seed * 7 + i, { color: rockC[0], squash: [1, 0.75, 0.9], sink: 0.3 }); S.add(R2, { at: [x, y, z] }); };
+    lump(pts[4][0] - 0.3, pts[4][1] + rad[4] * 0.3, 0.2, Tk * 1.3, 1); lump(-a - Tk * 0.5, 0, 0.5, Tk * 1.25, 2); lump(a + Tk * 0.35, 0, -0.4, Tk * 0.9, 3); lump(a - Tk * 0.2, 0, 0.9, Tk * 0.5, 4); lump(-a + Tk * 0.4, 0, -0.9, Tk * 0.55, 5);
+    strata(S, rockC, 0.8, seed); S.lit(0, H, 0.8, 1.06, 0.16); if (o.grass !== false) S.top(o.grass || '#66873f', 0.85, 0.72, { above: H * 0.55 }); if (o.snow) S.top('#f1f5fb', o.snow, 0.4);
+    const g = group('rockArch', S.mesh()); Object.assign(g.userData, { span, height: H, clear: b - Tk * 0.45 }); return g;
+  }
+  /** A cave entrance in a rock mound; the inside fades to black. o: {width, height, depth, openW, openH, color, grass, dark, fangs, seed}. userData.mouth = centre of the opening. */
+  function caveMouth(o = {}) {
+    const seed = o.seed ?? 1, r = rng(seed * 277 + 9), W = o.width ?? 11, H = o.height ?? 6.5, D = o.depth ?? 8, ow = o.openW ?? 3.4, oh = o.openH ?? 3.5, rockC = o.color || ['#7f7a72', '#6e6a64', '#8b857b', '#77716a'];
+    const S = new Soup(seed), n = 14, R = 4, zf = D / 2, open = [], rim = [], ring = [];
+    for (let i = 0; i <= n; i++) {
+      const th = i / n * PI, cx = -cos(th), sy = sin(th), e = i === 0 || i === n;
+      open.push([cx * ow / 2 * (1 + (e ? 0 : (r() - 0.5) * 0.16)) * (1 - 0.12 * sy * sy), Math.pow(sy, 0.6) * oh * (1 + (r() - 0.5) * 0.1), zf - 0.5 + (r() - 0.5) * 0.3]);
+      rim.push([cx * W / 2 * (0.92 + r() * 0.16), Math.pow(sy, 0.75) * H * (0.86 + r() * 0.22), zf - D * 0.36 + (r() - 0.5) * 0.6]);
+    }
+    for (let k = 0; k <= R; k++) { const v = k / R; ring.push(open.map((p, i) => { if (k === 0) return p; if (k === R) return rim[i]; const q = vlerp(p, rim[i], Math.pow(v, 0.85)), e = i === 0 || i === n; return [q[0] + (e ? 0 : (r() - 0.5) * 0.5), q[1] + (e ? 0 : (r() - 0.5) * 0.4), zf - 0.5 + sin(v * PI) * 0.7 - v * v * (zf - 0.5 - rim[i][2]) + (r() - 0.5) * 0.35]; })); }
+    S.surf(n, R, (u, v, i, j) => ring[j][i], rockC[0], { vary: 0.1 });
+    const back = [0.82, 0.5].map((sc2, k) => rim.map((p, i) => [p[0] * sc2 * (0.95 + r() * 0.1), p[1] * (k ? 0.5 : 0.86) * (0.95 + r() * 0.1), k ? -D / 2 + 0.3 : -D * 0.12]));
+    S.surf(n, 2, (u, v, i, j) => j === 0 ? rim[i] : back[j - 1][i], rockC[0], { vary: 0.1 });
+    const bc = [0, 0, -D / 2]; for (let i = 0; i < n; i++) S.tri(bc, back[1][i + 1], back[1][i], S.sh(rockC[0], 0.1));
+    strata(S, rockC, 1.0, seed); S.lit(0, H, 0.78, 1.06, 0.16); if (o.grass !== false) S.top(o.grass || '#5f8540', 0.95, 0.66, { above: oh * 0.8 }); if (o.snow) S.top('#f1f5fb', o.snow, 0.4);
+    // the throat: walls and floor that fade to black
+    const dark = C(o.dark || '#020203'), zs = [0, -1.2, -3, -5.5], sh = [1, 0.9, 0.74, 0.5], fade = [0.5, 0.82, 0.96, 1], wall = C(rockC[1]);
+    S.surf(n, 3, (u, v, i, j) => [open[i][0] * sh[j], open[i][1] * sh[j], open[i][2] + zs[j]], null, { flip: true, col: (u, v, i, j) => wall.clone().lerp(dark, (fade[j] + fade[j + 1]) / 2), vary: 0.08 });
+    for (let i = 0; i < n; i++) S.tri([0, oh * 0.25, open[0][2] + zs[3]], [open[i + 1][0] * sh[3], open[i + 1][1] * sh[3], open[i + 1][2] + zs[3]], [open[i][0] * sh[3], open[i][1] * sh[3], open[i][2] + zs[3]], dark);
+    for (let j = 0; j < 3; j++) S.quad([open[0][0] * sh[j], 0.03, open[0][2] + zs[j]], [open[n][0] * sh[j], 0.03, open[n][2] + zs[j]], [open[n][0] * sh[j + 1], 0.03, open[n][2] + zs[j + 1]], [open[0][0] * sh[j + 1], 0.03, open[0][2] + zs[j + 1]], C(o.floor || '#4a443c').clone().lerp(dark, (fade[j] + fade[j + 1]) / 2));
+    for (let i = 0, nf = o.fangs || 0; i < nf; i++) { const p = open[3 + flr((i + 0.5) / nf * (n - 6))], L = 0.35 + r() * 0.5; S.sweep([[p[0], p[1] + 0.2, p[2] - 0.25], [p[0] + (r() - 0.5) * 0.1, p[1] - L, p[2] - 0.2]], [0.13, 0.015], 5, rockC[2], { vary: 0.1, capB: false }); }
+    const side = (x, z, sz, i) => { const R2 = new Soup(seed + i); rockInto(R2, sz, seed * 11 + i, { color: pick(rockC, r) }); R2.lit(0, sz * 0.5, 0.75, 1.05, 0.12); S.add(R2, { at: [x, 0, z] }); };
+    side(-ow * 0.5 - 1.0, zf + 0.3, 1.5, 1); side(ow * 0.5 + 1.3, zf + 0.1, 1.1, 2); side(ow * 0.5 + 2.3, zf + 0.8, 0.6, 3); side(-ow * 0.5 - 2.4, zf + 0.7, 0.7, 4);
+    const g = group('caveMouth', S.mesh()); Object.assign(g.userData, { mouth: [0, oh * 0.45, zf - 0.5], openW: ow, openH: oh }); return g;
+  }
+
+  // ---------- distant backdrops ----------
+  const tri01 = x => 1 - Math.abs(2 * (x - flr(x)) - 1);
+  function ridgeRing(type, o, d) {
+    const seed = o.seed ?? 1, R = o.radius ?? d.radius, H = o.height ?? d.height, N = o.segments ?? d.segments, layers = o.layers ?? d.layers, arc = o.arc || [0, TAU], full = Math.abs(arc[1] - arc[0] - TAU) < 1e-3;
+    const rockC = C(o.color || d.color), baseC = C(o.base || d.base), snowC = C(o.snow || '#f3f6fb'), hazeC = C(o.haze || '#c9dbea'), hz = o.hazeAmount ?? d.haze, snowLine = o.snowLine ?? d.snowLine, sharp = o.sharp ?? d.sharp;
+    const g = group(type);
+    for (let L = 0; L < layers; L++) {
+      const r = rng(seed * 283 + L * 17 + 1), S = new Soup(seed + L * 5), RL = R * (1 + L * 0.42), HL = H * (1 + L * 0.55), p1 = r() * 9, p2 = r() * 9, p3 = r() * 9, f1 = 3 + flr(r() * 2), f2 = 7 + flr(r() * 3), hzL = clamp(hz + L * 0.22);
+      const hAt = t => { const pk = sharp * (0.6 * tri01(t * f1 + p1) + 0.4 * tri01(t * f2 + p2)) + (1 - sharp) * (0.5 + 0.5 * sin(t * TAU * f1 + p1) * 0.6 + 0.4 * 0.5 * sin(t * TAU * f2 + p2)); return HL * (0.28 + 0.72 * pk) * (0.82 + 0.36 * tri01(t * 2 + p3)); };
+      const rows = 3, ring = [];
+      for (let i = 0; i <= N; i++) {
+        const t = (full && i === N) ? 0 : i / N, a = arc[0] + (i / N) * (arc[1] - arc[0]), h = hAt(t) * (0.92 + r() * 0.16), wIn = h * 1.15 + R * 0.08, col = [];
+        for (let j = 0; j <= rows; j++) { const v = j / rows, jz = (j > 0 && j < rows) ? (i % 2 ? 1 : -1) * 0.35 / N * TAU * (0.5 + r()) : 0, dd = RL - wIn * (1 - v) + (j === rows ? (r() - 0.5) * R * 0.05 : (r() - 0.5) * wIn * 0.12); col.push([sin(a + jz) * dd, j === 0 ? -4 : h * Math.pow(v, 1.25) * (j < rows ? 0.85 + r() * 0.3 : 1), cos(a + jz) * dd]); }
+        ring.push(col);
+      }
+      if (full) ring[N] = ring[0];
+      S.surf(N, rows, (u, v, i, j) => ring[i][j], rockC, { flip: true, vary: 0.07 });
+      S.paint((ce, n) => { const hh = ce[1] / HL, k = sm((hh - 0.08) / 0.3), c = baseC.clone().lerp(rockC, k).multiplyScalar(0.9 + S.r() * 0.2); if (hh > snowLine + (S.r() - 0.5) * 0.12) c.lerp(snowC, 0.92); return c.lerp(hazeC, clamp(hzL * (1.15 - 0.4 * hh))); });
+      if (d.trees && o.trees !== false && L === 0) { const tc = C(o.treeColor || '#34553c').clone().lerp(hazeC, hzL * 0.9); for (let i = 0; i < (o.treeCount ?? 110); i++) { const ci = flr(r() * N), v = 0.25 + r() * 0.6, c0 = ring[ci], c1 = ring[ci + 1], q = r(), fj = v * rows, j = Math.min(rows - 1, flr(fj)), pa = vlerp(vlerp(c0[j], c0[j + 1], fj - j), vlerp(c1[j], c1[j + 1], fj - j), q), th = HL * (0.2 + r() * 0.16); S.geo(new T.ConeGeometry(th * 0.3, th, 4).translate(0, th * 0.4, 0), tc, { at: pa, vary: 0.12 }); } }
+      const m = S.mesh(MATFAR()); m.castShadow = m.receiveShadow = false; m.frustumCulled = false; g.add(m);
+    }
+    Object.assign(g.userData, { radius: R, height: H }); return g;
+  }
+  /** Ring of distant peaks around the set (not fogged; hazed by its own colours). o: {radius, height, segments, layers, color, base, snow, snowLine (0..1 of height, >1 = none), haze, hazeAmount, arc:[from, to], seed}. */
+  const mountains = (o = {}) => ridgeRing('mountains', o, { radius: 330, height: 95, segments: 84, layers: 2, color: '#5d6876', base: '#4a5d55', snowLine: 0.58, haze: 0.38, sharp: 1 });
+  /** Ring of rounded wooded hills. Same options as mountains() plus trees:false, treeCount, treeColor. */
+  const hills = (o = {}) => ridgeRing('hills', o, { radius: 170, height: 26, segments: 60, layers: 1, color: '#5d8348', base: '#4d7340', snowLine: 9, haze: 0.22, sharp: 0, trees: true });
+
+  function cloudSoup(seed, W, o = {}) {
+    const S = new Soup(seed), r = S.r, n = 5 + flr(r() * 3), white = C(o.color || '#ffffff'), shade = C(o.shade || '#a9b9cf'); let top = 0;
+    for (let i = 0; i < n; i++) { const u = n > 1 ? i / (n - 1) : 0.5, rr = W * (0.12 + 0.13 * sin(u * PI) + r() * 0.05), y = rr * (0.5 + r() * 0.25); S.blob(rr, white, seed * 3 + i, { at: [(u - 0.5) * W * 0.78 + (r() - 0.5) * W * 0.08, y, (r() - 0.5) * W * 0.28], squash: [1.2, 0.82, 1], octa: i % 2 === 1, detail: 1, bump: 0.15, vary: 0.025 }); top = Math.max(top, y + rr * 0.82); }
+    S.floor(0).paint((ce, n) => white.clone().lerp(shade, clamp(1 - sm(ce[1] / (top * 0.6)) + Math.max(0, -n[1]) * 0.5) * 0.85).multiplyScalar(0.97 + r() * 0.06));
+    return S;
+  }
+  /** One cumulus cloud, flat-bottomed. o: {size (width m), color, shade, seed}. */
+  function cloud(o = {}) { const m = cloudSoup(o.seed ?? 1, o.size ?? 30, o).mesh(MATFAR()); m.castShadow = m.receiveShadow = false; return group('cloud', m); }
+  /** A sky full of drifting clouds. o: {count, area (half-extent m), height:[lo, hi], size:[min, max], speed (m/s), dir (radians, 0 = toward +Z), color, shade, seed}. userData.drift(lt). */
+  function clouds(o = {}) {
+    const seed = o.seed ?? 1, r = rng(seed * 293 + 1), n = o.count ?? 9, A = o.area ?? 420, hh = o.height || [85, 140], ss = o.size || [34, 70], spd = o.speed ?? 2.5, dir = o.dir ?? PI / 2, g = group('clouds');
+    const geos = [0, 1, 2, 3].map(i => cloudSoup(seed * 5 + i, 1, o).geometry()), items = [];
+    for (let i = 0; i < n; i++) { const m = new T.Mesh(geos[i % 4], MATFAR()), sc = lerp(ss[0], ss[1], r()); m.scale.set(sc, sc * (0.8 + r() * 0.4), sc); m.rotation.y = (r() < 0.5 ? PI : 0) + (r() - 0.5) * 0.5; m.frustumCulled = false; g.add(m); items.push({ m, x: (r() - 0.5) * 2 * A, z: (r() - 0.5) * 2 * A, y: lerp(hh[0], hh[1], r()), v: 0.7 + r() * 0.6 }); }
+    g.userData.items = items;
+    g.userData.drift = (lt, speed = spd) => { for (const q of items) { const d = lt * speed * q.v; q.m.position.set(mod(q.x + sin(dir) * d + A, 2 * A) - A, q.y, mod(q.z + cos(dir) * d + A, 2 * A) - A); } return g; };
+    g.userData.animate = lt => g.userData.drift(lt); g.userData.drift(0); return g;
+  }
+
+  // ---------- water ----------
+  function waveSet(o, seed) {
+    const r = rng(seed * 71 + 3), amp = o.amp ?? 0.03, len = o.len ?? 3, dir = o.dir ?? 0.6, spd = o.speed ?? 1, W = [];
+    for (const [l, a, da] of [[1, 0.5, 0], [0.62, 0.3, 0.7], [0.37, 0.2, -0.9], [1.7, 0.35, 0.3]]) { const k = TAU / (len * l), d = dir + da * (o.spread ?? 1) + (r() - 0.5) * 0.3; W.push({ dx: sin(d), dz: cos(d), k, w: spd * 0.55 * Math.sqrt(9.8 * k), a: amp * a, p: r() * TAU }); }
+    return W;
+  }
+  const waveH = (W, x, z, t) => { let y = 0; for (const w of W) y += w.a * sin((x * w.dx + z * w.dz) * w.k - t * w.w + w.p); return y; };
+  /** Animated faceted water from vertices [x, z, amp 0..1, shade 0 deep..1 shallow..2 foam] and index triples. Normals are exaggerated (choppy) so small waves still glitter. */
+  function waterMesh(verts, tris, o, seed) {
+    for (const t of tris) { const a = verts[t[0]], b = verts[t[1]], c = verts[t[2]]; if ((b[1] - a[1]) * (c[0] - a[0]) - (b[0] - a[0]) * (c[1] - a[1]) < 0) { const q = t[1]; t[1] = t[2]; t[2] = q; } }
+    const nT = tris.length, pos = new Float32Array(nT * 9), nor = new Float32Array(nT * 9), col = new Float32Array(nT * 9), hg = new Float32Array(verts.length), r = rng(seed * 89 + 1);
+    const deep = C(o.color || '#2c6a8a'), shal = C(o.shallow || '#5fb3ad'), foam = C(o.foam || '#eef7f6'), tmp = new T.Color();
+    for (let i = 0; i < nT; i++) { const f = 1 + (r() - 0.5) * 2 * (o.vary ?? 0.05); for (let j = 0; j < 3; j++) { const v = verts[tris[i][j]], q = i * 9 + j * 3, sh = v[3] || 0; pos[q] = v[0]; pos[q + 2] = v[1]; tmp.copy(deep).lerp(shal, clamp(sh)); if (sh > 1) tmp.lerp(foam, clamp(sh - 1)); col[q] = tmp.r * f; col[q + 1] = tmp.g * f; col[q + 2] = tmp.b * f; nor[q + 1] = 1; } }
+    const g = new T.BufferGeometry(); g.setAttribute('position', new T.BufferAttribute(pos, 3)); g.setAttribute('normal', new T.BufferAttribute(nor, 3)); g.setAttribute('color', new T.BufferAttribute(col, 3)); g.computeBoundingSphere();
+    const mat = new T.MeshStandardMaterial({ vertexColors: true, roughness: o.rough ?? 0.22, metalness: o.metal ?? 0.08, transparent: true, opacity: o.opacity ?? 0.86, depthWrite: false });
+    const m = new T.Mesh(g, mat); m.receiveShadow = true; m.renderOrder = 2;
+    const W = waveSet(o, seed), chop = o.choppy ?? 4, cen = tris.map(t => { const a = verts[t[0]], b = verts[t[1]], c = verts[t[2]]; return [(a[0] + b[0] + c[0]) / 3, (a[1] + b[1] + c[1]) / 3, (a[2] + b[2] + c[2]) / 3]; });
+    const animate = lt => {
+      for (let i = 0; i < verts.length; i++) hg[i] = verts[i][2] * waveH(W, verts[i][0], verts[i][1], lt);
+      for (let i = 0; i < nT; i++) {
+        const t = tris[i], c = cen[i], q = i * 9; pos[q + 1] = hg[t[0]]; pos[q + 4] = hg[t[1]]; pos[q + 7] = hg[t[2]];
+        let gx = 0, gz = 0; for (const w of W) { const cc = w.a * w.k * cos((c[0] * w.dx + c[1] * w.dz) * w.k - lt * w.w + w.p); gx += cc * w.dx; gz += cc * w.dz; }
+        gx *= c[2] * chop; gz *= c[2] * chop; const l = 1 / Math.sqrt(gx * gx + gz * gz + 1);
+        for (let j = 0; j < 9; j += 3) { nor[q + j] = -gx * l; nor[q + j + 1] = l; nor[q + j + 2] = -gz * l; }
+      }
+      g.attributes.position.needsUpdate = true; g.attributes.normal.needsUpdate = true;
+    };
+    animate(0); m.userData.animate = animate; m.userData.heightAt = (x, z, lt) => waveH(W, x, z, lt);
+    return m;
+  }
+  /** Jittered grid over [x0,x1] x [z0,z1] with alternating diagonals. keep(x, z) -> false drops a vertex; snap(x, z) may move it. */
+  function gridTris(x0, x1, z0, z1, nx, nz, r, mapV, jit = 0.3) {
+    const verts = [], id = [], tris = [], dx = (x1 - x0) / nx, dz = (z1 - z0) / nz;
+    for (let i = 0; i <= nx; i++) { id.push([]); for (let j = 0; j <= nz; j++) { const e = i === 0 || i === nx || j === 0 || j === nz, v = mapV(x0 + i * dx + (e ? 0 : (r() - 0.5) * 2 * jit * dx), z0 + j * dz + (e ? 0 : (r() - 0.5) * 2 * jit * dz), i, j); id[i].push(v ? verts.push(v) - 1 : -1); } }
+    for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) { const a = id[i][j], b = id[i + 1][j], c = id[i + 1][j + 1], d = id[i][j + 1], add = (p, q, s) => { if (p >= 0 && q >= 0 && s >= 0) tris.push([p, q, s]); }; if ((i + j) % 2) { add(a, b, d); add(b, c, d); } else { add(a, b, c); add(a, c, d); } }
+    return { verts, tris };
+  }
+  const outline = (R, seed, wob = 1) => { const r = rng(seed * 97 + 5), p = [r() * TAU, r() * TAU, r() * TAU]; return a => R * (1 + wob * (0.14 * sin(2 * a + p[0]) + 0.08 * sin(3 * a + p[1]) + 0.045 * sin(5 * a + p[2]))); };
+  /** Still water with a shore: the base of pond() and lake(). */
+  function basin(type, o, d) {
+    const seed = o.seed ?? 1, r = rng(seed * 307 + 3), R = o.radius ?? d.radius, Rf = outline(R, seed, o.wobble ?? 1), wl = o.level ?? d.level, crest = wl + (o.bank ?? d.bank), cell = o.cell ?? d.cell, n = Math.max(6, Math.round(R * 2.4 / cell));
+    const ang = (x, z) => Math.atan2(x, z);
+    const gr = gridTris(-R * 1.2, R * 1.2, -R * 1.2, R * 1.2, n, n, r, (x, z) => { const dd = hyp(x, z), lim = Rf(ang(x, z)) * 1.04; if (dd > lim + cell * 1.5) return null; const k = dd > lim ? lim / dd : 1, u = Math.min(1, dd / lim); return [x * k, z * k, 1 - 0.75 * sm((u - 0.6) / 0.4), sm((u - 0.5) / 0.45) * 1.0]; });
+    const water = waterMesh(gr.verts, gr.tris, { amp: d.amp, len: d.len, choppy: d.choppy, ...o }, seed); water.position.y = wl;
+    const S = new Soup(seed), ns = Math.max(14, Math.round(R * 1.6)), rm = [0, 0.5, 0.8, 0.93, 1.02, 1.1, 1.3 + 0.6 / R], ys = [0.012, 0.012, 0.012, wl - 0.015, crest, crest * 0.8, -0.03];
+    const bed = C(o.bed || d.bed), wet = C(o.wet || d.wet), dry = C(o.shore || d.shore), bandC = [bed, bed.clone().lerp(wet, 0.6), wet, wet.clone().lerp(dry, 0.5), dry, dry.clone().multiplyScalar(0.92)];
+    S.surf(ns, 6, (u, v, i, j) => { const a = (i % ns) / ns * TAU, e = j >= 4 ? 1 + ((i * 7 + j * 3) % 5 - 2) * 0.02 : 1, dd = Rf(a) * rm[j] * e; return [sin(a) * dd, ys[j] * (j === 4 ? 0.8 + ((i * 13) % 7) / 14 : 1), cos(a) * dd]; }, null, { flip: true, col: (u, v, i, j) => bandC[j], vary: 0.07 });
+    const shore = S.mesh(MATDECAL()); shore.castShadow = false;
+    const g = group(type, shore, water);
+    Object.assign(g.userData, { water, radius: R, level: wl, outline: Rf, animate: lt => water.userData.animate(lt), heightAt: (x, z, lt) => wl + water.userData.heightAt(x, z, lt), edge: a => { const dd = Rf(a); return [sin(a) * dd, 0, cos(a) * dd]; } });
+    return g;
+  }
+  /** Small pond with a muddy bank, reeds, stones and lily pads. o: {radius, color, shallow, shore, wet, bed, reeds, lilies, stones, amp, len, speed, seed}. userData.animate(lt). */
+  function pond(o = {}) {
+    const seed = o.seed ?? 1, r = rng(seed * 311 + 7), g = basin('pond', o, { radius: 3.6, level: 0.07, bank: 0.09, cell: 0.75, amp: 0.012, len: 1.5, choppy: 9, bed: '#1f3b3d', wet: '#4b4334', shore: '#6f6247' }), U = g.userData, R = U.radius;
+    const sw = [];
+    for (let i = 0, n = o.reeds ?? 4; i < n; i++) { const a = seed + i * 1.9 + r() * 0.8, p = U.edge(a), k = 0.9 + r() * 0.08, rd = reeds({ seed: seed * 3 + i, count: 9 + flr(r() * 6), size: 0.4 + r() * 0.25, height: 1.2 + r() * 0.5 }); rd.position.set(p[0] * k, 0.04, p[2] * k); g.add(rd); sw.push(rd); }
+    const S = new Soup(seed + 1);
+    for (let i = 0, n = o.stones ?? 5; i < n; i++) { const a = seed * 2 + i * 1.3 + r(), p = U.edge(a), k = 1.0 + r() * 0.1, R2 = new Soup(seed + i); rockInto(R2, 0.3 + r() * 0.4, seed * 9 + i, { detail: 0 }); R2.lit(0, 0.3, 0.75, 1.05, 0.12); S.add(R2, { at: [p[0] * k, 0.05, p[2] * k] }); }
+    if (S.tris) g.add(S.mesh());
+    const L = new Soup(seed + 2);
+    for (let i = 0, n = o.lilies ?? 6; i < n; i++) { const a = r() * TAU, dd = U.outline(a) * (0.25 + r() * 0.5), x = sin(a) * dd, z = cos(a) * dd, pr = 0.16 + r() * 0.1, a0 = r() * TAU, c = tone('#4f8f45', 0.12, 0.02, r); for (let k = 0; k < 6; k++) { const a1 = a0 + k / 7 * TAU, a2 = a0 + (k + 1) / 7 * TAU; L.tri([x, 0, z], [x + sin(a1) * pr, 0, z + cos(a1) * pr], [x + sin(a2) * pr, 0, z + cos(a2) * pr], c); } if (i % 3 === 0) L.geo(new T.OctahedronGeometry(0.06), i % 2 ? '#f4e9f0' : '#f1b8cf', { at: [x, 0.04, z], scl: [1, 0.7, 1] }); }
+    if (L.tris) { const lm = L.mesh(MAT2()); lm.position.y = U.level + 0.03; lm.castShadow = false; lm.renderOrder = 3; g.add(lm); }
+    const base = U.animate; U.reeds = sw; U.animate = lt => { base(lt); sw.forEach(q => q.userData.sway(lt, o.wind ?? 1)); };
+    return g;
+  }
+  /** A lake with a pebbly shore. o: {radius, color, shallow, shore, wet, bed, amp, len, speed, wobble, seed}. userData.animate(lt), heightAt(x, z, lt), edge(angle). */
+  const lake = (o = {}) => basin('lake', o, { radius: 30, level: 0.12, bank: 0.16, cell: 2.2, amp: 0.035, len: 5, choppy: 6, bed: '#17323c', wet: '#6d6756', shore: '#a39a80' });
+  /** A river running along X (flowing toward +X), with banks. o: {length, width, meander, color, shallow, shore, wet, bed, amp, len, speed, seed}. userData.animate(lt), centre(x) -> z. */
+  function river(o = {}) {
+    const seed = o.seed ?? 1, r = rng(seed * 313 + 9), L = o.length ?? 60, Wd = o.width ?? 7, me = o.meander ?? 2.2, wl = o.level ?? 0.1, crest = wl + (o.bank ?? 0.16), ph = r() * TAU, per = o.period ?? 38;
+    const mz = x => me * sin(x * TAU / per + ph) + me * 0.35 * sin(x * TAU / (per * 0.43) + ph * 2), nx = Math.round(L / 1.5), nz = Math.max(4, Math.round(Wd / 1.4));
+    const gr = gridTris(-L / 2, L / 2, -0.52, 0.52, nx, nz, r, (x, t) => { const e = Math.abs(t) * 2; return [x, mz(x) + t * Wd, 1 - 0.7 * sm((e - 0.6) / 0.4), sm((e - 0.45) / 0.5)]; }, 0.28);
+    const water = waterMesh(gr.verts, gr.tris, { amp: 0.022, len: 2.4, choppy: 8, dir: PI / 2, spread: 0.45, speed: 1.3, ...o }, seed); water.position.y = wl;
+    const S = new Soup(seed), bed = C(o.bed || '#1c3a40'), wet = C(o.wet || '#5a5343'), dry = C(o.shore || '#8f8468'), ts = [-0.72, -0.56, -0.5, -0.44, -0.3, 0, 0.3, 0.44, 0.5, 0.56, 0.72], ys = [-0.03, crest * 0.8, crest, wl - 0.015, 0.012, 0.012, 0.012, wl - 0.015, crest, crest * 0.8, -0.03];
+    const bc = [dry.clone().multiplyScalar(0.92), dry, wet.clone().lerp(dry, 0.5), wet, bed, bed, wet, wet.clone().lerp(dry, 0.5), dry, dry.clone().multiplyScalar(0.92)], ns = Math.round(L / 2);
+    S.surf(ns, 10, (u, v, i, j) => { const x = (u - 0.5) * L, wob = (j <= 2 || j >= 8) ? ((i * 7 + j) % 5 - 2) * 0.05 : 0; return [x, ys[j] * (j === 2 || j === 8 ? 0.8 + ((i * 13) % 7) / 14 : 1), mz(x) + (ts[j] + wob * Math.sign(ts[j])) * Wd - Math.sign(ts[j]) * (Math.abs(ts[j]) > 0.6 ? 0.7 : 0)]; }, null, { flip: true, col: (u, v, i, j) => bc[j], vary: 0.07 });
+    const shore = S.mesh(MATDECAL()); shore.castShadow = false;
+    const g = group('river', shore, water);
+    Object.assign(g.userData, { water, length: L, width: Wd, level: wl, centre: mz, animate: lt => water.userData.animate(lt), heightAt: (x, z, lt) => wl + water.userData.heightAt(x, z, lt) });
+    return g;
+  }
+  /** Open sea out to the horizon, with real swell near the origin. Do not add s.ground() above it. o: {size, level, color, shallow, amp, len, speed, dir, detail (m of fine waves), seed}. userData.animate(lt), heightAt(x, z, lt). */
+  function sea(o = {}) {
+    const seed = o.seed ?? 1, r = rng(seed * 317 + 1), size = o.size ?? 1400, n = o.seg ?? 46, half = size / 2, fine = o.detail ?? 45, lvl = o.level ?? 0, pw = Math.log(fine / half) / Math.log(0.42);
+    const warp = t => Math.sign(t) * Math.pow(Math.abs(t), pw) * half;
+    const gr = gridTris(-1, 1, -1, 1, n, n, r, (u, v) => { const x = warp(u), z = warp(v), d = hyp(x, z); return [x, z, 1 / (1 + Math.pow(d / (fine * 1.6), 2)), 0]; }, 0.22);
+    const water = waterMesh(gr.verts, gr.tris, { amp: 0.22, len: 9, choppy: 1.6, dir: 0.5, rough: 0.28, opacity: 0.93, color: '#1f5f80', vary: 0.06, ...o }, seed); water.position.y = lvl;
+    const bed = S3.plane(size, size, o.bed || '#12374a', { rough: 1 }); bed.position.y = lvl - (o.depth ?? 2.5); bed.castShadow = false;
+    const g = group('sea', bed, water);
+    Object.assign(g.userData, { water, level: lvl, animate: lt => water.userData.animate(lt), heightAt: (x, z, lt) => lvl + water.userData.heightAt(x, z, lt) });
+    return g;
+  }
+  /** A sandy shore: you stand on dry sand at the origin (y = 0) and the sea lies toward -Z. Brings its own ground and sea: do not add s.ground(). o: {length, sand, wet, inland, color (sea), shallow, amp, len, speed, seaLevel, seed}. userData.animate(lt), waterline (z). */
+  function beach(o = {}) {
+    const seed = o.seed ?? 1, r = rng(seed * 331 + 3), L = o.length ?? 260, lvl = o.seaLevel ?? -0.45, slopeW = o.slope ?? 9, z0 = -3.5;      // sand starts to fall at z0
+    const sandC = C(o.sand || '#dcc594'), wetC = C(o.wet || '#a8926a'), inC = C(o.inland || '#8f9a5c');
+    const hS = z => z >= z0 ? 0.06 * (1 - Math.exp(-(z - z0) * 0.25)) - 0.06 * 0 : -Math.pow((z0 - z) / slopeW, 1.15) * 0.62;      // sand height profile
+    const zs = [140, 60, 30, 16, 9, 4, 0, z0, z0 - 1.5, z0 - 3, z0 - 4.5, z0 - 6, z0 - 8, z0 - 11, z0 - 16, z0 - 30], nx = Math.round(L / 6), S = new Soup(seed);
+    const wlz = z0 - slopeW * Math.pow(-lvl / 0.62, 1 / 1.15);     // where the sand meets the mean sea level
+    S.surf(nx, zs.length - 1, (u, v, i, j) => { const x = (u - 0.5) * L + ((i > 0 && i < nx) ? (r() - 0.5) * 2.5 : 0), z = zs[zs.length - 1 - j] + ((j > 0 && j < zs.length - 1) ? (r() - 0.5) * 0.5 : 0); return [x, hS(z) + (z > 6 ? (n2(x * 0.05, z * 0.05, seed) - 0.5) * Math.min(1.6, (z - 6) * 0.06) : 0) + (z > z0 ? (r() - 0.5) * 0.03 : 0), z]; }, null,
+      { vary: 0.05, col: (u, v, i, j) => { const z = (zs[zs.length - 1 - j] + zs[zs.length - 2 - j]) / 2; return z > 22 ? sandC.clone().lerp(inC, sm((z - 22) / 30)) : z < wlz + 2.6 ? sandC.clone().lerp(wetC, sm((wlz + 2.6 - z) / 1.6)) : sandC; } });
+    const sand = S.mesh(); sand.castShadow = false;
+    const sw = sea({ level: lvl, amp: 0.1, len: 7, dir: 0.15, detail: 40, shallow: '#58b9b4', color: '#1f6f8f', depth: 4, ...o, seed }); sw.position.z = -30;
+    // shallow tint + foam near the waterline: a strip that follows the swash
+    const nf = 56, fpos = new Float32Array(nf * 2 * 3 * 3), fg = new T.BufferGeometry(); fg.setAttribute('position', new T.BufferAttribute(fpos, 3));
+    const foam = new T.Mesh(fg, new T.MeshBasicMaterial({ color: '#f4fbfa', transparent: true, opacity: 0.85, depthWrite: false, toneMapped: false })); foam.renderOrder = 4; foam.frustumCulled = false;
+    const fx = i => (i / nf - 0.5) * Math.min(L, 120), slope = 0.62 * 1.15 / slopeW * Math.pow(-lvl / 0.62, 0.15 / 1.15);
+    const g = group('beach', sand, sw, foam);
+    const animate = lt => {
+      sw.userData.animate(lt);
+      const zl = i => { const x = fx(i); return wlz + clamp(sw.userData.water.userData.heightAt(x, wlz + 30, lt) / slope, -2.4, 2.4) + 0.25 * n1(x * 0.3 + lt * 0.2, seed); };
+      let prev = zl(0);
+      for (let i = 0; i < nf; i++) { const nxt = zl(i + 1), q = i * 18, x0 = fx(i), x1 = fx(i + 1), w0 = 0.22 + 0.16 * n1(x0 * 0.5, 3), w1 = 0.22 + 0.16 * n1(x1 * 0.5, 3), ya = hS(prev + 0.05) + 0.03, yb = hS(nxt + 0.05) + 0.03, yc = hS(prev - w0) + 0.03, yd = hS(nxt - w1) + 0.03;
+        fpos.set([x0, yc, prev - w0, x1, yd, nxt - w1, x1, yb, nxt + 0.05, x0, yc, prev - w0, x1, yb, nxt + 0.05, x0, ya, prev + 0.05], q); prev = nxt; }
+      fg.attributes.position.needsUpdate = true;
+    };
+    animate(0); Object.assign(g.userData, { sea: sw, foam, waterline: wlz, seaLevel: lvl, animate, heightAt: (x, z) => hS(z) });
+    return g;
+  }
+
+  // ---------- snow ----------
+  /** Snow-covered ground with wind-shaped drifts, flat near the origin (use instead of s.ground()). o: {size, seg, flat, height, color, shade, seed}. userData.heightAt(x, z). */
+  function snowGround(o = {}) {
+    const seed = o.seed ?? 1, size = o.size ?? 320, seg = o.seg ?? 44, flat = o.flat ?? 9, hgt = o.height ?? 1.1, white = C(o.color || '#eef3f9'), blue = C(o.shade || '#c3d3ea'), S = new Soup(seed);
+    const hAt = (x, z) => { const d = hyp(x, z), k = sm((d - flat) / (flat + 8)); return k * hgt * (0.75 * n2(x * 0.035 + 11, z * 0.09 + 5, seed) + 0.25 * n2(x * 0.12, z * 0.25, seed + 1)) * (1 + Math.min(3, d / 70)); };
+    const half = size / 2, warp = t => Math.sign(t) * Math.pow(Math.abs(t), 1.7) * half, r = S.r;
+    S.surf(seg, seg, (u, v, i, j) => { const e = i === 0 || j === 0 || i === seg || j === seg, x = warp(u * 2 - 1 + (e ? 0 : (r() - 0.5) * 0.5 / seg)), z = warp(1 - v * 2 + (e ? 0 : (r() - 0.5) * 0.5 / seg)); return [x, hAt(x, z), z]; }, white, { vary: 0.012 });
+    S.paint((ce, n, i, c) => { const sl = 1 - n[1], f = clamp(sl * 5 + (n[0] * 0.5 - n[2] * 0.3) * 2.2); return new T.Color(c[i], c[i + 1], c[i + 2]).lerp(blue, f * 0.85).multiplyScalar(S.r() < 0.03 ? 1.05 : 1); });
+    const m = S.mesh(); m.castShadow = false; const g = group('snowGround', m); g.userData.heightAt = hAt; return g;
+  }
+  /** A snow drift to pile against walls, fences and trees. o: {length, width, height, color, shade, seed}. */
+  function snowDrift(o = {}) {
+    const seed = o.seed ?? 1, L = o.length ?? 3.4, Wd = o.width ?? 1.7, H = o.height ?? 0.5, S = new Soup(seed), white = C(o.color || '#f1f5fb'), blue = C(o.shade || '#c6d5ea');
+    const g0 = new T.IcosahedronGeometry(1, 2); S3.jitter(g0, 0.06, seed); const P = g0.attributes.position;
+    for (let i = 0; i < P.count; i++) { const x = P.getX(i), y = P.getY(i), z = P.getZ(i), lee = z > 0 ? 0.72 : 1.15; P.setXYZ(i, x * L / 2 * (1 - 0.25 * z * z), Math.max(-0.03, (y + 0.25) / 1.25 * H * (1 - 0.3 * x * x)), z * Wd / 2 * lee + 0.12 * Wd * (1 - x * x) * Math.max(0, y)); }
+    S.geo(g0, white, { vary: 0.015 }); S.paint((ce, n, i, c) => new T.Color(c[i], c[i + 1], c[i + 2]).lerp(blue, clamp((1 - n[1]) * 0.9 + n[2] * 0.25)));
+    return group('snowDrift', S.mesh());
+  }
+
   return {
     pine, snowyPine, broadleaf, birch, deadTree, palm, bush, stump, log, logSeat, grassTuft, grass, flowerPatch, reeds,
-    rock, boulder, rockPile,
+    rock, boulder, rockPile, cliff, rockArch, caveMouth,
+    mountains, hills, cloud, clouds,
+    pond, lake, river, sea, beach, snowGround, snowDrift,
     _: { Soup, C, spots },
   };
 })();

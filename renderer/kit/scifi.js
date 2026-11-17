@@ -271,6 +271,281 @@ const KitSciFi = (() => {
   }
   const KINDS = ['data', 'bars', 'wave', 'radar', 'map', 'code', 'orbit', 'data', 'power', 'target'];
 
+  const glowM = (c, k = 1) => { const m = glow(c, k); m.userData.merge = true; return m; };   // animatable lamp material whose meshes still merge
+  const setGlow = (m, c, k = 1) => { m.color.set(c).multiplyScalar(k); return m; };
+
+  // =====================================================================================================
+  // INTERIORS: corridor, junction, doors
+  // =====================================================================================================
+  /** Corridor cross-section (counter-clockwise from the floor's left edge): floor, kick, wall, light chamfer, ceiling. */
+  const prof = (w = 2.6, h = 2.7) => { const hw = w / 2, fw = hw - 0.2, cw = hw - 0.52; return [[-fw, 0], [fw, 0], [hw, 0.3], [hw, h - 0.72], [cw, h], [-cw, h], [-hw, h - 0.72], [-hw, 0.3]]; };
+  /** Group whose local XY plane is the face A->B of a profile extruded along Z: +Z = inward normal, +Y = up the face, X = along the corridor. */
+  function frame(A, B) {
+    const d = V3(B[0] - A[0], B[1] - A[1], 0), len = d.length(); d.normalize(); const dn = d.y < -1e-6, n = V3(-d.y, d.x, 0), up = dn ? d.clone().negate() : d, x = up.clone().cross(n), g = grp(), O = dn ? B : A;
+    g.matrix.makeBasis(x, up, n).setPosition(O[0], O[1], 0); g.matrix.decompose(g.position, g.quaternion, g.scale); g.userData.len = len; return g;
+  }
+  const grateMat = () => tileMat('grate', 128, 128, (c, w, h) => { c.fillStyle = '#0a0c0f'; c.fillRect(0, 0, w, h); for (let i = 0; i < 4; i++) { c.fillStyle = '#4a5460'; c.fillRect(i * 32, 0, 8, h); c.fillStyle = '#6f7b8a'; c.fillRect(i * 32, 0, 2, h); } for (let i = 0; i < 8; i++) { c.fillStyle = '#414a55'; c.fillRect(0, i * 16, w, 5); c.fillStyle = '#626e7c'; c.fillRect(0, i * 16, w, 1.5); } }, { rough: 0.6, metal: 0.3 });
+  /** Fill the rectangle (x, y, w, h) of a wall (local XY plane, +Z out of the wall) with raised panels split at random. o: {rnd, colors, levels, depth, gap, detail:false} */
+  function panels(g, x, y, w, h, o, lvl = 0) {
+    const r = o.rnd;
+    if (lvl < (o.levels ?? 2) && max(w, h) > (o.min ?? 0.45) * 2 && r() < (lvl ? 0.6 : 1)) {
+      const vert = w > h * 1.15 ? true : h > w * 1.15 ? false : r() < 0.5, k = 0.34 + r() * 0.32;
+      if (vert) { panels(g, x, y, w * k, h, o, lvl + 1); panels(g, x + w * k, y, w * (1 - k), h, o, lvl + 1); } else { panels(g, x, y, w, h * k, o, lvl + 1); panels(g, x, y + h * k, w, h * (1 - k), o, lvl + 1); }
+      return;
+    }
+    const gap = o.gap ?? 0.028, d = (o.depth ?? 0.022) * (0.7 + r() * 0.7), col = o.colors[floor(r() * o.colors.length)], q = r();
+    box(w - gap, h - gap, d, col, o.mo || PA).at(x + w / 2, y + h / 2, d / 2).to(g);
+    if (o.detail === false || min(w, h) < 0.3) return;
+    if (q < 0.14) decal('vent', min(w, h) * 0.55).at(x + w / 2, y + h / 2, d + 0.002).to(g);
+    else if (q < 0.26) decal('placard', min(0.3, w * 0.5)).at(x + w * 0.32, y + h * 0.68, d + 0.002).to(g);
+    else if (q < 0.34) box(w * 0.5, 0.03, 0.035, PAL.dark, ME).at(x + w / 2, y + h * 0.5, d + 0.03).to(g);
+    else if (q < 0.4) box(0.05, 0.05, 0.012, glowS(o.led || PAL.ok, 1.2)).at(x + w - 0.1, y + h - 0.1, d + 0.006).to(g);
+  }
+
+  /**
+   * Modular corridor segment. Tiles end to end along Z (place the next one at z + length).
+   * o: {length: 3, width: 2.6, height: 2.7, light: '#8fe9ff' (strip colour), guide (floor guide lights), wall, dark, trim, rib,
+   *     left/right/ceiling/floor: false to leave a side out (cutaway shots), pipes: true, ribs: true, seed}
+   * userData: lightMat, guideMat, setLight(color, k), setGuide(color, k), length, width, height
+   */
+  function corridor(o = {}) {
+    const L = o.length ?? 3, W = o.width ?? 2.6, H = o.height ?? 2.7, lightC = o.light || PAL.light, wallC = o.wall || PAL.hull, dark = o.dark || PAL.dark, trim = o.trim || PAL.trim, seed = o.seed || 1, r = rng(seed * 101 + 3);
+    const g = grp(), P = prof(W, H), nb = max(1, round(L / 1.5)), bay = L / nb, lm = glowM(lightC, 1.5), gm = glowM(o.guide || lightC, 0.7);
+    const on = [o.floor !== false, o.right !== false, o.right !== false, o.right !== false, o.ceiling !== false, o.left !== false, o.left !== false, o.left !== false];
+    const face = (i, col, fn) => { if (!on[i]) return; const f = frame(P[i], P[(i + 1) % 8]).to(g), h = f.userData.len; quad(L, h, col, PA).at(0, h / 2, 0).shadows(false, true).to(f); fn && fn(f, h, i); };
+    const bays = fn => { for (let b = 0; b < nb; b++) fn(-L / 2 + (b + 0.5) * bay, b); };
+    face(0, shade(dark, 0.7), (f, h) => {
+      const gw = min(1.2, h * 0.55); uvMul(quad(L, gw, grateMat()), L / 0.5, gw / 0.5).at(0, h / 2, 0.004).shadows(false, true).to(f);
+      bays(x => [-1, 1].forEach(sd => box(bay - 0.03, (h - gw) / 2 - 0.03, 0.014, PAL.floor, ME).at(x, h / 2 + sd * (gw / 2 + (h - gw) / 4), 0.007).shadows(false, true).to(f)));
+    });
+    const kick = (f, h) => bays(x => { box(0.6, 0.09, 0.02, shade(wallC, 0.45), PA).at(x, h * 0.55, 0.01).to(f); box(0.52, 0.04, 0.012, gm).at(x, h * 0.55, 0.024).to(f); });
+    const wallF = (f, h, i) => {
+      const cols = [wallC, shade(wallC, 1.12), shade(wallC, 0.86)], lo = [shade(wallC, 0.4), shade(wallC, 0.5)];
+      bays(x => { const x0 = x - bay / 2 + 0.085, w = bay - 0.17; panels(f, x0, 0.02, w, 0.5, { rnd: r, colors: lo, levels: 1, depth: 0.03 }); panels(f, x0, 0.54, w, 0.62, { rnd: r, colors: cols, levels: 2 }); panels(f, x0, 1.27, w, h - 1.29, { rnd: r, colors: cols, levels: 1 }); });
+      box(L, 0.075, 0.03, trim, PA).at(0, 1.215, 0.015).to(f);
+      if (o.pipes !== false && i === 2) { [0.1, 0.22].forEach((dy, k) => rod([-L / 2, h - dy, 0.12], [L / 2, h - dy, 0.12], k ? 0.03 : 0.045, k ? '#b7773c' : shade(wallC, 0.75), { ...ME, sides: 6 }).to(f)); bays(x => box(0.07, 0.3, 0.17, PAL.dark, ME).at(x + bay * 0.25, h - 0.16, 0.085).to(f)); }
+      if (o.pipes !== false && i === 6) { box(L, 0.1, 0.06, shade(wallC, 0.5), ME).at(0, h - 0.12, 0.03).to(f); bays(x => { box(0.3, 0.2, 0.09, PAL.dark, PA).at(x - bay * 0.2, h - 0.12, 0.045).to(f); box(0.04, 0.04, 0.01, glowS(r() < 0.5 ? PAL.ok : PAL.amber, 1.3)).at(x - bay * 0.2 + 0.08, h - 0.1, 0.095).to(f); }); }
+    };
+    const lightF = (f, h) => bays(x => { box(bay - 0.24, h * 0.5, 0.04, shade(wallC, 0.5), PA).at(x, h * 0.5, 0.02).to(f); box(bay - 0.42, h * 0.2, 0.02, lm).at(x, h * 0.5, 0.05).to(f); });
+    face(1, dark, kick); face(7, dark, kick); face(2, shade(wallC, 0.2), wallF); face(6, shade(wallC, 0.2), wallF); face(3, shade(dark, 0.9), lightF); face(5, shade(dark, 0.9), lightF);
+    face(4, shade(dark, 0.8), (f, h) => { box(L, h * 0.34, 0.08, shade(wallC, 0.4), PA).at(0, h / 2, 0.04).to(f); bays(x => { box(0.12, h * 0.94, 0.05, shade(wallC, 0.5), PA).at(x, h / 2, 0.025).to(f); decal('vent', 0.3).at(x + bay * 0.27, h / 2, 0.083).to(f); }); });
+    if (o.ribs !== false) {
+      const outer = inset(P, -0.05), inner = inset(P, 0.085), sl = 0.2 / 0.3, dy = inner[1][1] + 0.012; inner[1] = [inner[1][0] - dy * sl, -0.012]; inner[0] = [inner[0][0] + dy * sl, -0.012];
+      for (let b = 0; b <= nb; b++) { const end = b === 0 || b === nb, th = end ? 0.07 : 0.14; extrude(outer, th, o.rib || shade(wallC, 0.6), { holes: [inner], ...PA }).at(0, 0, -L / 2 + b * bay - (b === 0 ? 0 : end ? th : th / 2)).to(g); }
+    }
+    Object.assign(g.userData, { length: L, width: W, height: H, lightMat: lm, guideMat: gm, setLight: (c, k = 1.5) => (setGlow(lm, c, k), g), setGuide: (c, k = 0.7) => (setGlow(gm, c, k), g) });
+    return fin(g, 'corridor', seed);
+  }
+
+  /**
+   * Bulkhead with a two-leaf sliding door. Fits the corridor cross-section (frame: 'corridor') or a plain wall (frame: 'wall').
+   * o: {width: 2.6, height: 2.7, doorWidth: 1.2, doorHeight: 2.1, frame: 'corridor', color, panel, trim, lamp: '#ff4a3a', number: '03', sign: 'airlock' ...}
+   * userData: open(k), panels [left, right], lampMat, barMat, setLamp(color, k), doorWidth, doorHeight
+   */
+  function door(o = {}) {
+    const W = o.width ?? 2.6, H = o.height ?? 2.7, dw = o.doorWidth ?? 1.2, dh = o.doorHeight ?? 2.1, th = 0.22, col = o.color || PAL.hullDk, pc = o.panel || PAL.hullLt, trim = o.trim || PAL.trim, c = 0.16, hd = dw / 2, g = grp();
+    const arch = k => [[-hd - k, 0], [-hd - k, dh - c + k * 0.414], [-hd + c - k * 0.414, dh + k], [hd - c + k * 0.414, dh + k], [hd + k, dh - c + k * 0.414], [hd + k, 0]];
+    const Po = o.frame === 'wall' ? [[-W / 2, 0], [W / 2, 0], [W / 2, H], [-W / 2, H]] : inset(prof(W, H), -0.06), a0 = arch(0); a0[0][1] = a0[5][1] = Po[0][1];
+    extrude([Po[0], ...a0, ...Po.slice(1)], th, col, PA).at(0, 0, -th / 2).to(g);
+    extrude([...arch(0.09), ...arch(0).reverse()], th + 0.07, shade(col, 0.55), ME).at(0, 0, -th / 2 - 0.035).to(g);
+    const lamp = glowM(o.lamp || PAL.warn, 1.6), bar = glowM(o.lamp || PAL.warn, 1.3), ya = 0.82, yb = 1.32, t = 0.07;
+    const leaf = sd => {
+      const p = grp(), out = sd < 0 ? [[-hd, 0], [0, 0], [0, ya], [t, ya + t], [t, yb - t], [0, yb], [0, dh], [-hd + c, dh], [-hd, dh - c]] : [[0, 0], [hd, 0], [hd, dh - c], [hd - c, dh], [0, dh], [0, yb], [t, yb - t], [t, ya + t], [0, ya]], cx = sd * hd * 0.54;
+      extrude(out, 0.08, pc, PA).at(0, 0, -0.04).to(p);
+      box(hd * 0.66, 0.46, 0.1, shade(pc, 0.78), PA).at(cx, 0.44, 0).to(p); box(hd * 0.66, 0.06, 0.1, trim, PA).at(cx, 0.76, 0).to(p);
+      box(0.13, 0.46, 0.1, '#0c1820', { rough: 0.2, emissive: '#2a6a8c', ei: 0.55 }).at(sd * 0.19, 1.62, 0).to(p);
+      box(hd * 0.3, 0.3, 0.1, shade(pc, 0.9), PA).at(sd * hd * 0.72, 1.72, 0).to(p);
+      [1, -1].forEach(f => { band(hd * 0.84, 0.09).at(sd * hd * 0.5, 0.11, f * 0.042).rot(0, f > 0 ? 0 : PI, 0).to(p); if (sd * f > 0 && o.number !== false) decal('n_' + (o.number || '03'), 0.24).at(sd * hd * 0.56, 1.12, f * 0.052).rot(0, f > 0 ? 0 : PI, 0).to(p); });
+      if (sd < 0) box(0.05, 0.14, 0.1, lamp).at(0.032, (ya + yb) / 2, 0).to(p);
+      return live(p);
+    };
+    const L = leaf(-1).to(g), R = leaf(1).to(g);
+    box(dw + 0.34, 0.17, th + 0.1, shade(col, 0.62), PA).at(0, dh + 0.21, 0).to(g); box(0.7, 0.05, th + 0.13, bar).at(0, dh + 0.21, 0).to(g);
+    [1, -1].forEach(f => { const s = grp().rot(0, f > 0 ? 0 : PI, 0).to(g), z = th / 2;
+      [-1, 1].forEach(sd => box(0.3, 1.5, 0.05, shade(col, 1.18), PA).at(sd * (hd + 0.33), 1.05, z + 0.02).to(s));
+      decal('keypad', 0.13, null, { glow: true }).at(hd + 0.33, 1.3, z + 0.047).to(s); decal('vent', 0.2).at(-hd - 0.33, 0.6, z + 0.047).to(s);
+      if (o.sign) decal('t_' + o.sign, 0.62).at(0, dh + 0.43, z + 0.003).to(s);
+      band(dw, 0.1).rot(-PI / 2, 0, 0).at(0, 0.012, z + 0.14).to(s); });
+    box(dw, 0.02, th + 0.2, PAL.dark, ME).at(0, 0, 0).to(g);
+    Object.assign(g.userData, { panels: [L, R], lampMat: lamp, barMat: bar, doorWidth: dw, doorHeight: dh, k: 0,
+      open: k => { k = clamp(k); g.userData.k = k; L.position.x = -k * (hd - 0.03); R.position.x = k * (hd - 0.03); return g; },
+      setLamp: (cc, k = 1.6) => (setGlow(lamp, cc, k), setGlow(bar, cc, k * 0.8), g) });
+    return fin(g, 'door', 1);
+  }
+
+  /** Extrude a side profile [[z, y], ...] along X, centred on x (consoles, seats, wedges). Returns a group. */
+  const extrudeX = (pts, w, col, o) => { const m = extrude(pts, w, col, o); m.rotation.y = -PI / 2; m.position.x = w / 2; return grp(m); };
+  /** Flat single-sided polygon in the XZ plane, facing up (shape y -> world -z) or down (shape y -> world +z). Returns a group. */
+  const polyFlat = (pts, col, o, down) => { const m = mesh(new T.ShapeGeometry(new T.Shape(pts.map(p => new T.Vector2(p[0], p[1])))), col, o); m.rotation.x = down ? PI / 2 : -PI / 2; return grp(m); };
+  const circ = (r, n = 20, cx = 0, cy = 0) => Array.from({ length: n }, (_, i) => [cx + cos(i / n * TAU) * r, cy + sin(i / n * TAU) * r]);
+
+  /**
+   * Hub where up to four corridors meet: an octagonal room with a ring light. Corridors attach at z = +-size/2 and x = +-size/2.
+   * o: {size: 4.4, width: 2.6, height: 2.7 (of the corridors), arms: [front +Z, right +X, back -Z, left -X] (false = closed wall), light, wall, dark, trim, seed}
+   * userData: lightMat, setLight(color, k), size
+   */
+  function junction(o = {}) {
+    const W = o.width ?? 2.6, H = o.height ?? 2.7, S = o.size ?? 4.4, Hc = H + 0.35, R = S / 2, a = W / 2 + 0.24, lightC = o.light || PAL.light, wallC = o.wall || PAL.hull, dark = o.dark || PAL.dark, trim = o.trim || PAL.trim;
+    const arms = o.arms || [1, 1, 1, 1], seed = o.seed || 1, r = rng(seed * 71 + 5), g = grp(), lm = glowM(lightC, 1.5), P = prof(W, H), plan = [[a, R], [R, a], [R, -a], [a, -R], [-a, -R], [-R, -a], [-R, a], [-a, R]];
+    polyFlat(plan, shade(dark, 0.7), PA).shadows(false, true).to(g); polyFlat(plan, shade(dark, 0.8), PA, true).at(0, Hc, 0).shadows(false, true).to(g);
+    cylB(1.05, 1.05, 0.014, 20, PAL.floor, ME).shadows(false, true).to(g); annulus(1.05, 1.15, 20, trim, PA).at(0, 0.016, 0).shadows(false, true).to(g);
+    cyl(0.95, 0.95, 0.07, 16, shade(wallC, 0.45), PA).at(0, Hc - 0.035, 0).to(g); torus(0.72, 0.05, lm, { rs: 5, ts: 20 }).rot(PI / 2, 0, 0).at(0, Hc - 0.09, 0).to(g); cyl(0.3, 0.3, 0.03, 12, lm).at(0, Hc - 0.085, 0).to(g);
+    const cols = [wallC, shade(wallC, 1.12), shade(wallC, 0.86)], dw = (R - a) * Math.SQRT2;
+    for (let i = 0; i < 4; i++) {
+      const sg = grp().rot(0, i * PI / 2, 0).to(g);
+      if (arms[i]) {
+        extrude([[-a, 0], P[0], P[7], P[6], P[5], P[4], P[3], P[2], P[1], [a, 0], [a, Hc], [-a, Hc]], 0.1, shade(wallC, 0.7), PA).at(0, 0, R - 0.1).shadows(false, true).to(sg);
+        uvMul(plane(1.2, R - 1.15, grateMat()), 1.2 / 0.5, (R - 1.15) / 0.5).at(0, 0.004, (R + 1.15) / 2).shadows(false, true).to(sg);
+        band(1.2, 0.1).rot(-PI / 2, 0, 0).at(0, 0.006, R - 0.2).to(sg);
+      } else {
+        const f = grp().rot(0, PI, 0).at(0, 0, R - 0.1).to(sg); quad(a * 2, Hc, shade(wallC, 0.2), PA).at(0, Hc / 2, 0).shadows(false, true).to(f);
+        panels(f, -a + 0.03, 0.03, a * 2 - 0.06, 0.55, { rnd: r, colors: [shade(wallC, 0.4), shade(wallC, 0.5)], levels: 1, depth: 0.03 }); panels(f, -a + 0.03, 0.62, a * 2 - 0.06, 1.3, { rnd: r, colors: cols, levels: 3 }); panels(f, -a + 0.03, 2.02, a * 2 - 0.06, Hc - 2.05, { rnd: r, colors: cols, levels: 1 });
+        box(a * 2, 0.075, 0.03, trim, PA).at(0, 1.96, 0.015).to(f);
+      }
+      const d = grp().at((a + R) / 2, 0, (a + R) / 2).rot(0, PI * 1.25, 0).to(sg); quad(dw, Hc, shade(dark, 0.9), PA).at(0, Hc / 2, 0).shadows(false, true).to(d);
+      box(dw * 0.62, 1.9, 0.05, shade(wallC, 0.5), PA).at(0, 1.45, 0.025).to(d); box(dw * 0.3, 1.6, 0.02, lm).at(0, 1.45, 0.06).to(d);
+      box(dw - 0.05, 0.42, 0.04, shade(wallC, 0.42), PA).at(0, 0.23, 0.02).to(d); box(dw - 0.05, 0.4, 0.04, shade(wallC, 0.7), PA).at(0, Hc - 0.24, 0.02).to(d);
+    }
+    Object.assign(g.userData, { size: S, lightMat: lm, setLight: (c, k = 1.5) => (setGlow(lm, c, k), g) });
+    return fin(g, 'junction', seed);
+  }
+
+  /**
+   * Round airlock hatch with a real (see-through) window and a locking wheel, set in a bulkhead.
+   * o: {width: 2.6, height: 2.7, radius: 0.78, center: 1.18, frame: 'corridor' | 'wall' | 'ring' (collar only), color, hatch, trim, lamp, sign: 'airlock'}
+   * userData: open(k) (wheel spins, then the hatch swings toward +Z), hatch, wheel, glass, lampMat, setLamp(color, k), center [x, y, z] of the window
+   */
+  function airlock(o = {}) {
+    const W = o.width ?? 2.6, H = o.height ?? 2.7, R = o.radius ?? 0.78, cy = o.center ?? 1.18, th = 0.24, col = o.color || PAL.hullDk, hc = o.hatch || PAL.hullLt, trim = o.trim || PAL.trim, g = grp(), rw = R * 0.27;
+    const Po = o.frame === 'wall' ? [[-W / 2, 0], [W / 2, 0], [W / 2, H], [-W / 2, H]] : inset(prof(W, H), -0.06);
+    if (o.frame !== 'ring') extrude(Po, th, col, { holes: [circ(R, 20, 0, cy)], ...PA }).at(0, 0, -th / 2).to(g);
+    extrude(circ(R + 0.15, 20, 0, cy), th + 0.1, shade(col, 0.55), { holes: [circ(R, 20, 0, cy)], ...ME }).at(0, 0, -th / 2 - 0.05).to(g);
+    ring(10, a => box(0.07, 0.07, th + 0.14, shade(col, 0.9), ME).at(cos(a) * (R + 0.075), cy + sin(a) * (R + 0.075), 0).rot(0, 0, a).to(g), 0.31);
+    const lamp = glowM(o.lamp || PAL.warn, 1.6), zf = th / 2 + 0.05, hinge = grp().at(-(R + 0.2), cy, zf + 0.05).to(g), hatch = grp().at(R + 0.2, 0, 0).to(hinge), wheel = grp().at(0, 0, 0.12).to(hatch);
+    extrude(circ(R + 0.06, 20), 0.12, hc, { holes: [circ(rw, 14)], ...PA }).at(0, 0, -0.07).to(hatch);
+    extrude(circ(R - 0.1, 20), 0.03, shade(hc, 0.82), { holes: [circ(rw + 0.1, 14)], ...PA }).at(0, 0, 0.05).to(hatch);
+    [-1, 1].forEach(f => extrude(circ(rw + 0.055, 14), 0.03, shade(col, 0.5), { holes: [circ(rw - 0.01, 14)], ...ME }).at(0, 0, f > 0 ? 0.05 : -0.1).to(hatch));
+    const glass = cyl(rw, rw, 0.02, 14, o.glass || PAL.glass, GL(o.glass || PAL.glass, 0.22, 0.2)).rot(PI / 2, 0, 0).at(0, 0, -0.01); glass.userData.keep = true; hatch.add(glass);
+    ring(6, a => box(0.2, 0.07, 0.04, shade(col, 0.6), ME).at(cos(a) * (R - 0.08), sin(a) * (R - 0.08), 0.07).rot(0, 0, a).to(hatch), 0.52);
+    [-0.34, 0.34].forEach(y => { box(R * 0.75, 0.08, 0.05, shade(col, 0.55), ME).at(-(R + 0.2) / 2 - R * 0.1, y, 0.02).to(hatch); cyl(0.045, 0.045, 0.16, 6, shade(col, 0.45), ME).at(0, y, 0).to(hinge); box(0.12, 0.12, 0.06, shade(col, 0.55), ME).at(0.0, y, -0.04).to(hinge); });
+    torus(R * 0.55, 0.028, shade(col, 0.4), { rs: 5, ts: 16, ...ME }).to(wheel); ring(4, a => rod([cos(a) * (rw + 0.06), sin(a) * (rw + 0.06), 0], [cos(a) * R * 0.55, sin(a) * R * 0.55, 0], 0.02, shade(col, 0.4), ME).to(wheel), 0.78);
+    ring(4, a => rod([cos(a) * (rw + 0.07), sin(a) * (rw + 0.07), -0.07], [cos(a) * (rw + 0.07), sin(a) * (rw + 0.07), 0], 0.018, shade(col, 0.4), ME).to(wheel), 0.78);
+    live(wheel); live(hatch); hinge.userData.live = true;
+    if (o.frame !== 'ring') {
+      box(0.5, 0.12, 0.06, shade(col, 0.6), PA).at(0, cy + R + 0.38, th / 2 + 0.03).to(g); box(0.36, 0.045, 0.02, lamp).at(0, cy + R + 0.38, th / 2 + 0.065).to(g);
+      if (o.sign !== false) decal('t_' + (o.sign || 'airlock'), 0.6).at(0, cy + R + 0.58, th / 2 + 0.003).to(g);
+      decal('keypad', 0.13, null, { glow: true }).at(R + 0.33, 1.3, th / 2 + 0.003).to(g); band(R * 1.6, 0.1).at(0, 0.12, th / 2 + 0.003).to(g);
+    }
+    Object.assign(g.userData, { hatch: hinge, wheel, glass, lampMat: lamp, center: [0, cy, 0], k: 0, setLamp: (c, k = 1.6) => (setGlow(lamp, c, k), g),
+      open: k => { k = clamp(k); g.userData.k = k; wheel.rotation.z = -S3.ramp(k, 0, 0.4) * TAU * 1.25; hinge.rotation.y = -S3.ramp(k, 0.3, 1) * 1.95; return g; } });
+    return fin(g, 'airlock', 1);
+  }
+
+  // =====================================================================================================
+  // PROPS: crates, canisters, pipes, vents, cables
+  // =====================================================================================================
+  /**
+   * Sci-fi cargo crate with an edge frame, latches and a status light.
+   * o: {w: 1, h: 0.8, d: 0.8, color, trim (frame), accent (latches, stripe), light (status LED, false = none), symbol: 'rad'|'bio'|'volt'|'warn'|'cold'|'med', seed}
+   */
+  function crate(o = {}) {
+    const w = o.w ?? 1, h = o.h ?? 0.8, d = o.d ?? 0.8, col = o.color || '#6c7b8d', trim = o.trim || shade(col, 0.38), acc = o.accent || PAL.trim, seed = o.seed || 1, r = rng(seed * 53 + 11), g = grp(), e = clamp(min(w, h, d) * 0.1, 0.035, 0.09);
+    boxB(w - e, h - e, d - e, col, PA).at(0, e / 2, 0).to(g);
+    [-1, 1].forEach(sx => [-1, 1].forEach(sz => boxB(e, h, e, trim, PA).at(sx * (w - e) / 2, 0, sz * (d - e) / 2).to(g)));
+    [e / 2, h - e / 2].forEach(y => { [-1, 1].forEach(s => { box(w - e, e, e, trim, PA).at(0, y, s * (d - e) / 2).to(g); box(e, e, d - e, trim, PA).at(s * (w - e) / 2, y, 0).to(g); }); });
+    box(w - e * 0.6, 0.02, d - e * 0.6, shade(col, 0.5), PA).at(0, h * 0.74, 0).to(g);                               // lid seam
+    [-1, 1].forEach(s => { box(w * 0.12, h * 0.16, 0.03, acc, ME).at(s * w * 0.26, h * 0.74, d / 2 - e / 2 + 0.012).to(g); box(0.03, h * 0.07, d * 0.3, shade(col, 0.35), ME).at(s * (w / 2 - e / 2 + 0.03), h * 0.52, 0).to(g); });
+    box(w - e * 2.2, h * 0.07, 0.012, acc, PA).at(0, h * 0.2, d / 2 - e / 2 + 0.005).to(g);                           // stripe
+    if (min(w, h) > 0.45) { decal('barcode', min(0.26, w * 0.26)).at(-w * 0.2, h * 0.47, d / 2 - e / 2 + 0.003).to(g); if (o.symbol) decal('s_' + o.symbol, min(0.24, h * 0.3)).at(w * 0.22, h * 0.47, d / 2 - e / 2 + 0.003).to(g); }
+    if (o.light !== false) box(w * 0.14, 0.03, 0.012, glowS(o.light || [PAL.ok, PAL.light, PAL.amber][floor(r() * 3)], 1.3)).at(0, h * 0.86, d / 2 - e / 2 + 0.006).to(g);
+    box(w * 0.5, 0.02, d * 0.5, shade(col, 0.82), PA).at(0, h - e / 2 + 0.008, 0).to(g);
+    return fin(g, 'crate', seed, 0.03);
+  }
+  /**
+   * Pressure canister. o: {radius: 0.26, height: 1.05, color, accent (band), glow: colour of the level window (false = none), symbol, seed}
+   * userData: levelMat (the glowing level window)
+   */
+  function canister(o = {}) {
+    const R = o.radius ?? 0.26, h = o.height ?? 1.05, col = o.color || '#c9ced4', acc = o.accent || PAL.trim, g = grp(), dk = '#2a3038', bh = h * 0.72, lv = o.glow === false ? null : glowM(o.glow || PAL.bio, 1.3);
+    cylB(R * 1.06, R * 1.1, 0.07, 10, dk, ME).to(g); cylB(R, R, bh, 10, col, PA).at(0, 0.07, 0).to(g); cylB(R * 1.035, R * 1.035, h * 0.09, 10, acc, PA).at(0, 0.07 + bh * 0.16, 0).to(g);
+    cylB(R * 1.03, R * 1.03, 0.03, 10, dk, ME).at(0, 0.07 + bh * 0.66, 0).to(g); cylB(R * 0.5, R, h * 0.1, 10, shade(col, 0.9), PA).at(0, 0.07 + bh, 0).to(g);
+    cylB(R * 0.28, R * 0.32, h * 0.07, 8, dk, ME).at(0, 0.07 + bh + h * 0.1, 0).to(g);
+    const top = 0.07 + bh + h * 0.17; torus(R * 0.72, 0.02, dk, { rs: 4, ts: 10, ...ME }).rot(PI / 2, 0, 0).at(0, top - 0.02, 0).to(g); ring(3, a => rod([cos(a) * R * 0.72, 0.07 + bh + h * 0.03, sin(a) * R * 0.72], [cos(a) * R * 0.72, top - 0.02, sin(a) * R * 0.72], 0.016, dk, ME).to(g), 0.5);
+    if (lv) { box(R * 0.42, bh * 0.36, 0.03, dk, ME).at(0, 0.07 + bh * 0.44, R - 0.012).to(g); box(R * 0.2, bh * 0.3, 0.03, lv).at(0, 0.07 + bh * 0.44, R - 0.004).to(g); }
+    if (o.symbol !== false) decal('s_' + (o.symbol || 'warn'), R * 0.62).at(0, 0.07 + bh * 0.82, R + 0.004).rot(0, 0, 0).to(g).position.applyAxisAngle(_up, 0.9);
+    g.children[g.children.length - 1].rotation.y = o.symbol !== false ? 0.9 : 0;
+    g.userData.levelMat = lv; return fin(g, 'canister', o.seed || 1, 0.02);
+  }
+  /** A dressed pile of crates and canisters. o: {count: 6, spread: 2.2, colors: [...], seed}. Footprint about spread x spread. */
+  function crateStack(o = {}) {
+    const n = o.count ?? 6, sp = o.spread ?? 2.2, seed = o.seed || 1, r = rng(seed * 29 + 3), g = grp(), cols = o.colors || ['#6c7b8d', '#8c6a3a', '#4d6a5c', '#7a8794', '#a2443a'], spots = [];
+    for (let i = 0; i < n; i++) {
+      const big = r() < 0.45, w = big ? 1.1 + r() * 0.3 : 0.6 + r() * 0.25, h = big ? 0.7 + r() * 0.25 : 0.45 + r() * 0.2, d = big ? 0.8 + r() * 0.2 : 0.55 + r() * 0.2; let x, z, y = 0, tries = 0;
+      const under = spots.find(s => !s.used && s.w > w + 0.05 && s.d > d + 0.05 && r() < 0.6);
+      if (under) { x = under.x + (r() - 0.5) * 0.1; z = under.z + (r() - 0.5) * 0.1; y = under.h; under.used = true; }
+      else do { x = (r() - 0.5) * (sp - w); z = (r() - 0.5) * (sp - d); tries++; } while (tries < 30 && spots.some(s => s.y === 0 && abs(s.x - x) < (s.w + w) / 2 + 0.06 && abs(s.z - z) < (s.d + d) / 2 + 0.06));
+      if (tries >= 30) continue;
+      if (!under) spots.push({ x, z, w, d, h, y: 0 });
+      crate({ w, h, d, color: cols[floor(r() * cols.length)], seed: seed * 10 + i, symbol: r() < 0.3 ? ['rad', 'bio', 'volt', 'warn'][floor(r() * 4)] : null }).at(x, y, z).rot(0, (r() - 0.5) * (under ? 0.5 : 0.24), 0).to(g);
+    }
+    for (let i = 0; i < 2; i++) { let x, z, tries = 0; do { x = (r() - 0.5) * (sp - 0.5); z = (r() - 0.5) * (sp - 0.5); tries++; } while (tries < 40 && spots.some(s => abs(s.x - x) < s.w / 2 + 0.34 && abs(s.z - z) < s.d / 2 + 0.34)); if (tries < 40) { canister({ color: i ? '#c9ced4' : '#d8b13a', glow: i ? PAL.bio : PAL.light, seed: i + 1 }).at(x, 0, z).rot(0, r() * 6, 0).to(g); spots.push({ x, z, w: 0.6, d: 0.6, h: 1, y: 0, used: true }); } }
+    return fin(g, 'crateStack', seed, 0);
+  }
+
+  /** Valve hand-wheel facing +Z (a live group: spin rotation.z). */
+  const valveWheel = (r = 0.11, col = '#c8322a') => { const w = grp(torus(r, r * 0.15, col, { rs: 5, ts: 10, ...PA })); ring(3, a => rod([0, 0, 0], [cos(a) * r, sin(a) * r, 0], r * 0.1, col, PA).to(w)); cyl(r * 0.24, r * 0.24, r * 0.3, 6, '#2a3038', ME).rot(PI / 2, 0, 0).to(w); return live(w); };
+  /**
+   * Run of wall pipes with clamps, flanges and a drop to the floor with a valve wheel and gauge. Back on z = 0.
+   * o: {length: 3, count: 3, y: 1.9 (height of the lowest pipe), colors: [...], drop: true, seed}
+   * userData: wheels [valve wheel groups: spin rotation.z]
+   */
+  function pipes(o = {}) {
+    const L = o.length ?? 3, n = o.count ?? 3, y0 = o.y ?? 1.9, seed = o.seed || 1, r = rng(seed * 61 + 7), g = grp(), cols = o.colors || [shade(PAL.hull, 0.8), '#b7773c', '#c9ced4', PAL.yellow], dk = '#2a3038', wheels = [];
+    const rr = i => [0.065, 0.04, 0.05, 0.035][i % 4], yy = i => y0 + i * 0.17, zz = i => rr(i) + 0.07;
+    for (let i = 0; i < n; i++) { rod([-L / 2, yy(i), zz(i)], [L / 2, yy(i), zz(i)], rr(i), cols[i % cols.length], { ...ME, sides: 7 }).to(g);
+      for (let x = -L / 2 + 0.5 + r() * 0.5; x < L / 2 - 0.2; x += 1.0 + r() * 0.6) cyl(rr(i) * 1.45, rr(i) * 1.45, 0.05, 7, shade(cols[i % cols.length], 0.75), ME).rot(0, 0, PI / 2).at(x, yy(i), zz(i)).to(g); }
+    for (let x = -L / 2 + 0.3; x <= L / 2 - 0.29; x += max(1.2, (L - 0.6) / max(1, round((L - 0.6) / 1.4)))) box(0.07, n * 0.17 + 0.06, 0.2, dk, ME).at(x, y0 + (n - 1) * 0.085, 0.1).to(g);
+    if (o.drop !== false) { const xd = (r() - 0.5) * L * 0.4, z = zz(0); rod([xd, y0, z], [xd, 0.04, z], rr(0), cols[0], { ...ME, sides: 7 }).to(g); cyl(rr(0) * 1.5, rr(0) * 1.5, 0.12, 7, shade(cols[0], 0.75), ME).rot(0, 0, PI / 2).at(xd, y0, z).to(g); cylB(rr(0) * 1.7, rr(0) * 1.7, 0.04, 7, dk, ME).at(xd, 0, z).to(g);
+      cyl(rr(0) * 1.4, rr(0) * 1.4, 0.16, 7, dk, ME).at(xd, 1.1, z).to(g); rod([xd, 1.1, z], [xd, 1.1, z + 0.16], 0.02, dk, ME).to(g); const w = valveWheel().at(xd, 1.1, z + 0.17).to(g); wheels.push(w);
+      rod([xd, 1.5, z], [xd + 0.14, 1.5, z], 0.015, dk, ME).to(g); cyl(0.075, 0.075, 0.04, 10, PAL.brass, ME).rot(PI / 2, 0, 0).at(xd + 0.2, 1.5, z).to(g); decal('gauge1', 0.14).at(xd + 0.2, 1.5, z + 0.022).to(g); }
+    g.userData.wheels = wheels; return fin(g, 'pipes', seed, 0.03);
+  }
+  /**
+   * Wall vent: a louvred grille, or (fan: true) a round extractor fan lit from behind. Back on z = 0.
+   * o: {w: 0.9, h: 0.6, y: 0.3 (height of the bottom edge), fan: false, glow (backlight colour behind the fan, false = none), color, speed: 2 (turns per second)}
+   * userData: blades (fan group), update(t)
+   */
+  function vent(o = {}) {
+    const fan = !!o.fan, w = o.w ?? (fan ? 1.1 : 0.9), h = fan ? w : (o.h ?? 0.6), y = o.y ?? 0.3, col = o.color || PAL.hullDk, g = grp(), cy = y + h / 2;
+    if (!fan) { extrude([[-w / 2, y], [w / 2, y], [w / 2, y + h], [-w / 2, y + h]], 0.09, col, { holes: [[[-w / 2 + 0.06, y + 0.06], [w / 2 - 0.06, y + 0.06], [w / 2 - 0.06, y + h - 0.06], [-w / 2 + 0.06, y + h - 0.06]]], ...PA }).to(g);
+      box(w - 0.1, h - 0.1, 0.02, '#07090b', RU).at(0, cy, 0.01).to(g); const n = max(2, floor((h - 0.12) / 0.075)); for (let i = 0; i < n; i++) box(w - 0.12, 0.012, 0.075, shade(col, 1.25), ME).rot(0.7, 0, 0).at(0, y + 0.06 + (i + 0.5) * (h - 0.12) / n, 0.055).to(g);
+      [-1, 1].forEach(sx => [-1, 1].forEach(sy => cyl(0.014, 0.014, 0.02, 6, shade(col, 0.5), ME).rot(PI / 2, 0, 0).at(sx * (w / 2 - 0.03), cy + sy * (h / 2 - 0.03), 0.095).to(g)));
+      return fin(g, 'vent', 1, 0.02); }
+    const R = w / 2, blades = grp().at(0, cy, 0.08).to(g), bl = o.glow === false ? null : glowM(o.glow || '#ffd9a0', 0.9);
+    extrude([[-R, y], [R, y], [R, y + h], [-R, y + h]], 0.2, col, { holes: [circ(R - 0.08, 16, 0, cy)], ...PA }).to(g); box(w - 0.02, h - 0.02, 0.02, '#07090b', RU).at(0, cy, 0.01).to(g);
+    if (bl) cyl(R - 0.12, R - 0.12, 0.01, 16, bl).rot(PI / 2, 0, 0).at(0, cy, 0.025).to(g);
+    ring(5, a => box(R * 0.82, R * 0.3, 0.012, '#15191e', ME).at(cos(a) * R * 0.44, sin(a) * R * 0.44, 0).rot(0.5, 0, a).to(blades)); cyl(R * 0.16, R * 0.16, 0.08, 8, '#2a3038', ME).rot(PI / 2, 0, 0).to(blades); live(blades);
+    [0.5, 0.86].forEach(k => torus((R - 0.08) * k, 0.008, shade(col, 0.5), { rs: 4, ts: 16, ...ME }).at(0, cy, 0.19).to(g)); ring(4, a => rod([0, cy, 0.19], [cos(a) * (R - 0.08), cy + sin(a) * (R - 0.08), 0.19], 0.008, shade(col, 0.5), ME).to(g), 0.4);
+    anim(g, t => { blades.rotation.z = -t * TAU * (o.speed ?? 2); }); Object.assign(g.userData, { blades, glowMat: bl }); g.userData.update(0);
+    return fin(g, 'vent', 1, 0.02);
+  }
+  /**
+   * Cables draped along a wall between brackets. Back on z = 0. o: {length: 3, count: 4, y: 2.3, sag: 0.22, colors, loose: false (one cable hangs free and sparks), seed}
+   * userData: sparkMat, sparkPos [x, y, z], update(t) (spark flicker, only with loose)
+   */
+  function cables(o = {}) {
+    const L = o.length ?? 3, n = o.count ?? 4, y = o.y ?? 2.3, sag = o.sag ?? 0.22, seed = o.seed || 1, r = rng(seed * 43 + 9), g = grp(), cols = o.colors || ['#15181c', '#2b323b', PAL.trim, '#15181c', '#7a1f1a', '#1d4a66'];
+    const nb = max(2, round(L / 1.5) + 1), xs = Array.from({ length: nb }, (_, i) => -L / 2 + 0.12 + i * (L - 0.24) / (nb - 1));
+    xs.forEach(x => { box(0.05, 0.14, 0.05 + n * 0.035, '#2a3038', ME).at(x, y, 0.025 + n * 0.0175).to(g); box(0.07, 0.03, 0.08 + n * 0.035, '#2a3038', ME).at(x, y - 0.07, 0.04 + n * 0.0175).to(g); });
+    let spark = null, sp = null;
+    for (let i = 0; i < n; i++) { const z = 0.045 + i * 0.035, rad = 0.012 + r() * 0.01, c = cols[i % cols.length];
+      for (let k = 0; k < nb - 1; k++) { const a = xs[k], b = xs[k + 1], s = sag * (0.45 + r() * 0.9);
+        if (o.loose && i === n - 1 && k === floor((nb - 1) / 2)) { sp = [a + (b - a) * 0.4, y - 0.95, z + 0.12]; vine([[a, y - 0.04, z], [a + (b - a) * 0.2, y - 0.25, z + 0.04], [a + (b - a) * 0.36, y - 0.7, z + 0.1], sp], rad, rad, c, { rs: 4, seg: 10, ...RU }).to(g); spark = glow('#bfe9ff', 2); ball(0.03, spark, 0).at(sp).to(g); const f = flare('#9fdcff', 0.5, 0.9).at(sp); g.add(f); g.userData.flare = f; }
+        else vine([[a, y - 0.04, z], [(a + b) / 2, y - 0.04 - s, z + (r() - 0.5) * 0.03], [b, y - 0.04, z]], rad, rad, c, { rs: 4, seg: 8, ...RU }).to(g); } }
+    if (spark) { anim(g, t => { const k = n1(t * 13, seed) > 0.25 ? 1 : n1(t * 31, seed + 4) > 0.5 ? 0.6 : 0.05; spark.color.set('#bfe9ff').multiplyScalar(2 * k); g.userData.flare.material.opacity = 0.9 * k; g.userData.level = k; }); g.userData.update(0); }
+    Object.assign(g.userData, { sparkMat: spark, sparkPos: sp }); return fin(g, 'cables', seed, 0.02);
+  }
+
   // ==== builders ====
 
   // ==== exports ====
@@ -279,5 +554,6 @@ const KitSciFi = (() => {
     const list = []; roots.flat().forEach(root => root && root.traverse(o => { if (o.userData.update && !o.userData.driven) list.push(o); }));
     if (list.length) s.tick(lt => { for (const o of list) o.userData.update(lt); }); return roots[0];
   }
-  return { PAL, animate, display, decal, bake, shade, mix };
+  return { PAL, animate, display, decal, bake, shade, mix,
+    corridor, door };
 })();

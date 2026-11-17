@@ -43,7 +43,14 @@
         "The protagonist does not remember the erased timeline. The audience does - that is the advantage they earned.",
         "A rewind can happen more than once, but never to the same decision twice: a second death rewinds to the next decision in the new harm_log."
       ]
-    }
+    },
+    "vote_reveal": {
+      "rule": "From Part 2 on, every part opens by showing how the audience voted on the previous decision: both options, the real percentages, the winner tapped, then the story goes down that path.",
+      "data": "The episode JSON carries a 'previous' block: {question, a, b, a_pct, b_pct}. Percentages are the combined real votes from Instagram, Facebook, YouTube and TikTok, supplied by the channel owner. Never invented.",
+      "record": "Each decision is also recorded in this bible under 'votes' as {part, question, a, b, a_pct, b_pct, chosen}."
+    },
+    "compilation": "Every five parts of a series are merged into one video with make_compilation.py: each part's story and choice, then the next part's vote result, and one end card at the very end.",
+    "end_card": "Every video ends with a 5-second card: the two options again, the channel name and handle, and the four platforms."
   },
   "canon": {
     "ship": "MV Meridian, deep cargo hauler on continuous low thrust, outbound past Saturn. About 890 million miles from Earth; radio delay about 80 minutes one way. Rotating habitat ring gives the crew section gravity.",

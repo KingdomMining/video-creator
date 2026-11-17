@@ -88,6 +88,11 @@ const KitFantasy = (() => {
     out.position.copy(src.position); out.quaternion.copy(src.quaternion); out.scale.copy(src.scale);
     return out;
   }
+  /** Give a composite builder one update(t) that drives every animated part inside it (animate() will not visit them twice). */
+  function compose(g) {
+    const fns = [], walk = o => { for (const k of o.children) { if (typeof k.userData.update === 'function') { fns.push(k.userData.update); if (k.userData.composite) continue; } walk(k); } }; walk(g);
+    const own = g.userData.update; if (fns.length) { g.userData.update = t => { if (own) own(t); for (const f of fns) f(t); }; g.userData.composite = true; } return g;
+  }
   /** Add an update(t) to a group, keeping any it already has. */
   const chain = (g, fn) => { const prev = g.userData.update; g.userData.update = prev ? t => { prev(t); fn(t); } : fn; return g; };
 
@@ -144,6 +149,19 @@ const KitFantasy = (() => {
   function archFrame(wo, ho, wi, hi, kind = 'round', n = 6) { const O = archPts(wo, ho, kind, n), I = archPts(wi, hi, kind, n); return [O[1], ...O.slice(2), O[0], I[0], ...I.slice(2).reverse(), I[1]]; }
   /** Flight of n steps, w wide, rising h in total, back on z = 0 and descending toward +Z. */
   function stairs(w, h, n, tread, m, s = 1.5) { const g = grp(), rise = h / n; for (let i = 0; i < n; i++) tbox(w, rise * (i + 1), tread, m, s, 0, 0, (n - 1 - i + 0.5) * tread).to(g); return g; }
+  /** Roof slab hinged on its ridge edge (the X axis): `len` along the ridge, `run` down the slope (+Z before pitching). Texture rows run parallel to the ridge. */
+  function roofSlab(len, run, thick, m, s = 2) {
+    const g = new T.BoxGeometry(len, thick, run).translate(0, thick / 2, run / 2), p = g.attributes.position, uv = g.attributes.uv;
+    for (let i = 0; i < p.count; i++) { const f = i >> 2; if (f === 2 || f === 3) uv.setXY(i, p.getX(i) / s, -p.getZ(i) / s); else uv.setXY(i, (f < 2 ? p.getZ(i) : p.getX(i)) / s, 0.03); }
+    return mesh(g, m);
+  }
+  /** Gable roof, ridge along X. len = ridge length, span = width across (Z), rise = ridge height above the eave line. Origin at eave level, centre. o: {over: 0.4 (eave overhang), thick: 0.12, s: 2, cap: colour | false} */
+  function gableRoof(len, span, rise, m, o = {}) {
+    const over = o.over ?? 0.4, thick = o.thick ?? 0.12, g = grp(), pitch = Math.atan2(rise, span / 2), run = Math.hypot(rise, span / 2) + over;
+    for (const sz of [1, -1]) { const sl = roofSlab(len, run, thick, m, o.s ?? 2); sl.position.set(0, rise, 0); sl.rotation.set(sz > 0 ? pitch : -pitch, sz > 0 ? 0 : PI, 0); g.add(sl); }
+    if (o.cap !== false) { const c = cyl(thick * 1.25, thick * 1.25, len + 0.04, 5, o.cap || C.woodDk); c.rotation.z = PI / 2; c.position.y = rise + thick * 0.75; g.add(c); }
+    g.userData = { pitch, run }; return g;
+  }
   /** Pointed roof (cone or pyramid) with a roofing texture, base on y = 0, a flat face toward +Z. */
   function roofCone(r, h, sides, m) {
     const g = new T.ConeGeometry(r, h, sides, 1).translate(0, h / 2, 0), uv = g.attributes.uv, reps = Math.max(2, Math.round(TAU * r / 2)), sl = Math.hypot(r, h) / 2;
@@ -255,25 +273,26 @@ const KitFantasy = (() => {
   }
 
   // ---------- fire ----------
-  /** A cluster of flame tongues `size` metres tall (1 = a campfire). userData.update(t) makes it lick and flicker. */
-  function flame(size = 1, color = C.fire, seed = 1) {
+  function _flame(size = 1, color = C.fire, seed = 1) {
     const g = grp(), hot = mix(color, '#ffe58a', 0.6), core = mix(color, '#fff7d6', 0.85), red = mix(color, '#e8361a', 0.45);
     [[0, 0, 0.17, 0.72, color, 1.5], [0.09, 0.03, 0.12, 0.5, hot, 1.6], [-0.08, 0.06, 0.11, 0.44, red, 1.4], [-0.02, -0.1, 0.11, 0.48, hot, 1.6], [0.01, 0.05, 0.1, 0.3, core, 1.8]]
       .forEach(([x, z, r, h, c, k], i) => { const m = drop(r * size, h * size, 5, glo(c, k)).at(x * size, 0, z * size); m.rotation.y = i * 1.3; g.add(m); });
-    g.userData.update = t => g.children.forEach((m, i) => { const a = noise1(t * 6 + i * 3.1, seed + i), b = noise1(t * 8.5 + i * 1.7, seed + i + 9); m.scale.set(1 + a * 0.14, 1 + b * 0.26, 1 + a * 0.14); m.rotation.z = 0.16 * noise1(t * 4.3 + i, seed + 20 + i); m.rotation.x = 0.16 * noise1(t * 3.7 + i, seed + 40 + i); });
+    g.userData.lick = t => g.children.forEach((m, i) => { const a = noise1(t * 6 + i * 3.1, seed + i), b = noise1(t * 8.5 + i * 1.7, seed + i + 9); m.scale.set(1 + a * 0.14, 1 + b * 0.26, 1 + a * 0.14); m.rotation.z = 0.16 * noise1(t * 4.3 + i, seed + 20 + i); m.rotation.x = 0.16 * noise1(t * 3.7 + i, seed + 40 + i); });
     return g;
   }
+  /** A cluster of flame tongues about 0.7 x `size` metres tall (1 = a campfire). userData.update(t) makes it lick and flicker. o: {size: 1, color, seed} */
+  function flame(o = {}) { const f = _flame(o.size ?? 1, o.color || C.fire, o.seed || 1); f.userData.update = f.userData.lick; return f; }
   /** Put fire on group g at one or several local points. Fills userData.flame, .flames, .flares, .lightPos, .setLit, and chains update(t). */
   function addFire(g, pts, size, o = {}) {
     if (typeof pts[0] === 'number') pts = [pts];
     const color = o.color || C.fire, seed = o.seed || 1, fs = [], hs = [], c = [0, 0, 0];
     pts.forEach((p, i) => {
-      const f = (size < 0.12 ? grp(drop(size * 0.22, size, 5, glo(mix(color, '#fff2b8', 0.6), 1.7))) : flame(size, color, seed + i * 7)).at(p[0], p[1], p[2]); g.add(f); fs.push(f);
+      const f = (size < 0.12 ? grp(drop(size * 0.22, size, 5, glo(mix(color, '#fff2b8', 0.6), 1.7))) : _flame(size, color, seed + i * 7)).at(p[0], p[1], p[2]); g.add(f); fs.push(f);
       const h = flare(color, o.halo ?? Math.max(0.5, size * 2.6), o.haloOpacity ?? 0.42).at(p[0], p[1] + size * 0.35, p[2]); g.add(h); hs.push(h); c[0] += p[0] / pts.length; c[1] += p[1] / pts.length; c[2] += p[2] / pts.length;
     });
     const U = g.userData, op = o.haloOpacity ?? 0.42; U.flame = fs[0]; U.flames = fs; U.flares = hs; U.lightPos = [c[0], c[1] + size * 0.4, c[2]]; U.lightColor = color; U.lit = true;
     U.setLit = on => { U.lit = !!on; fs.forEach(f => { f.visible = !!on; }); hs.forEach(h => { h.visible = !!on; }); if (U.embers) U.embers.visible = !!on; };
-    chain(g, t => { fs.forEach((f, i) => { if (f.userData.update) f.userData.update(t + i * 1.7); else f.scale.y = 1 + 0.18 * noise1(t * 9 + i * 2.3, seed + i); }); hs.forEach((h, i) => { h.material.opacity = op * S3.flicker(t + i, 0.3, 9, seed + i); }); });
+    chain(g, t => { fs.forEach((f, i) => { if (f.userData.lick) f.userData.lick(t + i * 1.7); else f.scale.y = 1 + 0.18 * noise1(t * 9 + i * 2.3, seed + i); }); hs.forEach((h, i) => { h.material.opacity = op * S3.flicker(t + i, 0.3, 9, seed + i); }); });
     if (o.lit === false) U.setLit(false);
     return g;
   }
@@ -352,19 +371,285 @@ const KitFantasy = (() => {
     if (parapet === 'outer') tbox(length, 0.22, 0.3, lt, s, 0, height, -thick / 2 + 0.15).to(st);
     g.add(bake(st)); g.userData = { length, height, thick, walkY: height }; return g;
   }
+  // ---------- heraldry: emblems, banners, shields ----------
+  /** Draw a simple device centred at (cx, cy) inside a circle of radius s. kind: sun moon star tower crown cross tree sword skull flame eye chevron none */
+  function drawEmblem(c, kind, cx, cy, s, fg, bg = '#000000') {
+    c.save(); c.translate(cx, cy); c.fillStyle = fg; c.strokeStyle = fg; c.lineJoin = 'round'; c.lineCap = 'round';
+    const P = (pts, col) => { c.beginPath(); pts.forEach((p, i) => i ? c.lineTo(p[0] * s, p[1] * s) : c.moveTo(p[0] * s, p[1] * s)); c.closePath(); c.fillStyle = col || fg; c.fill(); };
+    const O = (x, y, r, col) => { c.beginPath(); c.arc(x * s, y * s, r * s, 0, TAU); c.fillStyle = col || fg; c.fill(); };
+    if (kind === 'sun') { O(0, 0, 0.46); for (let i = 0; i < 12; i++) { const a = i * TAU / 12, r = i % 2 ? 0.82 : 1; P([[Math.cos(a - 0.13) * 0.56, Math.sin(a - 0.13) * 0.56], [Math.cos(a) * r, Math.sin(a) * r], [Math.cos(a + 0.13) * 0.56, Math.sin(a + 0.13) * 0.56]]); } }
+    else if (kind === 'moon') { c.beginPath(); c.arc(-0.12 * s, 0, 0.8 * s, 0.9184, TAU - 0.9184); c.arc(0.23 * s, 0, 0.65 * s, TAU - 1.3605, 1.3605, true); c.closePath(); c.fill(); O(0.52, -0.5, 0.09); }
+    else if (kind === 'star') { const p = []; for (let i = 0; i < 10; i++) { const a = -PI / 2 + i * PI / 5, r = i % 2 ? 0.42 : 1; p.push([Math.cos(a) * r, Math.sin(a) * r]); } P(p); }
+    else if (kind === 'tower') { P([[-0.5, 0.9], [-0.5, -0.3], [-0.7, -0.3], [-0.7, -0.9], [-0.42, -0.9], [-0.42, -0.62], [-0.14, -0.62], [-0.14, -0.9], [0.14, -0.9], [0.14, -0.62], [0.42, -0.62], [0.42, -0.9], [0.7, -0.9], [0.7, -0.3], [0.5, -0.3], [0.5, 0.9]]); P([[-0.16, 0.9], [-0.16, 0.42], [0, 0.26], [0.16, 0.42], [0.16, 0.9]], bg); P([[-0.07, 0.02], [-0.07, -0.2], [0.07, -0.2], [0.07, 0.02]], bg); }
+    else if (kind === 'crown') { P([[-0.82, 0.55], [-0.95, -0.45], [-0.45, 0.02], [0, -0.7], [0.45, 0.02], [0.95, -0.45], [0.82, 0.55]]); c.fillStyle = bg; c.fillRect(-0.74 * s, 0.26 * s, 1.48 * s, 0.07 * s); O(0, -0.72, 0.1); O(-0.95, -0.47, 0.09); O(0.95, -0.47, 0.09); O(0, 0.08, 0.1, bg); }
+    else if (kind === 'cross') { P([[-0.16, -0.95], [0.16, -0.95], [0.16, -0.42], [0.66, -0.42], [0.66, -0.1], [0.16, -0.1], [0.16, 0.95], [-0.16, 0.95], [-0.16, -0.1], [-0.66, -0.1], [-0.66, -0.42], [-0.16, -0.42]]); }
+    else if (kind === 'tree') { P([[-0.1, 0.95], [-0.14, 0.2], [0.14, 0.2], [0.1, 0.95]]); P([[-0.34, 0.95], [0, 0.82], [0.34, 0.95]]); O(0, -0.35, 0.52); O(-0.42, -0.02, 0.36); O(0.42, -0.02, 0.36); O(0, -0.72, 0.3); }
+    else if (kind === 'sword') { P([[0, -1], [0.13, -0.78], [0.13, 0.36], [-0.13, 0.36], [-0.13, -0.78]]); P([[-0.5, 0.36], [0.5, 0.36], [0.5, 0.5], [-0.5, 0.5]]); P([[-0.07, 0.5], [0.07, 0.5], [0.07, 0.82], [-0.07, 0.82]]); O(0, 0.9, 0.12); }
+    else if (kind === 'skull') {
+      c.lineWidth = 0.17 * s; for (const d of [-1, 1]) { c.beginPath(); c.moveTo(-0.78 * s * d, 0.2 * s); c.lineTo(0.78 * s * d, 0.95 * s); c.stroke(); O(-0.82 * d, 0.14, 0.11); O(-0.72 * d, 0.3, 0.11); O(0.84 * d, 0.88, 0.11); O(0.74 * d, 1.02, 0.11); }
+      O(0, -0.28, 0.58); P([[-0.34, 0.1], [0.34, 0.1], [0.3, 0.52], [-0.3, 0.52]]); O(-0.24, -0.26, 0.16, bg); O(0.24, -0.26, 0.16, bg); P([[0, -0.06], [0.09, 0.12], [-0.09, 0.12]], bg); for (const x of [-0.15, 0, 0.15]) { c.fillStyle = bg; c.fillRect((x - 0.02) * s, 0.3 * s, 0.04 * s, 0.22 * s); }
+    }
+    else if (kind === 'flame') { c.beginPath(); c.moveTo(0, -s); c.bezierCurveTo(0.2 * s, -0.5 * s, 0.75 * s, -0.1 * s, 0.6 * s, 0.45 * s); c.bezierCurveTo(0.5 * s, 0.85 * s, 0.15 * s, 0.95 * s, 0, 0.95 * s); c.bezierCurveTo(-0.3 * s, 0.95 * s, -0.7 * s, 0.75 * s, -0.6 * s, 0.25 * s); c.bezierCurveTo(-0.55 * s, 0, -0.3 * s, -0.15 * s, -0.3 * s, -0.4 * s); c.bezierCurveTo(-0.1 * s, -0.3 * s, -0.05 * s, -0.7 * s, 0, -s); c.fill(); c.fillStyle = bg; c.beginPath(); c.ellipse(0.02 * s, 0.5 * s, 0.2 * s, 0.33 * s, 0, 0, TAU); c.fill(); }
+    else if (kind === 'eye') { c.beginPath(); c.moveTo(-s, 0); c.quadraticCurveTo(0, -0.95 * s, s, 0); c.quadraticCurveTo(0, 0.95 * s, -s, 0); c.fill(); O(0, 0, 0.36, bg); O(0, 0, 0.17); }
+    else if (kind === 'chevron') { P([[-0.9, 0.5], [0, -0.5], [0.9, 0.5], [0.9, 0.9], [0, -0.1], [-0.9, 0.9]]); P([[-0.9, -0.2], [0, -1.2], [0.9, -0.2], [0.9, 0.05], [0, -0.92], [-0.9, 0.05]]); }
+    c.restore();
+  }
+  const clothMat = (o) => {
+    const { color = C.red, trim = C.gold, emblem = 'sun', w = 256, h = 512, at = 0.36, size = 0.3, border = true } = o, ec = o.emblemColor || trim, key = ['cloth', color, trim, emblem, ec, w, h, at, size, border, o.stripes || ''].join('|');
+    return tmat(key, () => ctex(key, w, h, c => {
+      c.fillStyle = hex(color); c.fillRect(0, 0, w, h);
+      if (o.stripes) { c.fillStyle = hex(o.stripes); const n = 6; for (let i = 0; i < n; i += 2) c.fillRect(i * w / n, 0, w / n, h); }
+      for (let y = 0; y < h; y += 6) { c.fillStyle = 'rgba(0,0,0,.05)'; c.fillRect(0, y, w, 2); }
+      if (border) { c.fillStyle = hex(trim); c.fillRect(0, 0, w * 0.055, h); c.fillRect(w * 0.945, 0, w * 0.055, h); c.fillRect(0, 0, w, w * 0.08); c.fillStyle = 'rgba(0,0,0,.18)'; c.fillRect(w * 0.055, w * 0.08, w * 0.89, 3); }
+      if (emblem && emblem !== 'none') drawEmblem(c, emblem, w / 2, h * at, w * size, hex(ec), hex(color));
+    }), { side: 'double', rough: 1 });
+  };
+  /**
+   * Cloth banner with a heraldic device.
+   * o: {width: 1.1, height: 2.8, color, trim, emblem ('sun' moon star tower crown cross tree sword skull flame eye chevron none), emblemColor,
+   *     tail: 'swallow' | 'point' | 'flat', mount: 'wall' (back on z = 0) | 'pole' (free-standing) | 'hang' (rod and cords, hangs free), y (top of the cloth), wave: 0.05, seed}
+   * userData: {cloth, update(t) (slow sway)}
+   */
+  function banner(o = {}) {
+    const { width = 1.1, height = 2.8, color = C.red, trim = C.gold, emblem = 'sun', tail = 'swallow', mount = 'wall', wave = 0.05, seed = 1 } = o;
+    const y = o.y ?? (mount === 'pole' ? height + 0.85 : 4), g = grp(), st = grp(), geo = new T.PlaneGeometry(width, height, 4, 7), P = geo.attributes.position, base = [], wall = mount === 'wall';
+    for (let i = 0; i < P.count; i++) { const u = P.getX(i) / width + 0.5, v = 0.5 - P.getY(i) / height, sh = tail === 'swallow' ? 1 - Math.abs(2 * u - 1) : tail === 'point' ? Math.abs(2 * u - 1) : 0; P.setY(i, -v * height * (1 - 0.17 * sh)); base.push(u, v); }
+    const cloth = mesh(geo, clothMat({ color, trim, emblem, emblemColor: o.emblemColor })); cloth.position.set(0, y - 0.05, wall ? 0.1 : mount === 'pole' ? 0.07 : 0);
+    const shape = t => { for (let i = 0; i < P.count; i++) { const u = base[i * 2], v = base[i * 2 + 1]; P.setZ(i, wave * (0.25 + v) * Math.sin(u * 7.5 + seed * 1.7 + t * 1.5) + (wall ? 0 : wave * 1.8 * v * v * Math.sin(t * 0.9 + seed))); } P.needsUpdate = true; };
+    shape(0); g.add(cloth);
+    cyl(0.028, 0.028, width + 0.26, 6, C.woodDk).rot(0, 0, PI / 2).at(0, y, cloth.position.z).to(st);
+    for (const sx of [-1, 1]) { ball(0.05, C.gold, 0, GOLD).at(sx * (width / 2 + 0.15), y, cloth.position.z).to(st); if (wall) rod([sx * width * 0.36, y, 0], [sx * width * 0.36, y, 0.1], 0.014, C.iron, IRON).to(st); if (mount === 'hang') rod([sx * width * 0.42, y, 0], [0, y + 0.55, 0], 0.01, C.rope).to(st); }
+    if (mount === 'pole') { cylB(0.035, 0.045, y + 0.3, 6, C.woodDk).to(st); cone(0.05, 0.16, 5, C.gold, GOLD).at(0, y + 0.38, 0).to(st); cylB(0.2, 0.26, 0.1, 8, C.stoneDk).to(st); cylB(0.1, 0.16, 0.2, 8, C.stoneDk).to(st); }
+    g.add(bake(st)); g.userData = { cloth, update: shape }; return g;
+  }
+  /**
+   * Heraldic shield. o: {shape: 'heater' | 'round', size: 0.95 (height), color, color2 (other half of the field), emblem, emblemColor, trim,
+   *     mount: 'wall' (back on z = 0, bottom at o.y) | 'lean' (resting on the ground, tilted back), y: 1.6}
+   */
+  function shield(o = {}) {
+    const { shape = 'heater', size = 0.95, color = C.red, color2 = null, emblem = 'tower', trim = C.steel, mount = 'wall' } = o, y = o.y ?? (mount === 'wall' ? 1.6 : 0), g = grp(), st = grp(), w = size * 0.82;
+    const ec = o.emblemColor || '#f3e7c6', key = ['shield', shape, color, color2, emblem, ec].join('|');
+    const m = tmat(key, () => ctex(key, 256, 256, (c, W, H) => {
+      c.fillStyle = hex(color); c.fillRect(0, 0, W, H); if (color2) { c.fillStyle = hex(color2); c.fillRect(W / 2, 0, W / 2, H); }
+      if (shape === 'round') { for (let i = 0; i < 8; i++) { c.strokeStyle = 'rgba(0,0,0,.28)'; c.lineWidth = 3; c.beginPath(); c.moveTo(W / 2, H / 2); c.lineTo(W / 2 + Math.cos(i * PI / 4) * W, H / 2 + Math.sin(i * PI / 4) * W); c.stroke(); } if (color2) { c.fillStyle = hex(color2); for (let i = 0; i < 8; i += 2) { c.beginPath(); c.moveTo(W / 2, H / 2); c.arc(W / 2, H / 2, W, i * PI / 4, (i + 1) * PI / 4); c.fill(); } } }
+      else { c.fillStyle = 'rgba(0,0,0,.12)'; c.fillRect(0, 0, W, 10); }
+      if (emblem && emblem !== 'none') drawEmblem(c, emblem, W / 2, H * (shape === 'round' ? 0.5 : 0.4), W * (shape === 'round' ? 0.2 : 0.25), ec, hex(color));
+    }), { rough: 0.6 });
+    if (shape === 'round') { const r = size / 2, cp = []; for (let i = 0; i < 14; i++) cp.push([Math.cos(i * TAU / 14) * (r - 0.035), Math.sin(i * TAU / 14) * (r - 0.035)]); cyl(r, r, 0.045, 14, trim, STEEL).rot(PI / 2, 0, 0).at(0, r, 0.0225).to(st); face(cp, m).at(0, r, 0.048).to(st); ball(0.1, trim, 1, STEEL).scl(1, 1, 0.55).at(0, r, 0.06).to(st); }
+    else { const out = [[-0.5, 1], [0.5, 1], [0.5, 0.5], [0.42, 0.27], [0.24, 0.09], [0, 0], [-0.24, 0.09], [-0.42, 0.27], [-0.5, 0.5]], sc = k => out.map(([x, yy]) => [x * w * k, (yy - 0.5) * size * k + size * 0.5]); extrude(sc(1), 0.045, trim, STEEL).to(st); face(sc(0.91), m).at(0, 0, 0.049).to(st); }
+    const b = bake(st); if (mount === 'lean') { b.rotation.x = -0.3; b.position.set(0, 0, 0); } else b.position.y = y; g.add(b); return g;
+  }
+  /**
+   * Double doors in an arched or flat opening, back on z = 0. userData.open(k) swings both leaves (outward toward +Z, or inward with inward: true).
+   * o: {arch: 'round' | 'point' | 'flat', color, inward: false, swing: 1.5}
+   */
+  function doubleDoor(w, h, o = {}) {
+    const g = grp(), a = w / 2, kind = o.arch || 'round', pts = [[-a, 0], [0, 0]], leaves = [], wm = woodMat(o.color || C.woodDk, { planks: 5 });   // leaf outline: hinge edge on x = 0, meeting edge on x = -a
+    if (kind === 'flat') pts.push([0, h], [-a, h]); else if (kind === 'round') { const sy = h - a; for (let i = 0; i <= 5; i++) { const t = i / 5 * PI / 2; pts.push([-a + a * Math.cos(t), sy + a * Math.sin(t)]); } } else { const sy = h - 0.866 * w; for (let i = 0; i <= 4; i++) { const t = i / 4 * PI / 3; pts.push([-w + w * Math.cos(t), sy + w * Math.sin(t)]); } }
+    for (const sx of [1, -1]) {   // sx = 1: hinge on the right edge (x = +a), leaf reaches to the centre
+      const st = grp(), leaf = grp(); textr(pts.map(p => [p[0], p[1]]), 0.09, wm, 1).at(0, 0, 0.045).to(st);
+      for (const yy of [0.45, h * 0.52]) { box(a * 0.86, 0.1, 0.02, C.iron, IRON).at(-a * 0.45, yy, 0.1).to(st); for (let i = 0; i < 3; i++) cone(0.035, 0.05, 4, C.iron, IRON).at(-a * (0.15 + i * 0.3), yy, 0.115).rot(PI / 2, 0, 0).to(st); }
+      torus(0.09, 0.018, C.iron, { ...IRON, rs: 4, ts: 8 }).at(-a + 0.2, h * 0.36, 0.115).to(st);
+      const b = bake(st); b.scale.x = sx; leaf.add(b); leaf.position.set(sx * a, 0, 0.01); leaf.userData.live = true; g.add(leaf); leaves.push(leaf);
+    }
+    const full = archPts(w, h, kind), dk = face(full, mat('#0b0a0a', { rough: 1 })).at(0, 0, 0.004); dk.castShadow = false; g.add(dk);
+    g.userData.leaves = leaves; g.userData.open = k => { const an = clamp(k) * (o.swing ?? 1.5) * (o.inward ? -1 : 1); leaves[0].rotation.y = an; leaves[1].rotation.y = -an; }; return g;
+  }
+
+  // ---------- castle ----------
   /** Small flag on a pole (standing at the origin). userData.update(t) makes it flutter. */
   function pennant(h = 2.4, color = C.red, len = 1.3) {
-    const g = grp(cylB(0.03, 0.04, h, 5, C.woodDk), ball(0.06, C.gold, 0, GOLD).at(0, h + 0.03, 0)), fl = grp().at(0, h - 0.34, 0), w = len / 3, parts = [];
-    for (let i = 0; i < 3; i++) { const hh0 = 0.56 * (1 - i / 3), hh1 = 0.56 * (1 - (i + 1) / 3), p = grp().at(i ? w : 0.02, 0, 0); const q = mesh(new T.BufferGeometry().setFromPoints([V([0, -hh0 / 2, 0]), V([w, -hh1 / 2, 0]), V([w, hh1 / 2, 0]), V([0, -hh0 / 2, 0]), V([w, hh1 / 2, 0]), V([0, hh0 / 2, 0])]), i === 1 ? shade(color, 0.85) : color, { side: 'double' }); q.geometry.computeVertexNormals(); p.add(q); (i ? parts[i - 1] : fl).add(p); parts.push(p); }
-    g.add(fl); g.userData.flag = fl; g.userData.update = t => parts.forEach((p, i) => { p.rotation.y = (i ? 0.5 : 0.25) * Math.sin(t * 3.2 - i * 1.1) + 0.12 * noise1(t * 1.3 + i, 3); }); g.userData.update(0); return g;
+    const g = grp(cylB(0.03, 0.04, h, 5, C.woodDk), ball(0.06, C.gold, 0, GOLD).at(0, h + 0.03, 0)), fl = grp().at(0, h - 0.36, 0), w = len / 3, parts = [];
+    for (let i = 0; i < 3; i++) {
+      const a = 0.6 * (1 - i / 3), b = 0.6 * (1 - (i + 1) / 3), p = grp().at(i ? w : 0.03, 0, 0);
+      const geo = new T.BufferGeometry().setFromPoints([V([0, -a / 2, 0]), V([w, -b / 2, 0]), V([w, b / 2, 0]), V([0, -a / 2, 0]), V([w, b / 2, 0]), V([0, a / 2, 0])]); geo.computeVertexNormals();
+      p.add(mesh(geo, i === 1 ? shade(color, 0.86) : color, { side: 'double' })); (i ? parts[i - 1] : fl).add(p); parts.push(p);
+    }
+    g.add(fl); g.userData.flag = fl; g.userData.update = t => parts.forEach((p, i) => { p.rotation.y = (i ? 0.55 : 0.3) * Math.sin(t * 3.4 - i * 1.2) + 0.15 * noise1(t * 1.3 + i, 3); }); g.userData.update(0); return g;
   }
+  /**
+   * Round tower. o: {radius: 2.6, height: 11, top: 'battlement' | 'roof' | 'both', color, roofColor, lit: false (glowing windows),
+   *     door: 'front' | 'back' | 'none', flag: colour | null, sides: 12, seed}
+   * userData: {radius, height, walkY, top: [0, y, 0], door, open(k), flag, update(t)}
+   */
+  function towerRound(o = {}) {
+    const { radius = 2.6, height = 11, top = 'battlement', color = C.stone, roofColor = C.slate, lit = false, door = 'front', flag = C.red, sides = 12, seed = 1 } = o;
+    const g = grp(), st = grp(), { sm, lt } = stoneSet(color, seed), ap = Math.cos(PI / sides), rAt = y => lerp(radius * 1.06, radius, y / height), R1 = radius + 0.42;
+    tcyl(radius, radius * 1.06, height, sides, sm, 3).to(st); tcyl(radius * 1.1, radius * 1.17, 0.85, sides, sm, 3).to(st); tcyl(radius * 1.08, radius * 1.1, 0.16, sides, lt, 3, 0, 0.85, 0).to(st);
+    tcyl(R1, radius, 0.7, sides, lt, 3, 0, height - 0.7, 0).to(st);
+    const onFace = (obj, i, y, off = 0.01, r = rAt(y)) => { const a = i * TAU / sides; obj.position.set(Math.sin(a) * (r * ap + off), y, Math.cos(a) * (r * ap + off)); obj.rotation.y = a; st.add(obj); return obj; };
+    let topY = height;
+    if (top !== 'roof') {
+      const pr = tlathe([[R1, 0], [R1, 0.95], [R1 - 0.45, 0.95], [R1 - 0.45, 0]], sides, sm, 3); pr.position.y = height; st.add(pr);
+      const cw = 2 * R1 * Math.sin(PI / sides);
+      for (let i = 0; i < sides; i += 2) { onFace(tbox(cw * 0.98, 0.85, 0.45, sm, 3), i, height + 0.95, -0.225, R1); onFace(box(cw * 0.98 + 0.07, 0.09, 0.53, C.stoneLt), i, height + 0.95 + 0.895, -0.225, R1); if (i % 4 === 0) onFace(box(0.08, 0.46, 0.03, C.dark), i, height + 0.95 + 0.42, 0.006, R1); }
+      topY = height + 1.8;
+    }
+    if (top !== 'battlement') {
+      const both = top === 'both', rr = both ? R1 - 0.6 : R1 + 0.35, by = both ? height + 0.55 : height, rh = rr * (both ? 2.1 : 1.75);
+      if (both) tcyl(rr - 0.12, rr - 0.12, 0.6, sides, sm, 3, 0, height, 0).to(st);
+      roofCone(rr, rh, sides, roofMat('slate', roofColor)).at(0, by, 0).to(st); cyl(rr + 0.03, rr + 0.03, 0.1, sides, shade(roofColor, 0.72)).at(0, by + 0.02, 0).rot(0, PI / sides, 0).to(st);
+      topY = by + rh;
+    }
+    const lv = Math.max(1, Math.floor((height - 3.2) / 3.2));
+    for (let l = 0; l < lv; l++) { const y = 3.6 + l * 3.2; onFace(archWin(0.62, 1.25, { lit }), 0, y, 0); onFace(slit(0.95), l % 2 ? 3 : sides - 3, y + 0.3); onFace(slit(0.95), sides / 2 + (l % 2 ? -2 : 2), y - 0.6); }
+    if (door !== 'none') {
+      const dy = 1.01, pd = plankDoor(1.05, 2.15, { arch: 'round' });
+      const dg = grp(textr(archFrame(1.8, 2.62, 1.05, 2.15), 0.5, lt, 1.5), pd.at(0, 0, -0.06), stairs(1.9, dy, 5, 0.28, sm, 1.5).at(0, -dy, 0.25), tbox(1.9, dy, 0.5, sm, 1.5).at(0, -dy, 0));
+      onFace(dg, door === 'back' ? sides / 2 : 0, dy, -0.02, radius * 1.1); g.userData.door = pd.userData.leaf; g.userData.open = pd.userData.open;
+    }
+    g.add(bake(st));
+    if (flag) { const bt = top === 'battlement', f = pennant(bt ? 3.4 : 1.9, flag).at(0, bt ? height : topY - 0.3, 0); g.add(f); g.userData.flag = f.userData.flag; topY = (bt ? height + 3.4 : topY + 1.6); }
+    Object.assign(g.userData, { radius, height, walkY: height, top: [0, topY, 0] }); return compose(g);
+  }
+  /**
+   * Square tower. o: {width: 5, height: 10, top: 'battlement' | 'roof' | 'both', color, roofColor, lit: false, door: 'front' | 'back' | 'none', flag: colour | null, seed}
+   * userData: {width, height, walkY, top, door, open(k), flag, update(t)}
+   */
+  function towerSquare(o = {}) {
+    const { width = 5, height = 10, top = 'battlement', color = C.stone, roofColor = C.slate, lit = false, door = 'front', flag = C.red, seed = 1 } = o;
+    const g = grp(), st = grp(), { sm, lt } = stoneSet(color, seed), h2 = width / 2, W1 = width + 0.7;
+    tbox(width, height, width, sm, 3).to(st); tbox(width + 0.5, 0.85, width + 0.5, sm, 3).to(st); tbox(width + 0.3, 0.16, width + 0.3, lt, 3, 0, 0.85, 0).to(st); tbox(W1, 0.32, W1, lt, 3, 0, height - 0.32, 0).to(st);
+    const onFace = (obj, sd, x, y, off = 0.01, half = h2) => { const a = sd * PI / 2; obj.position.set(Math.sin(a) * (half + off) + Math.cos(a) * x, y, Math.cos(a) * (half + off) - Math.sin(a) * x); obj.rotation.y = a; st.add(obj); return obj; };
+    const nc = Math.max(3, Math.round(width / 0.85)); for (let sd = 0; sd < 4; sd++) for (let i = 0; i < nc; i++) onFace(box(0.3, 0.36, 0.34, C.stoneLt), sd, -h2 + (i + 0.5) * width / nc, height - 0.5, 0.17);
+    let topY = height;
+    if (top !== 'roof') {
+      const e = W1 / 2 - 0.225, nm = Math.max(1, Math.round((W1 - 1.9) / 1.55)), mw = 0.85, gap = (W1 - 1.9 - nm * mw) / (nm + 1);
+      for (let sd = 0; sd < 4; sd++) { onFace(tbox(W1 - (sd % 2 ? 0.9 : 0), 0.95, 0.45, sm, 3), sd, 0, height, -0.225, W1 / 2); for (let i = 0; i < nm; i++) { const u = -(W1 / 2 - 0.95) + gap + mw / 2 + i * (mw + gap); onFace(tbox(mw, 0.85, 0.45, sm, 3), sd, u, height + 0.95, -0.225, W1 / 2); onFace(box(mw + 0.07, 0.09, 0.53, C.stoneLt), sd, u, height + 0.95 + 0.895, -0.225, W1 / 2); } }
+      for (const sx of [-1, 1]) for (const sz of [-1, 1]) { tbox(0.95, 0.85, 0.95, sm, 3, sx * (e - 0.25), height + 0.95, sz * (e - 0.25)).to(st); box(1.02, 0.09, 1.02, C.stoneLt).at(sx * (e - 0.25), height + 0.95 + 0.895, sz * (e - 0.25)).to(st); }
+      topY = height + 1.8;
+    }
+    if (top !== 'battlement') {
+      const both = top === 'both', half = both ? h2 - 0.25 : W1 / 2 + 0.35, by = both ? height + 0.5 : height, rh = half * (both ? 2.0 : 1.7);
+      if (both) tbox(half * 2 - 0.3, 0.55, half * 2 - 0.3, sm, 3, 0, height, 0).to(st);
+      roofCone(half * Math.SQRT2, rh, 4, roofMat('slate', roofColor)).at(0, by, 0).to(st); box(half * 2 + 0.06, 0.1, half * 2 + 0.06, shade(roofColor, 0.72)).at(0, by + 0.02, 0).to(st);
+      topY = by + rh;
+    }
+    const lv = Math.max(1, Math.floor((height - 3.2) / 3.2));
+    for (let l = 0; l < lv; l++) { const y = 3.6 + l * 3.2; onFace(archWin(0.7, 1.35, { lit }), 0, 0, y, 0); onFace(slit(0.95), 1, l % 2 ? 0.8 : -0.8, y + 0.2); onFace(slit(0.95), 3, l % 2 ? -0.8 : 0.8, y - 0.3); onFace(slit(0.95), 2, 0, y); }
+    if (door !== 'none') {
+      const dy = 1.01, pd = plankDoor(1.05, 2.15, { arch: 'round' });
+      const dg = grp(textr(archFrame(1.8, 2.62, 1.05, 2.15), 0.5, lt, 1.5), pd.at(0, 0, -0.1), stairs(1.9, dy, 5, 0.28, sm, 1.5).at(0, -dy, 0.25), tbox(1.9, dy, 0.5, sm, 1.5).at(0, -dy, 0));
+      onFace(dg, door === 'back' ? 2 : 0, 0, dy, 0.2); g.userData.door = pd.userData.leaf; g.userData.open = pd.userData.open;
+    }
+    g.add(bake(st));
+    if (flag) { const bt = top === 'battlement', f = pennant(bt ? 3.4 : 1.9, flag).at(0, bt ? height : topY - 0.3, 0); g.add(f); g.userData.flag = f.userData.flag; topY = (bt ? height + 3.4 : topY + 1.6); }
+    Object.assign(g.userData, { width, height, walkY: height, top: [0, topY, 0] }); return compose(g);
+  }
+  /**
+   * Lowering bridge of planks on chains. Hinge end at z = -length / 2, far end toward +Z.
+   * o: {width: 3.6, length: 6, color, posts: true (timber frame holding the chains; false when a gatehouse does), anchorY: 4.4, open: 1, seed}
+   * userData: {deck, raise(k) (0 = down, 1 = up), open(k) (1 = down and passable, 0 = raised), hinge: [0, 0, z]}
+   */
+  function drawbridge(o = {}) {
+    const { width = 3.6, length = 6, color = C.wood, posts = true, anchorY = 4.4, open = 1, seed = 1 } = o, g = grp(), deck = grp(), ds = grp(), hz = -length / 2, ax = width / 2 - 0.09;
+    tbox(width, 0.14, length, woodMat(color, { planks: 6, horiz: true, seed }), 1.5, 0, 0.06, length / 2).to(ds);
+    for (const sx of [-1, 1]) { box(0.18, 0.26, length, C.woodDk).at(sx * ax, 0.11, length / 2).to(ds); torus(0.09, 0.022, C.iron, { ...IRON, rs: 4, ts: 8 }).at(sx * ax, 0.33, length - 0.3).rot(0, PI / 2, 0).to(ds); }
+    for (let z = 0.5; z < length; z += 1.25) box(width - 0.36, 0.03, 0.1, C.iron, IRON).at(0, 0.215, z).to(ds);
+    deck.add(bake(ds)); deck.position.set(0, 0.02, hz); g.add(deck);
+    const ct = S3.canvasTex(16, 32, c => { c.fillStyle = '#23262c'; c.fillRect(0, 0, 16, 32); c.fillStyle = '#7b828c'; c.fillRect(5, 1, 6, 14); c.fillStyle = '#565c66'; c.fillRect(1, 17, 14, 13); c.fillStyle = '#23262c'; c.fillRect(5, 20, 6, 7); }, { repeat: [1, 1] });
+    const cm = S3.texMat(ct, { rough: 0.5 }), chains = [-1, 1].map(() => { const c = mesh(new T.CylinderGeometry(0.035, 0.035, 1, 4), cm); g.add(c); return c; });
+    if (posts) { const ps = grp(), ph = anchorY + 0.45; for (const sx of [-1, 1]) { boxB(0.3, ph, 0.3, C.woodDk).at(sx * (width / 2 + 0.2), 0, hz - 0.2).to(ps); beam([sx * (width / 2 + 0.2), ph - 1.3, hz - 0.2], [sx * (width / 2 - 0.9), ph - 0.15, hz - 0.2], 0.16, 0.16, C.woodDk).to(ps); cyl(0.14, 0.14, 0.12, 8, C.iron, IRON).rot(0, 0, PI / 2).at(sx * ax, anchorY, hz - 0.02).to(ps); boxB(0.42, 0.16, 0.42, C.stoneDk).at(sx * (width / 2 + 0.2), 0, hz - 0.2).to(ps); } box(width + 1.1, 0.3, 0.3, C.woodDk).at(0, ph, hz - 0.2).to(ps); g.add(bake(ps)); }
+    const U = g.userData; U.deck = deck; U.hinge = [0, 0, hz];
+    U.raise = k => { const a = clamp(k) * 1.42, y = 0.33, z = length - 0.3, s = Math.sin(a), c = Math.cos(a); deck.rotation.x = -a; chains.forEach((ch, i) => { const sx = i ? 1 : -1, p = [sx * ax, 0.02 + y * c + z * s, hz - y * s + z * c], q = [sx * ax, anchorY, hz + 0.02]; stretch(ch, p, q); }); ct.repeat.set(1, Math.max(1, Math.hypot(0.02 + y * c + z * s - anchorY, -y * s + z * c) / 0.22)); };
+    U.open = k => U.raise(1 - clamp(k)); U.open(open); return g;
+  }
+  /**
+   * Gatehouse: an arched passage between two round towers, with a portcullis.
+   * o: {width: 14, height: 8.5, depth: 5, gateWidth: 3.6, gateHeight: 4.6, color, lit: true (torches burning), banner: colour | null, emblem,
+   *     doors: false (wooden gates at the inner end), bridge: false (drawbridge in front), open: 0, seed}
+   * userData: {portcullis, open(k), doors, openDoors(k), bridge (its userData.open(k)), front: [x,y,z], inside: [x,y,z], walkY, update(t)}
+   */
+  function gatehouse(o = {}) {
+    const { width = 14, height = 8.5, depth = 5, gateWidth = 3.6, gateHeight = 4.6, color = C.stone, seed = 1, lit = true, banner: bn = C.red, emblem = 'tower', doors = false, bridge = false, open = 0 } = o;
+    const g = grp(), st = grp(), { sm, lt } = stoneSet(color, seed), tr = 2.3, tx = width / 2 - tr, cw = tx * 2, hz = depth / 2, I = archPts(gateWidth, gateHeight, 'round', 8), a = gateWidth / 2, sy = gateHeight - a;
+    textr([[cw / 2, 0], [cw / 2, height], [-cw / 2, height], [-cw / 2, 0], I[0], ...I.slice(2).reverse(), I[1]], depth, sm, 3).to(st);
+    tbox(cw, 0.26, depth + 0.3, lt, 3, 0, height - 0.26, 0).to(st); tbox(gateWidth, 0.05, depth + 1.2, paveMat('flag', shade(color, 0.9)), 2).to(st);
+    for (const sd of [1, -1]) { tbox(cw, 0.95, 0.45, sm, 3, 0, height, sd * (hz - 0.1)).to(st); merlons(st, cw, Math.round(cw / 1.6), height + 0.95, sd * (hz - 0.1), sm, { cap: C.stoneLt }); }
+    const nv = 9, vr = a + 0.25; for (let i = 0; i < nv; i++) { const an = (i + 0.5) / nv * PI, key = i === 4, rr = vr + (key ? 0.07 : 0); box(vr * PI / nv * 0.93, key ? 0.64 : 0.5, 0.16, shade(color, key ? 1.3 : i % 2 ? 1.1 : 1.2)).at(Math.cos(an) * rr, sy + Math.sin(an) * rr, hz + 0.05).rot(0, 0, an - PI / 2).to(st); }
+    for (let j = 0; j * 0.52 < sy - 0.3; j++) for (const sx of [-1, 1]) box(j % 2 ? 0.56 : 0.4, 0.48, 0.16, shade(color, j % 2 ? 1.1 : 1.2)).at(sx * (a + (j % 2 ? 0.28 : 0.2)), 0.26 + j * 0.52, hz + 0.05).to(st);
+    for (const sx of [-1, 1]) slit(1.0).at(sx * 1.25, gateHeight + 1.75, hz + 0.01).to(st);
+    if (bn) shield({ color: bn, emblem, size: 1.1, y: gateHeight + 0.75 }).at(0, 0, hz + 0.02).to(st);
+    g.add(bake(st));
+    const tz = hz - tr + 1.0, tws = [-1, 1].map(sx => { const t = towerRound({ radius: tr, height: height + 2.4, color, seed: seed + (sx > 0 ? 2 : 1), door: 'none', flag: bn, lit: o.windows }); t.position.set(sx * tx, 0, tz); g.add(t); return t; });
+    if (bn) for (const sx of [-1, 1]) { const b = banner({ color: bn, emblem, width: 1.0, height: 3.3, y: height - 0.6, seed: seed + sx }); b.position.set(sx * tx, 0, tz + tr * Math.cos(PI / 12) + 0.02); g.add(b); }
+    const ts = [-1, 1].map(sx => { const t = wallTorch({ y: 2.7, lit, seed: seed + sx + 3 }); t.position.set(sx * (a + 0.82), 0, hz); g.add(t); return t; });
+    // portcullis
+    const pc = grp(), ps = grp(), pw = gateWidth + 0.24, ph = gateHeight + 0.1, nb = Math.round(pw / 0.43);
+    for (let i = 0; i <= nb; i++) { const x = -pw / 2 + i * pw / nb; box(0.085, ph, 0.085, '#5b4630').at(x, ph / 2 + 0.16, 0).to(ps); cone(0.07, 0.24, 4, C.steel, STEEL).at(x, 0.13, 0).rot(PI, PI / 4, 0).to(ps); }
+    for (let j = 0; 0.5 + j * 0.62 < ph; j++) { box(pw, 0.085, 0.11, '#4d3a27').at(0, 0.5 + j * 0.62, 0).to(ps); for (let i = 0; i <= nb; i++) box(0.12, 0.12, 0.13, C.iron, IRON).at(-pw / 2 + i * pw / nb, 0.5 + j * 0.62, 0).to(ps); }
+    pc.add(bake(ps)); pc.position.set(0, 0, hz - 0.85); g.add(pc);
+    const U = g.userData; U.portcullis = pc; U.open = k => { pc.position.y = clamp(k) * (gateHeight + 0.2); }; U.open(open); U.torches = ts; U.towers = tws;
+    if (doors) { const dd = doubleDoor(gateWidth, gateHeight, { arch: 'round', inward: true }); dd.rotation.y = 0; dd.position.set(0, 0, -hz + 0.5); g.add(dd); U.doors = dd; U.openDoors = dd.userData.open; }
+    if (bridge) { const br = drawbridge({ width: gateWidth, length: 6.5, posts: false, anchorY: gateHeight + 1.3, color: C.wood }); br.position.set(0, 0, hz + 3.25); g.add(br); U.bridge = br; }
+    Object.assign(U, { front: [0, 0, hz + 5], inside: [0, 0, -hz - 3], walkY: height, width, height, depth }); return compose(g);
+  }
+  /**
+   * The keep: the lord's great tower, with corner turrets, a stair to a pointed door, and banners.
+   * o: {width: 11, depth: 9, height: 13, color, roofColor, lit: false (glowing windows), banner: colour | null, emblem, flag: colour | null, seed}
+   * userData: {door (double door group), open(k), doorPos: [x, y, z] (top of the stair), top: [0, y, 0], flag, update(t)}
+   */
+  function keep(o = {}) {
+    const { width = 11, depth = 9, height = 13, color = C.stone, roofColor = C.slate, lit = false, banner: bn = C.red, emblem = 'crown', flag = C.red, seed = 1 } = o;
+    const g = grp(), st = grp(), { sm, lt } = stoneSet(color, seed), hx = width / 2, hz = depth / 2, tw = 3, th = height + 2.6, W = width + 0.5, D = depth + 0.5;
+    tbox(width, height, depth, sm, 3).to(st); tbox(W, 0.9, D, sm, 3).to(st); tbox(width + 0.3, 0.16, depth + 0.3, lt, 3, 0, 0.9, 0).to(st);
+    for (let y = 5; y < height - 2; y += 4) tbox(width + 0.16, 0.18, depth + 0.16, lt, 3, 0, y, 0).to(st);
+    tbox(W, 0.3, D, lt, 3, 0, height - 0.3, 0).to(st);
+    for (const sd of [1, -1]) { tbox(W, 0.95, 0.45, sm, 3, 0, height, sd * (D / 2 - 0.225)).to(st); merlons(st, W, Math.round(W / 1.5), height + 0.95, sd * (D / 2 - 0.225), sm, { cap: C.stoneLt }); }
+    for (const sd of [1, -1]) { const side = grp(); tbox(D - 0.9, 0.95, 0.45, sm, 3).to(side); merlons(side, D - 0.9, Math.round((D - 0.9) / 1.5), 0.95, 0, sm, { cap: C.stoneLt }); side.position.set(sd * (W / 2 - 0.225), height, 0); side.rotation.y = sd * PI / 2; st.add(side); }
+    // corner turrets
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+      const x = sx * (hx - tw / 2 + 0.55), z = sz * (hz - tw / 2 + 0.55), t = grp().at(x, 0, z), e = tw / 2 + 0.3 - 0.2;
+      tbox(tw, th, tw, sm, 3).to(t); tbox(tw + 0.4, 0.9, tw + 0.4, sm, 3).to(t); tbox(tw + 0.6, 0.3, tw + 0.6, lt, 3, 0, th - 0.3, 0).to(t);
+      for (let sd = 0; sd < 4; sd++) { const an = sd * PI / 2, w1 = tbox(tw + 0.6 - (sd % 2 ? 0.8 : 0), 0.9, 0.4, sm, 3); w1.position.set(Math.sin(an) * e, th, Math.cos(an) * e); w1.rotation.y = an; t.add(w1); const m1 = tbox(0.8, 0.8, 0.4, sm, 3); m1.position.set(Math.sin(an) * e, th + 0.9, Math.cos(an) * e); m1.rotation.y = an; t.add(m1); }
+      for (const cx of [-1, 1]) for (const cz of [-1, 1]) tbox(0.75, 0.8, 0.75, sm, 3, cx * (e - 0.175), th + 0.9, cz * (e - 0.175)).to(t);
+      const sl = slit(1.0); sl.position.set(sx * 0, th - 3, sz * (tw / 2 + 0.01)); if (sz < 0) sl.rotation.y = PI; t.add(sl);
+      const s2 = slit(1.0); s2.position.set(sx * (tw / 2 + 0.01), th - 6.5, 0); s2.rotation.y = sx * PI / 2; t.add(s2);
+      st.add(t);
+    }
+    // central roof behind the parapet
+    const rb = Math.min(width, depth) - 1.6, rf = roofCone(rb / 2 * Math.SQRT2, 3.4, 4, roofMat('slate', roofColor)); rf.scale.set((width - 1.4) / rb, 1, (depth - 1.4) / rb); rf.position.y = height + 0.02; st.add(rf);
+    // door at the head of a stair, windows, banners
+    const dw = 2.1, dh = 3.3, dy = 1.06, dd = doubleDoor(dw, dh, { arch: 'point', color: C.woodDk });
+    textr(archFrame(dw + 1.1, dh + 0.62, dw, dh, 'point'), 0.6, lt, 1.5).at(0, dy, hz + 0.26).to(st); dd.position.set(0, dy, hz + 0.12); st.add(dd);
+    tbox(dw + 1.9, dy, 0.6, sm, 1.5, 0, 0, hz + 0.3).to(st); stairs(dw + 1.9, dy, 5, 0.34, sm, 1.5).at(0, 0, hz + 0.6).to(st);
+    for (let y = 5.9; y + 2.4 < height; y += 4) { for (const x of [-hx * 0.55, 0, hx * 0.55]) { archWin(0.85, 1.9, { lit, arch: 'point' }).at(x, y, hz + 0.005).to(st); archWin(0.85, 1.9, { lit, arch: 'point' }).at(x, y, -hz - 0.005).rot(0, PI, 0).to(st); } for (const z of [-hz * 0.3, hz * 0.3]) for (const sx of [-1, 1]) archWin(0.7, 1.7, { lit, arch: 'point' }).at(sx * (hx + 0.005), y, z).rot(0, sx * PI / 2, 0).to(st); }
+    g.add(bake(st));
+    if (bn) for (const sx of [-1, 1]) { const b = banner({ color: bn, emblem, width: 1.15, height: 3.6, y: 5.2, seed: seed + sx }); b.position.set(sx * (dw / 2 + 1.5), 0, hz + 0.02); g.add(b); }
+    const U = g.userData; U.doors = dd.userData.leaves; U.open = dd.userData.open; U.doorPos = [0, dy, hz + 1.2];
+    if (flag) { const f = pennant(3.8, flag, 2.0).at(0, height + 3.3, 0); g.add(f); U.flag = f.userData.flag; }
+    Object.assign(U, { width, depth, height, top: [0, height + 7.1, 0] }); return compose(g);
+  }
+  /**
+   * Courtyard well with a windlass, a little roof and a bucket.
+   * o: {radius: 0.85, color, wood, roof: true, roofColor, water: '#1c3d4a', seed}
+   * userData: {bucket, lower(k) (0 = bucket at the rim, 1 = down the shaft), rim: 0.9}
+   */
+  function well(o = {}) {
+    const { radius = 0.85, color = C.stone, wood = C.wood, roof = true, roofColor, water = '#1c3d4a', seed = 1 } = o, g = grp(), st = grp(), sm = stoneMat(color, { seed }), ri = radius - 0.22;
+    tcyl(radius + 0.38, radius + 0.44, 0.13, 10, paveMat('flag', shade(color, 0.92)), 2).to(st);
+    const rg = tlathe([[radius, 0.13], [radius, 0.9], [ri, 0.9], [ri, 0.2]], 10, sm, 1.5); st.add(rg);
+    const cp = tlathe([[radius + 0.05, 0.9], [radius + 0.05, 1.0], [ri - 0.03, 1.0], [ri - 0.03, 0.9]], 10, stoneMat(shade(color, 1.12), { seed: seed + 2 }), 1.5); st.add(cp);
+    cyl(ri, ri, 0.02, 10, water, { rough: 0.12, metal: 0.2 }).at(0, 0.5, 0).rot(0, PI / 10, 0).to(st);
+    const px = radius + 0.02, ph = 2.25, ay = 1.72;
+    for (const sx of [-1, 1]) { boxB(0.14, ph, 0.14, wood).at(sx * px, 0, 0).to(st); if (roof) for (const sz of [-1, 1]) beam([sx * px, ph - 0.55, 0], [sx * px, ph - 0.05, sz * 0.5], 0.08, 0.08, shade(wood, 0.8)).to(st); }
+    cyl(0.045, 0.045, px * 2 + 0.3, 6, shade(wood, 0.75)).rot(0, 0, PI / 2).at(0, ay, 0).to(st); cyl(0.1, 0.1, 0.8, 8, shade(wood, 1.1)).rot(0, 0, PI / 2).at(0, ay, 0).to(st); cyl(0.107, 0.107, 0.3, 8, C.rope).rot(0, 0, PI / 2).at(0.05, ay, 0).to(st);
+    rod([px + 0.15, ay, 0], [px + 0.15, ay - 0.26, 0], 0.02, C.iron, IRON).to(st); rod([px + 0.13, ay - 0.26, 0], [px + 0.4, ay - 0.26, 0], 0.022, C.woodDk).to(st);
+    if (roof) gableRoof(px * 2 + 0.7, 1.24, 0.52, roofMat('shingle', roofColor), { over: 0.14, thick: 0.07, s: 1, cap: shade(wood, 0.7) }).at(0, ph - 0.06, 0).to(st);
+    g.add(bake(st));
+    const bk = grp(), bs = grp(); lathe([[0.13, 0], [0.17, 0.3], [0.15, 0.3], [0.115, 0.03], [0.0001, 0.03]], 8, wood).to(bs); cyl(0.172, 0.165, 0.035, 8, C.iron, IRON).at(0, 0.2, 0).to(bs); cyl(0.142, 0.135, 0.03, 8, C.iron, IRON).at(0, 0.07, 0).to(bs); torus(0.165, 0.012, C.iron, { ...IRON, rs: 4, ts: 8, arc: PI }).at(0, 0.3, 0).to(bs);
+    bk.add(bake(bs)); g.add(bk); const rope = mesh(new T.CylinderGeometry(0.014, 0.014, 1, 4), mat(C.rope)); g.add(rope);
+    const U = g.userData; U.bucket = bk; U.rim = 1.0; U.lower = k => { const y = lerp(1.08, -1.2, clamp(k)); bk.position.set(0.05, y, 0); stretch(rope, [0.05, y + 0.46, 0], [0.05, ay - 0.1, 0]); bk.visible = rope.visible = true; }; U.lower(0); return g;
+  }
+
   // @@NEXT@@
 
   // ---------- stage helpers ----------
   /** Register every userData.update(t) found under the given objects with the stage. o: {global: true} uses film time instead of shot time. */
   function animate(s, ...roots) {
     const o = roots.length && roots[roots.length - 1] && !roots[roots.length - 1].isObject3D ? roots.pop() : {}, fns = [];
-    roots.flat().forEach(r => r && r.traverse(x => { if (x.userData && typeof x.userData.update === 'function') fns.push(x.userData.update); }));
+    const walk = x => { if (!x) return; if (typeof x.userData.update === 'function') { fns.push(x.userData.update); if (x.userData.composite) return; } x.children.forEach(walk); };
+    roots.flat().forEach(walk);
     if (fns.length) s.tick((lt, t) => { const tt = o.global ? t : lt; for (const f of fns) f(tt); });
     return fns.length;
   }
@@ -386,6 +671,7 @@ const KitFantasy = (() => {
   return {
     palette: C, animate, lightFlames, worldPos, bake, shade, mix,
     stoneMat, woodMat, roofMat, plasterMat, paveMat, glassMat,
-    flame, wallTorch, brazier, wall, towerRound,
+    flame, wallTorch, brazier,
+    wall, towerRound, towerSquare, gatehouse, drawbridge, keep, well, banner, shield, plankDoor, doubleDoor,
   };
 })();

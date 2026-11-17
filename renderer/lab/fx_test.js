@@ -33,8 +33,20 @@
     });
   }
 
+  const W = { area: 1.45, height: 6 };   // weather shown in a small column instead of around the camera
   page('fx_cat1', { mood: 'studio', items: [
-    ['rain', (s, p) => KitFX.rain(s, { center: p, area: 1.4, count: 200, splashes: 40, height: 6 })],
-    ['rain (windy)', (s, p) => KitFX.rain(s, { center: p, area: 1.4, count: 200, splashes: 40, height: 6, wind: [5, 1] })],
+    ['rain', (s, p) => KitFX.rain(s, { ...W, center: p, count: 200, splashes: 40 })],
+    ['storm', (s, p) => KitFX.storm(s, { ...W, center: p, count: 420, splashes: 60, spray: 3 })],
+    ['snow', (s, p) => KitFX.snow(s, { ...W, center: p, count: 260 })],
+    ['hail', (s, p) => KitFX.hail(s, { ...W, center: p, count: 90, bounces: 50 })],
+    ['leaves', (s, p) => KitFX.leaves(s, { ...W, center: p, count: 34 })],
+    ['ash', (s, p) => KitFX.ash(s, { ...W, center: p, count: 200 })],
+  ] });
+  page('fx_cat2', { mood: 'studio', items: [
+    ['dust', (s, p) => KitFX.dust(s, { center: p, area: 1.6, count: 110, haze: 4 })],
+    ['motes', (s, p) => KitFX.motes(s, { pos: p, size: [2.4, 2.4, 2.4] })],
+    ['fogBank', (s, p) => KitFX.fogBank(s, { center: p, area: 1.8, count: 4, size: 2.6, height: 2.2 })],
+    ['groundMist', (s, p) => KitFX.groundMist(s, { center: p, area: 1.8, count: 12, size: 1.6 })],
+    ['lightning', (s, p) => KitFX.lightning(s, { pos: [p[0], 0, p[2] - 1], height: 7, width: 0.08, times: [0.45, 1.4, 2.4], flash: 0.5, sky: 0.15 })],
   ] });
 })();

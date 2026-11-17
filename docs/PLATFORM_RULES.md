@@ -39,6 +39,15 @@ two choices but removes the A/B letters and replaces "COMMENT A OR B" with "WHAT
 narration never says "comment". Use the standard cut on YouTube and TikTok, the Meta cut on Facebook and
 Instagram. Other creators do post "comment A or B" on Facebook; that is their risk to take.
 
+## 2b. The end card that names the other platforms
+
+Every video ends with a card showing the channel name, the handle and the words Instagram, Facebook, YouTube
+and TikTok. Platforms demote videos that carry another app's **logo or watermark** (Instagram and Facebook say so
+explicitly; TikTok treats another app's watermark as unoriginal content). Plain text names are not covered by
+those rules, so the card uses text only and never a logo. Whether any platform quietly reduces reach for
+naming a competitor is not documented either way. If reach on one platform looks suppressed, the first thing
+to test is a cut whose end card shows only the handle.
+
 ## 3. Upload settings
 
 | Platform | Setting |
