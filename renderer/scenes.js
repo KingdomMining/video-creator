@@ -275,10 +275,14 @@ window.renderFrame = t => {
   c.save(); c.translate(W / 2 + sx, H / 2 + sy); c.scale(z, z); c.translate(-W / 2, -H / 2);
   (SCENES[sc.visual] || SCENES.space)(c, t, lt, d, sc.params || {}, P);
   c.restore(); c.shadowBlur = 0; c.globalAlpha = 1;
+  // bloom: blurred highlights screened back over the frame
+  if (!window._bl) { window._bl = document.createElement('canvas'); _bl.width = W / 4; _bl.height = H / 4; }
+  const b = _bl.getContext('2d'); b.filter = 'blur(7px) contrast(1.55) brightness(0.82)'; b.drawImage(cv, 0, 0, W / 4, H / 4);
+  c.save(); c.globalCompositeOperation = 'screen'; c.globalAlpha = TL.bloom ?? 0.38; c.drawImage(_bl, 0, 0, W, H); c.restore();
   // vignette, grain, cut flash
   const vg = c.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, H * 0.75); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.72)'); c.fillStyle = vg; c.fillRect(0, 0, W, H);
   const r = rng(Math.floor(t * 30) + 1); for (let i = 0; i < 700; i++) { c.fillStyle = `rgba(255,255,255,${r() * 0.06})`; c.fillRect(r() * W, r() * H, 3, 3); }
-  if (lt < 0.2) { c.fillStyle = `rgba(0,0,0,${1 - lt / 0.2})`; c.fillRect(0, 0, W, H); }
+  if (lt < 0.12) { c.fillStyle = `rgba(0,0,0,${1 - lt / 0.12})`; c.fillRect(0, 0, W, H); }
   if (d - lt < 0.1 && sc !== TL.scenes[TL.scenes.length - 1]) { c.fillStyle = `rgba(0,0,0,${0.7 * (1 - (d - lt) / 0.1)})`; c.fillRect(0, 0, W, H); }
   header(c, t, P); captions(c, t, P); choiceCard(c, t, P);
 };
