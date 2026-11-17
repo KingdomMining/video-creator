@@ -1,0 +1,5 @@
+out/
+voices/
+__pycache__/
+node_modules/
+episodes/zz-test/

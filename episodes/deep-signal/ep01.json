@@ -1,0 +1,22 @@
+{
+  "series": "DEEP SIGNAL", "episode": 1, "theme": "space",
+  "say": {"cryosleep": "cryo sleep"},
+  "hook": "WOULD YOU OPEN IT?",
+  "scenes": [
+    {"visual": "ds_exterior", "text": "Two hundred twelve days into your watch. The cargo ship Meridian is passing Saturn, and you are the only one awake."},
+    {"visual": "ds_cryo", "text": "Five crew. Four of them in cryosleep. Your job is simple. Stay awake. Watch the ship. Wake no one."},
+    {"visual": "ds_alert", "params": {"calm": true, "lines": ["ON WATCH", "*R. VOSS  PILOT", "DIST TO EARTH", "*890,000,000 MI", "SIGNAL DELAY", "*80 MIN ONE WAY"]}, "text": "Earth is nearly nine hundred million miles behind you. A call for help takes eighty minutes to get there. Nobody is coming."},
+    {"visual": "ds_alert", "sfx": [{"type": "alarm", "at": 0.05}], "text": "At three in the morning, ship time, the proximity alarm goes off. Something is touching the hull."},
+    {"visual": "ds_schematic", "params": {"lines": ["CONTACT: HULL PLATE 14", "!SPEED: 0.4 M/S", "!PATTERN: HAND OVER HAND", "!HEADING: AIRLOCK 02"]}, "sfx": [{"type": "beep", "at": 0.3}], "text": "It isn't debris. Debris doesn't change direction. This is climbing along the outside of the ship, hand over hand, toward the airlock."},
+    {"visual": "ds_run", "hold": 0.3, "text": "You run."},
+    {"visual": "ds_hatch", "hold": 1.35, "sfx": [{"type": "knock", "at": -1.3}], "text": "Space is silent. But steel carries sound."},
+    {"visual": "ds_hatch", "params": {"tight": true}, "hold": 1.3, "sfx": [{"type": "knock", "at": -1.25}], "text": "Three slow knocks, on the outer door. Nothing out there should be alive."},
+    {"visual": "ds_window", "params": {"hand": 5.0}, "hold": 0.4, "sfx": [{"type": "thud", "at": 5.0}], "text": "You wipe the frost from the glass. A figure in a spacesuit. It lifts one hand, and presses it against the window."},
+    {"visual": "ds_tag", "hold": 0.3, "sfx": [{"type": "beep", "at": 0.75}], "text": "The name tag reads R. Voss, pilot. That is your name."},
+    {"visual": "ds_tag", "params": {"o2": true}, "hold": 0.3, "text": "And the suit's oxygen gauge reads zero."},
+    {"visual": "ds_locker", "hold": 0.3, "text": "Your own suit is still hanging in the locker behind you."},
+    {"visual": "ds_window", "params": {"still": true, "close": true, "radio": true}, "hold": 0.5, "sfx": [{"type": "static", "at": 0.0}], "text": "Then the radio crackles. And your own voice says: Please. Let me in. I'm the real one."}
+  ],
+  "choice": {"narration": "Do you open the airlock? Or keep it sealed?", "question": "WHAT DO YOU DO?", "a": "OPEN THE AIRLOCK", "b": "KEEP IT SEALED", "hold": 3.4},
+  "hashtags": "#space #scifi #story #whatwouldyoudo #cliffhanger #choose"
+}
