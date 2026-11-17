@@ -35,12 +35,12 @@ function arcText(c, text, cx, cy, r, a0, a1) { const n = text.length; for (let i
 function dsPlanet(c, px, py, R) {
   const ring = front => { c.save(); c.translate(px, py); c.rotate(-0.36); c.scale(1, 0.2); for (let i = 0; i < 34; i++) { const rr = R * (1.22 + i * 0.022), a = [.5, .34, .62, .14, .46, .3, .56, .07, .42, .22, .6][i % 11]; c.strokeStyle = `rgba(${228 - i * 2},${196 - i * 2},${158 - i},${a * 0.6})`; c.lineWidth = R * 0.019; c.beginPath(); c.arc(0, 0, rr, front ? 0 : Math.PI, front ? Math.PI : Math.PI * 2); c.stroke(); } c.restore(); };
   ring(false);
-  const g0 = c.createRadialGradient(px, py, R * 0.96, px, py, R * 1.09); g0.addColorStop(0, 'rgba(255,170,110,.5)'); g0.addColorStop(1, 'rgba(255,170,110,0)'); c.fillStyle = g0; c.beginPath(); c.arc(px, py, R * 1.09, 0, 7); c.fill();
+  const g0 = c.createRadialGradient(px, py, R * 0.96, px, py, R * 1.09); g0.addColorStop(0, 'rgba(255,225,160,.45)'); g0.addColorStop(1, 'rgba(255,225,160,0)'); c.fillStyle = g0; c.beginPath(); c.arc(px, py, R * 1.09, 0, 7); c.fill();
   const body = cached('planet', 1700, 1700, (b, w) => {
     const r = rng(5), Rb = w / 2; b.translate(Rb, Rb); b.beginPath(); b.arc(0, 0, Rb, 0, 7); b.clip(); b.rotate(-0.36);
-    const pal = ['#d9a066', '#b9713d', '#e8c79a', '#8a4a2a', '#c98a52', '#f0d9b5', '#a35a33', '#6e3a24'];
+    const pal = ['#e3cf9a', '#cdb47a', '#f0e2b6', '#b99a62', '#d8c38c', '#f4ead0', '#c2a56c', '#a98b58'];
     let y = -Rb; while (y < Rb) { const hgt = 18 + r() * 90, col = pal[Math.floor(r() * pal.length)], ph = r() * 9, amp = 4 + r() * 12; b.fillStyle = col; b.beginPath(); b.moveTo(-Rb, y + hgt + 20); for (let x = -Rb; x <= Rb; x += 20) b.lineTo(x, y + Math.sin(x * 0.006 + ph) * amp + Math.sin(x * 0.021 + ph * 2) * amp * 0.4); b.lineTo(Rb, y + hgt + 20); b.fill(); y += hgt; }
-    for (let i = 0; i < 9; i++) { const x = (r() - 0.5) * Rb * 1.5, yy = (r() - 0.5) * Rb * 1.5, w2 = 40 + r() * 130; b.fillStyle = `rgba(${r() > 0.5 ? '255,235,205' : '110,50,30'},.45)`; b.beginPath(); b.ellipse(x, yy, w2, w2 * 0.33, 0, 0, 7); b.fill(); }
+    for (let i = 0; i < 0; i++) { const x = (r() - 0.5) * Rb * 1.5, yy = (r() - 0.5) * Rb * 1.5, w2 = 40 + r() * 130; b.fillStyle = `rgba(${r() > 0.5 ? '255,235,205' : '110,50,30'},.45)`; b.beginPath(); b.ellipse(x, yy, w2, w2 * 0.33, 0, 0, 7); b.fill(); }
     for (let i = 0; i < 2500; i++) { b.fillStyle = `rgba(${r() > 0.5 ? 255 : 40},${r() > 0.5 ? 230 : 20},${r() > 0.5 ? 200 : 10},.05)`; b.fillRect((r() - 0.5) * w, (r() - 0.5) * w, 30 + r() * 120, 3); }
   });
   c.drawImage(body, px - R, py - R, R * 2, R * 2);
@@ -144,7 +144,7 @@ SCENES.ds_alert = (c, t, lt, d, p) => {
   // canopy
   c.save(); c.beginPath(); c.moveTo(70, 880); c.lineTo(150, 300); c.quadraticCurveTo(540, 220, 930, 300); c.lineTo(1010, 880); c.closePath(); c.clip();
   c.fillStyle = vgrad(c, 250, 900, [[0, '#01030b'], [1, '#081028']]); c.fillRect(0, 200, W, 720); c.drawImage(starfield(), -500 - lt * 14, -700);
-  const pg = c.createRadialGradient(900, 1700, 880, 900, 1700, 990); pg.addColorStop(0, '#2a140c'); pg.addColorStop(0.75, '#c97a42'); pg.addColorStop(0.9, 'rgba(255,170,110,.5)'); pg.addColorStop(1, 'rgba(255,170,110,0)'); c.fillStyle = pg; c.beginPath(); c.arc(900, 1700, 990, 0, 7); c.fill();
+  const pg = c.createRadialGradient(900, 1700, 880, 900, 1700, 990); pg.addColorStop(0, '#2a2212'); pg.addColorStop(0.75, '#d8c38c'); pg.addColorStop(0.9, 'rgba(255,225,160,.5)'); pg.addColorStop(1, 'rgba(255,225,160,0)'); c.fillStyle = pg; c.beginPath(); c.arc(900, 1700, 990, 0, 7); c.fill();
   // HUD
   if (!calm) {  const tx = lerp(700, 560, sm(lt / d)), ty = lerp(430, 600, sm(lt / d)), bs = 56 + 10 * Math.sin(t * 9);
   c.strokeStyle = `rgba(255,60,70,${on ? 1 : 0.35})`; c.lineWidth = 5; for (const [a, b] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) { c.beginPath(); c.moveTo(tx + a * bs, ty + b * (bs - 22)); c.lineTo(tx + a * bs, ty + b * bs); c.lineTo(tx + a * (bs - 22), ty + b * bs); c.stroke(); }
@@ -314,20 +314,20 @@ SCENES.ds_window = (c, t, lt, d, p) => {
 let TL_HAND = 2.3;
 
 // ================= SHOT 7 — the name tag =================
-SCENES.ds_tag = (c, t, lt, d) => {
+SCENES.ds_tag = (c, t, lt, d, p) => {
   const S = strobe(t), buf = cached('tagbuf', W, H, () => {}), b = buf.getContext('2d');
   b.setTransform(1, 0, 0, 1, 0, 0); const g = b.createLinearGradient(0, 0, W, H); g.addColorStop(0, '#f1f3f7'); g.addColorStop(0.5, '#b4bccb'); g.addColorStop(1, '#58616f'); b.fillStyle = g; b.fillRect(0, 0, W, H);
-  b.save(); b.translate(W / 2 + Math.sin(t * 0.6) * 10, H / 2 + Math.sin(t * 0.45) * 14); b.rotate(-0.045 + Math.sin(t * 0.35) * 0.008); b.translate(-W / 2, -H / 2);
+  b.save(); b.translate(W / 2 + Math.sin(t * 0.6) * 10, H / 2 + Math.sin(t * 0.45) * 14 - (p.o2 ? 760 * sm(lt / 0.9) + 0 : 0)); b.rotate(-0.045 + Math.sin(t * 0.35) * 0.008); b.translate(-W / 2, -H / 2);
   b.drawImage(cached('fabric', 600, 1000, (f, w, h) => { const r = rng(12); for (let i = 0; i < 60000; i++) { f.fillStyle = `rgba(${r() > 0.5 ? '255,255,255' : '20,30,50'},${r() * 0.1})`; f.fillRect(r() * w, r() * h, 2, 1 + r() * 3); } }), -100, -100, W + 200, H + 200);
   b.strokeStyle = 'rgba(50,60,85,.5)'; b.lineWidth = 7; b.lineCap = 'round'; b.beginPath(); b.moveTo(-100, 520); b.quadraticCurveTo(540, 430, 1180, 560); b.moveTo(-100, 1530); b.quadraticCurveTo(540, 1640, 1180, 1500); b.stroke();
   b.strokeStyle = 'rgba(255,255,255,.5)'; b.lineWidth = 3; b.setLineDash([16, 12]); b.beginPath(); b.moveTo(-100, 538); b.quadraticCurveTo(540, 448, 1180, 578); b.moveTo(-100, 1512); b.quadraticCurveTo(540, 1622, 1180, 1482); b.stroke(); b.setLineDash([]);
-  b.fillStyle = metalG(b, 0, 1600, 0, 1900, '#dfe4ec', '#8892a4', '#3a4352'); rrect(b, 120, 1640, 840, 400, 40); b.fill(); b.fillStyle = '#04080c'; rrect(b, 190, 1700, 330, 130, 14); b.fill(); b.fillStyle = '#58f29a'; b.font = 'bold 66px "DejaVu Sans Mono"'; b.textAlign = 'left'; b.fillText('O2 00%', 206, 1790);
+  b.fillStyle = metalG(b, 0, 1600, 0, 1900, '#dfe4ec', '#8892a4', '#3a4352'); rrect(b, 120, 1640, 840, 400, 40); b.fill(); b.fillStyle = '#04080c'; rrect(b, 190, 1700, 330, 130, 14); b.fill(); b.fillStyle = '#58f29a'; b.font = 'bold 66px "DejaVu Sans Mono"'; b.textAlign = 'left'; b.fillText('O2 00%', 206, 1790); b.fillStyle = '#04080c'; rrect(b, 560, 1700, 330, 130, 14); b.fill(); b.fillStyle = '#ffb23f'; b.font = 'bold 40px "DejaVu Sans Mono"'; b.fillText('PRESS 0.0', 580, 1756); b.fillText('PSI', 580, 1806); if (p.o2 && mod(t, 0.7) < 0.45) { b.strokeStyle = '#ff3344'; b.lineWidth = 8; rrect(b, 170, 1680, 370, 170, 20); b.stroke(); }
   patch(b, 540, 790, 236); nameTape(b, 150, 1090, 780, 250);
   const fr = rng(4); for (let i = 0; i < 40; i++) { b.strokeStyle = 'rgba(40,50,70,.25)'; b.lineWidth = 2; const x = 170 + fr() * 740, y = 1110 + fr() * 210; b.beginPath(); b.moveTo(x, y); b.lineTo(x + (fr() - 0.5) * 60, y + (fr() - 0.5) * 14); b.stroke(); }
   b.restore();
   const sh = b.createLinearGradient(0, 0, W, H); sh.addColorStop(0, 'rgba(255,255,255,.1)'); sh.addColorStop(0.55, 'rgba(0,0,10,.12)'); sh.addColorStop(1, 'rgba(0,0,10,.6)'); b.fillStyle = sh; b.fillRect(0, 0, W, H);
   b.fillStyle = `rgba(255,20,35,${0.03 + 0.1 * S})`; b.fillRect(0, 0, W, H);
-  const blur = 26 * (1 - ease(lt / 0.75)), z = lerp(1.22, 1.0, ease(lt / 0.9));
+  const blur = p.o2 ? 0 : 26 * (1 - ease(lt / 0.75)), z = p.o2 ? 1 : lerp(1.22, 1.0, ease(lt / 0.9));
   c.save(); c.filter = blur > 0.4 ? `blur(${blur.toFixed(1)}px)` : 'none'; c.translate(W / 2, 1100); c.scale(z, z); c.translate(-W / 2, -1100); c.drawImage(buf, 0, 0); c.restore(); c.filter = 'none';
   c.globalAlpha = 0.4; c.drawImage(frostTex(), -360, 0, W + 720, H); c.globalAlpha = 1;
   poly(c, [[-80, 700], [900, -80], [1160, -80], [-80, 1010]], 'rgba(255,255,255,.05)');
@@ -393,7 +393,7 @@ SCENES.ds_podface = (c, t, lt, d, p) => {
   c.strokeStyle = 'rgba(200,215,225,.55)'; c.lineWidth = 5; c.lineCap = 'round'; for (let i = 0; i < 7; i++) { c.beginPath(); c.moveTo(338 + i * 9, 760 - i * 22); c.quadraticCurveTo(346 + i * 12, 640 - i * 10, 400 + i * 16, 590 - i * 6); c.stroke(); c.beginPath(); c.moveTo(742 - i * 9, 760 - i * 22); c.quadraticCurveTo(734 - i * 12, 640 - i * 10, 680 - i * 16, 590 - i * 6); c.stroke(); }
   // brows, eyes, nose, mouth, scar
   c.strokeStyle = '#151b23'; c.lineWidth = 15; c.beginPath(); c.moveTo(394, 776); c.quadraticCurveTo(450, 754, 506, 772); c.moveTo(574, 772); c.quadraticCurveTo(630, 754, 686, 776); c.stroke();
-  const o = wake ? clamp((Math.sin(lt * 9) * Math.sin(lt * 2.3) - 0.8) * 4) * 0.4 : 0;
+  const o = 0;
   for (const ex of [450, 630]) { c.fillStyle = 'rgba(12,40,54,.35)'; c.beginPath(); c.ellipse(ex, 826, 62, 34, 0, 0, 7); c.fill(); if (o > 0.05) { c.fillStyle = '#e8f2f6'; c.beginPath(); c.ellipse(ex, 826, 44, 15 * o, 0, 0, 7); c.fill(); c.fillStyle = '#10202a'; c.beginPath(); c.arc(ex, 826, 12 * o, 0, 7); c.fill(); }
     c.strokeStyle = '#18222b'; c.lineWidth = 7; c.beginPath(); c.arc(ex, 800 - o * 8, 52, 0.22 * Math.PI, 0.78 * Math.PI); c.stroke(); c.lineWidth = 3; for (let i = 0; i < 6; i++) { const a = (0.26 + i * 0.096) * Math.PI; c.beginPath(); c.moveTo(ex + Math.cos(a) * 52, 800 + Math.sin(a) * 52); c.lineTo(ex + Math.cos(a) * 66, 800 + Math.sin(a) * 64); c.stroke(); } }
   poly(c, [[548, 810], [584, 946], [540, 960]], 'rgba(14,44,60,.38)'); c.strokeStyle = 'rgba(235,246,250,.55)'; c.lineWidth = 6; c.beginPath(); c.moveTo(530, 820); c.lineTo(522, 930); c.stroke(); c.strokeStyle = 'rgba(14,40,54,.7)'; c.lineWidth = 6; c.beginPath(); c.moveTo(500, 956); c.quadraticCurveTo(540, 976, 580, 956); c.stroke();
@@ -401,7 +401,6 @@ SCENES.ds_podface = (c, t, lt, d, p) => {
   const r = rng(8); for (let i = 0; i < 500; i++) { const a = 0.15 * Math.PI + r() * 0.7 * Math.PI, rr = 100 + r() * 78; c.fillStyle = `rgba(16,34,46,${0.25 * r()})`; c.fillRect(540 + Math.cos(a) * rr * 1.05, 900 + Math.sin(a) * rr * 1.05, 3, 4); }
   c.strokeStyle = 'rgba(240,250,255,.9)'; c.lineWidth = 6; c.beginPath(); c.moveTo(584, 1040); c.lineTo(612, 1082); c.stroke();
   nameTape(c, 590, 1500, 360, 118);
-  if (wake) { const tw = Math.sin(lt * 23) * (mod(lt, 1.7) < 0.5 ? 9 : 0); c.fillStyle = sk; for (let i = 0; i < 4; i++) { rrect(c, 150 + i * 44, 1560 - (i % 2) * 14 + tw * (i % 2 ? 1 : -1), 36, 150, 18); c.fill(); } }
   c.restore(); c.filter = 'none';
   // frost layer with a hand-wiped clearing
   const buf = cached('frostbuf', W, H, () => {}), b = buf.getContext('2d'); b.globalCompositeOperation = 'source-over'; b.shadowBlur = 0; b.clearRect(0, 0, W, H); b.fillStyle = 'rgba(214,238,250,.8)'; b.fillRect(0, 0, W, H);
@@ -416,6 +415,9 @@ SCENES.ds_podface = (c, t, lt, d, p) => {
   poly(c, [[-80, 760], [760, -80], [980, -80], [-80, 1020]], 'rgba(255,255,255,.07)'); poly(c, [[300, 2000], [1160, 1100], [1160, 1220], [420, 2000]], 'rgba(255,255,255,.04)');
   c.strokeStyle = '#020a0e'; c.lineWidth = 150; rrect(c, 20, 250, 1040, 1700, 330); c.stroke(); c.strokeStyle = wake ? `rgba(255,${150 + 60 * S},90,.9)` : 'rgba(190,245,255,.8)'; c.lineWidth = 6; rrect(c, 96, 326, 888, 1548, 262); c.stroke();
   if (wake) { c.save(); c.globalCompositeOperation = 'lighter'; c.fillStyle = `rgba(255,120,30,${0.07 + 0.14 * S})`; c.fillRect(-80, -80, W + 160, H + 160); c.restore();
-    c.fillStyle = 'rgba(3,6,9,.88)'; rrect(c, 250, 290, 580, 190, 20); c.fill(); c.strokeStyle = '#ff5a64'; c.lineWidth = 4; c.stroke(); c.textAlign = 'center'; c.font = 'bold 32px "DejaVu Sans Mono"'; c.fillStyle = '#ffb23f'; c.fillText('WAKE CYCLE STARTED', 540, 340);
-    c.font = 'bold 104px "DejaVu Sans Mono"'; c.fillStyle = '#ff5a64'; c.shadowColor = '#ff3344'; c.shadowBlur = 30; c.fillText('00:' + String(Math.max(0, 60 - Math.floor(lt))).padStart(2, '0'), 540, 446); c.shadowBlur = 0; }
+    c.fillStyle = 'rgba(3,6,9,.88)'; rrect(c, 250, 290, 580, 190, 20); c.fill(); c.strokeStyle = '#ff5a64'; c.lineWidth = 4; c.stroke(); c.textAlign = 'center'; c.font = 'bold 32px "DejaVu Sans Mono"'; c.fillStyle = '#ffb23f'; c.fillText('REVIVAL STARTED · ABORT WINDOW', 540, 340);
+    c.font = 'bold 104px "DejaVu Sans Mono"'; c.fillStyle = '#ff5a64'; c.shadowColor = '#ff3344'; c.shadowBlur = 30; c.fillText('00:' + String(Math.max(0, 60 - Math.floor(lt))).padStart(2, '0'), 540, 446); c.shadowBlur = 0;
+    const bpm = Math.round(lerp(8, 46, sm(lt / d))), ph0 = lt * lerp(0.15, 0.8, sm(lt / d)); c.fillStyle = 'rgba(3,6,9,.88)'; rrect(c, 250, 496, 580, 96, 16); c.fill(); c.strokeStyle = '#58f29a'; c.lineWidth = 4; c.beginPath();
+    for (let i = 0; i <= 380; i += 4) { const ph = mod(i / 380 * 2.2 - ph0 * 2, 1), y = ph < 0.07 ? -30 * Math.sin(ph / 0.07 * Math.PI) : ph < 0.12 ? 12 : 0; i ? c.lineTo(274 + i, 548 + y) : c.moveTo(274 + i, 548 + y); } c.stroke();
+    c.font = 'bold 34px "DejaVu Sans Mono"'; c.textAlign = 'right'; c.fillStyle = '#58f29a'; c.fillText(bpm + ' BPM', 812, 560); }
 };

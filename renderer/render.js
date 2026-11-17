@@ -18,7 +18,7 @@ const fs = require('fs'), path = require('path');
     await browser.close(); return;
   }
   const ff = spawn('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', String(tl.fps), '-c:v', 'mjpeg', '-i', '-', '-i', a2,
-    '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '19', '-preset', 'medium', '-c:a', 'aac', '-b:a', '192k', '-shortest', '-movflags', '+faststart', a3],
+    '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '22', '-preset', 'medium', '-c:a', 'aac', '-b:a', '192k', '-shortest', '-movflags', '+faststart', a3],
     { stdio: ['pipe', 'inherit', 'inherit'] });
   const n = Math.round(tl.duration * tl.fps);
   for (let i = 0; i < n; i++) {

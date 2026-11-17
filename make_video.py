@@ -12,6 +12,8 @@ ROOT = Path(__file__).parent
 VOICE = ROOT / "voices" / "en_US-ryan-high.onnx"
 VOICE_URL = "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/ryan/high/"
 SR, FPS = 44100, 30
+TAKES = 6
+CHECK = True   # speech-recognise every line to verify pronunciation and time the captions
 _voice = None
 
 
@@ -43,8 +45,42 @@ def tts(text):
     return np.interp(np.linspace(0, len(a) - 1, n), np.arange(len(a)), a).astype(np.float32)
 
 
+_asr = None
+def heard(audio):
+    """Speech-recognise a synthesized clip: returns [(word, start, end)] so narration can be checked against the script."""
+    global _asr
+    if _asr is None:
+        from faster_whisper import WhisperModel
+        _asr = WhisperModel("small.en", device="cpu", compute_type="int8")
+    a16 = np.interp(np.linspace(0, len(audio) - 1, int(len(audio) * 16000 / SR)), np.arange(len(audio)), audio).astype(np.float32)
+    segs, _ = _asr.transcribe(a16, word_timestamps=True, beam_size=5)
+    return [(w.word.strip(), w.start, w.end) for sg in segs for w in sg.words]
+
+def norm(w):
+    return re.sub(r"[^a-z0-9]", "", w.lower().replace("grey", "gray"))
+
+def toks(text):
+    text = text.lower().replace("-", " ").replace("i'm", "i am").replace("\u2019", "'")
+    return [norm(w) for w in text.split() if norm(w)]
+
+def misheard(script, hw):
+    """Words the recogniser heard differently. Digits ("212") count as matching the spelled-out number."""
+    import difflib
+    a, b = toks(script), toks(" ".join(w for w, _, _ in hw)); bad = 0
+    for op, i1, i2, j1, j2 in difflib.SequenceMatcher(None, a, b, autojunk=False).get_opcodes():
+        if op != "equal" and not (j2 > j1 and all(any(ch.isdigit() for ch in x) for x in b[j1:j2])): bad += max(i2 - i1, j2 - j1)
+    return bad
+
+
 def sentences(text):
-    return [s.strip() for s in re.split(r"(?<=[.!?…])\s+", text) if s.strip()]
+    """Split into sentences, but never after an initial ("R. Voss") and never leave a 1-2 word fragment
+    on its own - very short clips are where the voice model slips."""
+    parts = [x.strip() for x in re.split(r"(?<![A-Z]\.)(?<=[.!?\u2026:])\s+", text) if x.strip()]
+    out = []
+    for x in parts:
+        if out and (len(x.split()) <= 2 or len(out[-1].split()) <= 2): out[-1] += " " + x
+        else: out.append(x)
+    return out
 
 
 def word_times(sentence, start, dur):
@@ -55,7 +91,7 @@ def word_times(sentence, start, dur):
         d = (dur - 0.08) * x / total
         clean = re.sub(r"[^\w'’\-%]", "", w).upper()
         if clean:
-            out.append({"w": clean, "start": round(t, 3), "end": round(t + d, 3), "eos": w[-1] in ".!?…"})
+            out.append({"w": clean, "start": round(t, 3), "end": round(t + d, 3), "eos": w[-1] in ".!?…" and len(w) > 2})
         t += d
     return out
 
@@ -167,12 +203,28 @@ def build(ep_path, still=None):
     out_dir = ROOT / "out"; out_dir.mkdir(exist_ok=True)
     rs = np.random.default_rng(ep["episode"] * 7 + len(ep["series"]))
 
-    t, voice_clips, words, scenes, events = 0.35, [], [], [], []
+    t, voice_clips, words, scenes, events, report = 0.35, [], [], [], [], []
+    respell = ep.get("say", {})                    # {"written": "spoken"} pronunciation overrides
+    def SAY(s):
+        for k, v in respell.items(): s = re.sub(rf"\b{re.escape(k)}(?!\w)", v, s)
+        return s
     def speak(text):
         nonlocal t
         for s in sentences(text):
-            a = tts(s); d = len(a) / SR
-            voice_clips.append((t, a)); words.extend(word_times(s, t, d)); t += d + 0.16
+            a = tts(SAY(s))
+            if CHECK:                                 # re-take the line until it is heard exactly as written
+                best = (misheard(SAY(s), heard(a)), a)
+                for _ in range(TAKES - 1):
+                    if best[0] == 0: break
+                    a2 = tts(SAY(s)); m = misheard(SAY(s), heard(a2))
+                    if m < best[0]: best = (m, a2)
+                a = best[1]; hw = heard(a)
+                if best[0]: report.append((s, " ".join(w for w, _, _ in hw)))
+            d = len(a) / SR; wt = word_times(s, t, d)
+            if CHECK and [norm(w["w"]) for w in wt] == [norm(w) for w, _, _ in hw]:   # true timings for captions
+                for w, (_, st, en) in zip(wt, hw): w["start"], w["end"] = round(t + st, 3), round(t + en, 3)
+                for x, y in zip(wt, wt[1:]): x["end"] = y["start"]
+            voice_clips.append((t, a)); words.extend(wt); t += d + 0.16
 
     for sc in ep["scenes"]:
         start = scenes[-1]["end"] if scenes else 0.0
@@ -198,6 +250,7 @@ def build(ep_path, still=None):
           "choice": {"start": round(cstart, 3), "question": ch["question"], "a": ch["a"], "b": ch["b"]}}
     tl_path = out_dir / f"{slug}.timeline.json"; tl_path.write_text(json.dumps(tl))
     print(f"{slug}: {duration:.1f}s, {len(words)} words")
+    for want, got in report: print(f"  HEARD DIFFERENTLY:\n    script: {want}\n    heard:  {got}")
 
     if still is not None:
         jpg = out_dir / f"{slug}-{still:05.1f}.jpg"

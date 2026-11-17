@@ -3,15 +3,15 @@
   "hook": "YOU CHOSE: KEEP IT SEALED",
   "scenes": [
     {"visual": "ds_window", "params": {"still": true}, "text": "Last time, something knocked on your airlock, wearing your name. You kept the door sealed."},
-    {"visual": "ds_window", "params": {"still": true, "close": true}, "text": "The figure doesn't knock again. It just floats there, one hand on the glass, watching you. For an hour. Then two."},
-    {"visual": "ds_schematic", "params": {"from": [300, 60], "to": [-430, 70], "lost": true, "lines": ["CONTACT: MOVING", "!HEADING: AFT"]}, "hold": 0.8, "text": "Then it lets go, and crawls along the hull. Out of sight."},
-    {"visual": "ds_alert", "params": {"calm": true, "hud": "ALL HATCHES SEALED", "lines": ["HATCHES", "*ALL SEALED", "CONTACTS    0", "CREW AWAKE  1", "ON WATCH", "*R. VOSS  PILOT"]}, "text": "You lock every hatch on the ship. You tell yourself you imagined it. Seven months alone will do that to a mind."},
+    {"visual": "ds_window", "params": {"still": true, "close": true}, "text": "The figure doesn't knock again. It floats there, one hand on the glass, oxygen at zero, watching you. For an hour. Then two."},
+    {"visual": "ds_schematic", "params": {"from": [300, 60], "to": [-430, 70], "lost": true, "lines": ["CONTACT: MOVING", "!HEADING: AFT", "!SENSORS BLIND: DRIVE HEAT"]}, "hold": 0.8, "text": "Then it lets go, and climbs along the hull toward the engines, where the heat blinds your sensors."},
+    {"visual": "ds_alert", "params": {"calm": true, "hud": "ALL HATCHES SEALED", "lines": ["HATCHES", "*ALL SEALED", "CONTACTS    0", "CREW AWAKE  1", "ON WATCH", "*R. VOSS  PILOT"]}, "text": "You lock every hatch on the ship. You tell yourself you imagined it. Seven months alone can do that to a mind."},
     {"visual": "ds_cryo", "params": {"occupied": true}, "hold": 0.4, "text": "But you check on the crew anyway. Four pods. Four sleepers. Then you reach the fifth pod. Yours. It should be empty."},
     {"visual": "ds_podface", "hold": 0.3, "text": "You wipe away the frost. There's a man inside. He has your face. The same scar on the chin. The same grey in his hair."},
-    {"visual": "console", "params": {"radar": false, "lines": ["CRYO LOG: R. VOSS", "STATUS: ASLEEP", "DAYS UNDER: 212", "!WAKE EVENTS: 0"]}, "sfx": [{"type": "beep", "at": 0.3}], "text": "The ship's log says pilot Voss never woke up. Not once in two hundred twelve days. So who are you?"},
-    {"visual": "ds_podface", "params": {"wake": true}, "sfx": [{"type": "alarm", "at": 0.05}], "text": "Then the pod begins its wake-up cycle. Sixty seconds. The glass starts to clear. His fingers twitch."},
+    {"visual": "console", "params": {"radar": false, "lines": ["CRYO LOG: R. VOSS", "SEALED: DAY 1", "WAKE EVENTS: 0", "!STATUS: ASLEEP"]}, "sfx": [{"type": "beep", "at": 0.3}], "text": "The ship's log says pilot Voss went into cryosleep on day one, and has never been woken. So who has been standing his watch?"},
+    {"visual": "ds_podface", "params": {"wake": true}, "sfx": [{"type": "alarm", "at": 0.05}], "text": "Then the pod starts its revival cycle. The glass begins to clear. His heart rate climbs. You have sixty seconds to abort."},
     {"visual": "ds_window", "params": {"still": true, "close": true, "radio": "scream"}, "hold": 0.5, "sfx": [{"type": "static", "at": 0.0}, {"type": "thud", "at": 0.9}], "text": "And the radio screams. It's the voice from outside. Don't let it wake up. That thing is not me."}
   ],
-  "choice": {"narration": "Do you abort the wake-up? Or let the pod open?", "question": "WHAT DO YOU DO?", "a": "ABORT THE WAKE-UP", "b": "LET THE POD OPEN", "hold": 4.2},
+  "choice": {"narration": "Do you abort the revival? Or let him wake?", "question": "WHAT DO YOU DO?", "a": "ABORT THE REVIVAL", "b": "LET HIM WAKE", "hold": 4.0},
   "hashtags": "#space #scifi #story #whatwouldyoudo #cliffhanger #choose"
 }
