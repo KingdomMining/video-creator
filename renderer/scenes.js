@@ -217,72 +217,130 @@ const SCENES = {
   },
 };
 
-// ---------- overlays ----------
-function captions(c, t, P) {
-  if (t >= TL.choice.start) return;
+// ---------- layout: platform safe zones (1080x1920) ----------
+// Platform UI hides the top ~250px, the bottom ~480px and a button column on the right (x > 940 for y 850-1500).
+// Keep faces and key action inside x 70-940, y 300-1080. Captions sit at y ~1190. Nothing important below y 1400.
+const SAFE = { top: 250, bottom: 1400, left: 70, right: 940, capY: 1190 };
+const STYLE0 = { accent: '#5ad7ff', warn: '#ff3344', hi: '#ffe14a', alt: '#8fe6ff', titleFont: 'Anton', titleWeight: 400, bloom: 0.38, vignette: 0.72, grain: 0.06 };
+function sty() { const P = PAL[TL.theme]; return Object.assign({}, STYLE0, P ? { accent: P.accent, warn: P.warn } : {}, TL.style || {}); }
+const tfont = (S, size) => `${S.titleWeight} ${size}px "${S.titleFont}"`;
+
+function captions(c, t, S) {
+  const cov = TL.cover || 0; if (t >= TL.choice.start || t < cov) return;
   const ch = TL.chunks.find(k => t >= k.start && t < k.end); if (!ch) return;
-  c.font = '800 96px Inter'; c.textAlign = 'left'; c.lineJoin = 'round';
-  const pop = 1 + 0.08 * (1 - ease((t - ch.start) / 0.12));
+  c.font = '800 88px Inter'; c.textAlign = 'left'; c.lineJoin = 'round';
+  const pop = 1 + 0.08 * (1 - ease((t - Math.max(ch.start, cov)) / 0.12));
   const lines = []; let cur = [];
-  for (const w of ch.words) { const test = [...cur, w].map(x => x.w).join(' '); if (c.measureText(test).width > 900 && cur.length) { lines.push(cur); cur = [w]; } else cur.push(w); }
+  for (const w of ch.words) { const test = [...cur, w].map(x => x.w).join(' '); if (c.measureText(test).width > 820 && cur.length) { lines.push(cur); cur = [w]; } else cur.push(w); }
   if (cur.length) lines.push(cur);
-  c.save(); c.translate(W / 2, 1360); c.scale(pop, pop);
-  lines.forEach((ln, li) => { const sp = c.measureText(' ').width, tw = ln.reduce((s, w) => s + c.measureText(w.w).width, 0) + sp * (ln.length - 1); let x = -tw / 2; const y = (li - (lines.length - 1) / 2) * 112;
-    for (const w of ln) { const active = t >= w.start && t < w.end; c.strokeStyle = '#000'; c.lineWidth = 22; c.strokeText(w.w, x, y); c.fillStyle = active ? '#ffe14a' : '#ffffff'; c.fillText(w.w, x, y); x += c.measureText(w.w).width + sp; } });
+  c.save(); c.translate(W / 2, SAFE.capY + 30); c.scale(pop, pop);
+  lines.forEach((ln, li) => { const sp = c.measureText(' ').width, tw = ln.reduce((s, w) => s + c.measureText(w.w).width, 0) + sp * (ln.length - 1); let x = -tw / 2; const y = (li - (lines.length - 1) / 2) * 104;
+    for (const w of ln) { const active = t >= w.start && t < w.end; c.strokeStyle = '#000'; c.lineWidth = 20; c.strokeText(w.w, x, y); c.fillStyle = active ? S.hi : (w.alt ? S.alt : '#ffffff'); c.fillText(w.w, x, y); x += c.measureText(w.w).width + sp; } });
   c.restore();
 }
 
-function header(c, t, P) {
-  const a = t < TL.choice.start ? 1 : 1 - ease((t - TL.choice.start) / 0.3); if (a <= 0) return; c.save(); c.globalAlpha = a;
-  c.font = '800 44px Inter'; c.textAlign = 'center'; const label = `${TL.series}  ·  PART ${TL.episode}`, tw = c.measureText(label).width + 70;
-  c.fillStyle = 'rgba(0,0,0,.6)'; rrect(c, W / 2 - tw / 2, 150, tw, 80, 40); c.fill(); c.strokeStyle = A(P.accent, 0.9); c.lineWidth = 3; c.stroke(); c.fillStyle = '#fff'; c.fillText(label, W / 2, 206);
-  if (TL.hook && t < 3.2) { const k = ease(t / 0.35) * (1 - ease((t - 2.8) / 0.4)); c.globalAlpha = k * a; c.font = '800 84px Inter'; const ls = wrap(c, TL.hook, 920); ls.forEach((l, i) => { c.strokeStyle = '#000'; c.lineWidth = 20; c.lineJoin = 'round'; c.strokeText(l, W / 2, 380 + i * 100); c.fillStyle = P.warn; c.fillText(l, W / 2, 380 + i * 100); }); }
+function header(c, t, S) {
+  const cov = TL.cover || 0; if (t < cov) return;
+  const a = (t < TL.choice.start ? 1 : 1 - ease((t - TL.choice.start) / 0.3)) * ease((t - cov) / 0.25); if (a <= 0) return;
+  c.save(); c.globalAlpha = a; c.font = '800 36px Inter'; c.textAlign = 'center';
+  const label = `${TL.series}  ·  PART ${TL.episode}`, tw = c.measureText(label).width + 56;
+  c.fillStyle = 'rgba(0,0,0,.55)'; rrect(c, W / 2 - tw / 2, 262, tw, 64, 32); c.fill(); c.strokeStyle = A(S.accent, 0.9); c.lineWidth = 3; c.stroke(); c.fillStyle = '#fff'; c.fillText(label, W / 2, 307);
+  if (TL.hook && t < cov + 3.0) { const k = ease((t - cov) / 0.3) * (1 - ease((t - cov - 2.6) / 0.4)); c.globalAlpha = k * a; c.font = tfont(S, 84); const ls = wrap(c, String(TL.hook).toUpperCase(), 860); ls.forEach((l, i) => { c.strokeStyle = '#000'; c.lineWidth = 18; c.lineJoin = 'round'; c.strokeText(l, W / 2, 430 + i * 96); c.fillStyle = S.warn; c.fillText(l, W / 2, 430 + i * 96); }); }
   c.restore();
 }
 
-function choiceCard(c, t, P) {
+function choiceCard(c, t, S, soft) {
   const ch = TL.choice, lt = t - ch.start; if (lt < 0) return;
-  c.fillStyle = `rgba(0,0,0,${0.68 * ease(lt / 0.4)})`; c.fillRect(0, 0, W, H);
+  c.fillStyle = `rgba(0,0,0,${0.7 * ease(lt / 0.4)})`; c.fillRect(0, 0, W, H);
   c.textAlign = 'center'; c.lineJoin = 'round';
-  let a = ease(lt / 0.4); c.globalAlpha = a; c.font = '800 46px Inter'; c.fillStyle = P.accent; c.fillText(`${TL.series}  ·  PART ${TL.episode}`, W / 2, 330);
-  c.font = '800 104px Inter'; c.fillStyle = '#fff'; wrap(c, ch.question, 940).forEach((l, i) => c.fillText(l, W / 2, 480 + i * 116 - (1 - a) * 40));
+  let a = ease(lt / 0.4); c.globalAlpha = a; c.font = '800 38px Inter'; c.fillStyle = S.accent; c.fillText(`${TL.series}  ·  PART ${TL.episode}`, W / 2, 312);
+  c.font = '800 92px Inter'; c.fillStyle = '#fff'; const ql = wrap(c, ch.question, 860); ql.forEach((l, i) => c.fillText(l, W / 2, 420 + i * 100 - (1 - a) * 40));
+  const PX = 140, PW = 800, PH = 232, GAP = 76, y0 = 420 + (ql.length - 1) * 100 + 70;
   const panel = (y, letter, text, c0, c1, delay, dir, hot) => {
-    const k = ease((lt - delay) / 0.45); if (k <= 0) return; const x = 70 + dir * (1 - k) * W, w = W - 140, h = 300, s = 1 + (hot ? 0.025 : 0);
-    c.save(); c.globalAlpha = k; c.translate(W / 2, y + h / 2); c.scale(s, s); c.translate(-W / 2, -(y + h / 2));
-    c.shadowColor = c0; c.shadowBlur = hot ? 70 : 30; const g = c.createLinearGradient(x, y, x + w, y + h); g.addColorStop(0, c0); g.addColorStop(1, c1); c.fillStyle = g; rrect(c, x, y, w, h, 44); c.fill(); c.shadowBlur = 0;
+    const k = ease((lt - delay) / 0.45); if (k <= 0) return; const x = PX + dir * (1 - k) * W, s = 1 + (hot ? 0.025 : 0);
+    c.save(); c.globalAlpha = k; c.translate(W / 2, y + PH / 2); c.scale(s, s); c.translate(-W / 2, -(y + PH / 2));
+    c.shadowColor = c0; c.shadowBlur = hot ? 70 : 30; const g = c.createLinearGradient(x, y, x + PW, y + PH); g.addColorStop(0, c0); g.addColorStop(1, c1); c.fillStyle = g; rrect(c, x, y, PW, PH, 40); c.fill(); c.shadowBlur = 0;
     c.strokeStyle = 'rgba(255,255,255,.85)'; c.lineWidth = 5; c.stroke();
-    if (!TL.soft) { c.fillStyle = '#fff'; c.beginPath(); c.arc(x + 150, y + h / 2, 96, 0, 7); c.fill(); c.fillStyle = c1; c.font = '800 130px Inter'; c.textAlign = 'center'; c.fillText(letter, x + 150, y + h / 2 + 46); }
-    c.fillStyle = '#fff'; c.font = '800 66px Inter'; c.textAlign = TL.soft ? 'center' : 'left'; const ls = wrap(c, text, w - (TL.soft ? 120 : 330)); ls.forEach((l, i) => c.fillText(l, TL.soft ? x + w / 2 : x + 285, y + h / 2 + 24 + (i - (ls.length - 1) / 2) * 78)); c.restore();
+    if (!soft) { c.fillStyle = '#fff'; c.beginPath(); c.arc(x + 118, y + PH / 2, 76, 0, 7); c.fill(); c.fillStyle = c1; c.font = '800 104px Inter'; c.textAlign = 'center'; c.fillText(letter, x + 118, y + PH / 2 + 37); }
+    c.fillStyle = '#fff'; c.font = '800 58px Inter'; c.textAlign = soft ? 'center' : 'left'; const ls = wrap(c, text, PW - (soft ? 100 : 270)); ls.forEach((l, i) => c.fillText(l, soft ? x + PW / 2 : x + 228, y + PH / 2 + 21 + (i - (ls.length - 1) / 2) * 68)); c.restore();
   };
-  const hot = lt > 1.4 ? Math.floor(lt / 0.75) % 2 : -1;
-  panel(760, 'A', ch.a, '#2f7bff', '#0a2f9c', 0.25, -1, hot === 0); panel(1150, 'B', ch.b, '#ff4646', '#96101f', 0.5, 1, hot === 1);
-  a = ease((lt - 0.55) / 0.3); if (a > 0) { c.globalAlpha = a; c.fillStyle = '#0b0b0b'; c.beginPath(); c.arc(W / 2, 1105, 62, 0, 7); c.fill(); c.strokeStyle = '#fff'; c.lineWidth = 5; c.stroke(); c.fillStyle = '#fff'; c.font = '800 50px Inter'; c.textAlign = 'center'; c.fillText('OR', W / 2, 1123); }
-  a = ease((lt - 1.0) / 0.4); if (a > 0) { const pu = 1 + 0.04 * Math.sin(lt * 7); const CTA = TL.soft ? 'WHAT WOULD YOU DO?' : 'COMMENT  A  OR  B'; c.save(); c.globalAlpha = a; c.translate(W / 2, 1600); c.scale(pu, pu); c.font = TL.soft ? '800 74px Inter' : '800 88px Inter'; c.textAlign = 'center'; c.strokeStyle = '#000'; c.lineWidth = 18; c.strokeText(CTA, 0, 0); c.fillStyle = '#ffe14a'; c.fillText(CTA, 0, 0); c.restore();
-    c.globalAlpha = a; c.font = '600 42px Inter'; c.fillStyle = 'rgba(255,255,255,.85)'; c.fillText(TL.soft ? `Part ${TL.episode + 1} follows what most of you would do` : `Top answer decides Part ${TL.episode + 1}`, W / 2, 1680);
-    const rem = clamp(1 - lt / (TL.duration - ch.start)); c.fillStyle = 'rgba(255,255,255,.2)'; rrect(c, 140, 1740, 800, 16, 8); c.fill(); c.fillStyle = P.warn; rrect(c, 140, 1740, Math.max(16, 800 * rem), 16, 8); c.fill(); }
+  const hot = lt > 1.4 ? Math.floor(lt / 0.75) % 2 : -1, yB = y0 + PH + GAP;
+  panel(y0, 'A', ch.a, '#2f7bff', '#0a2f9c', 0.25, -1, hot === 0); panel(yB, 'B', ch.b, '#ff4646', '#96101f', 0.5, 1, hot === 1);
+  a = ease((lt - 0.55) / 0.3); if (a > 0) { c.globalAlpha = a; c.fillStyle = '#0b0b0b'; c.beginPath(); c.arc(W / 2, y0 + PH + GAP / 2, 52, 0, 7); c.fill(); c.strokeStyle = '#fff'; c.lineWidth = 5; c.stroke(); c.fillStyle = '#fff'; c.font = '800 42px Inter'; c.textAlign = 'center'; c.fillText('OR', W / 2, y0 + PH + GAP / 2 + 15); }
+  a = ease((lt - 1.0) / 0.4); if (a > 0) { const pu = 1 + 0.04 * Math.sin(lt * 7), CTA = soft ? 'WHAT WOULD YOU DO?' : 'COMMENT  A  OR  B', yc = yB + PH + 108; c.save(); c.globalAlpha = a; c.translate(W / 2, yc); c.scale(pu, pu); c.font = soft ? '800 66px Inter' : '800 76px Inter'; c.textAlign = 'center'; c.strokeStyle = '#000'; c.lineWidth = 16; c.strokeText(CTA, 0, 0); c.fillStyle = S.hi; c.fillText(CTA, 0, 0); c.restore();
+    c.globalAlpha = a; c.font = '600 36px Inter'; c.fillStyle = 'rgba(255,255,255,.9)'; c.fillText(soft ? `Part ${TL.episode + 1} follows what most of you would do` : `Top answer decides Part ${TL.episode + 1}`, W / 2, yc + 58);
+    const rem = clamp(1 - lt / (TL.duration - ch.start)); c.fillStyle = 'rgba(255,255,255,.2)'; rrect(c, 190, yc + 86, 700, 14, 7); c.fill(); c.fillStyle = S.warn; rrect(c, 190, yc + 86, Math.max(14, 700 * rem), 14, 7); c.fill(); }
   c.globalAlpha = 1;
 }
 
+// Cover / thumbnail text. TL.thumb = {visual, params, title, tagline, layout:'top'|'center'|'bottom', colors:[..], size, lines:[..], text:false to draw your own in the shot overlay}
+function thumbText(c, S) {
+  const th = TL.thumb; if (!th || !th.title || th.text === false) return;
+  const lay = th.layout || 'top', maxW = th.maxW || 900; let size = th.size || 210, lines;
+  for (; size >= 90; size -= 6) { c.font = tfont(S, size); lines = th.lines || wrap(c, String(th.title).toUpperCase(), maxW); if (lines.length <= (th.maxLines || 2) && lines.every(l => c.measureText(l).width <= maxW)) break; }
+  const lh = size * 1.0, blockH = lines.length * lh, tagH = th.tagline ? 130 : 0, partH = 86;
+  let y = lay === 'top' ? 380 + partH : lay === 'center' ? 960 - (blockH + tagH + partH) / 2 + partH : 1440 - tagH - blockH;
+  c.save(); c.textAlign = 'center'; c.lineJoin = 'round';
+  c.font = '800 40px Inter'; const pl = `PART ${TL.episode}`, pw = c.measureText(pl).width + 56; c.fillStyle = S.accent; rrect(c, W / 2 - pw / 2, y - partH, pw, 62, 31); c.fill(); c.fillStyle = '#06080c'; c.fillText(pl, W / 2, y - partH + 45);
+  c.font = tfont(S, size);
+  lines.forEach((l, i) => { const yy = y + size * 0.84 + i * lh; c.shadowColor = 'rgba(0,0,0,.65)'; c.shadowBlur = 34; c.shadowOffsetY = 12; c.lineWidth = Math.max(16, size * 0.15); c.strokeStyle = '#000'; c.strokeText(l, W / 2, yy); c.shadowColor = 'transparent'; c.shadowBlur = 0; c.shadowOffsetY = 0; c.fillStyle = (th.colors || ['#ffffff', S.hi])[i % 2]; c.fillText(l, W / 2, yy); });
+  if (th.tagline) { c.font = '800 54px Inter'; const tl = wrap(c, String(th.tagline).toUpperCase(), 820), ty = y + blockH + 44; tl.forEach((l, i) => { const w = c.measureText(l).width + 60; c.fillStyle = th.tagBg || S.warn; rrect(c, W / 2 - w / 2, ty + i * 84, w, 76, 14); c.fill(); c.fillStyle = th.tagColor || '#ffffff'; c.fillText(l, W / 2, ty + i * 84 + 56); }); }
+  c.restore();
+}
+
+function guides(c) {   // --guides: where platform UI will cover the frame
+  c.save(); c.fillStyle = 'rgba(255,0,60,.28)'; c.fillRect(0, 0, W, SAFE.top); c.fillRect(0, 1500, W, H - 1500); c.fillRect(SAFE.right, 850, W - SAFE.right, 650);
+  c.fillStyle = 'rgba(255,160,0,.18)'; c.fillRect(0, SAFE.bottom, W, 1500 - SAFE.bottom);
+  c.strokeStyle = 'rgba(0,255,160,.8)'; c.lineWidth = 3; c.setLineDash([14, 10]); c.strokeRect(130, SAFE.capY - 110, 820, 220); c.strokeStyle = 'rgba(255,255,0,.7)'; c.strokeRect(1, 285, W - 2, 1350);
+  c.setLineDash([]); c.font = '600 26px Inter'; c.textAlign = 'left'; c.fillStyle = '#fff'; c.fillText('platform UI', 16, 40); c.fillText('captions', 140, SAFE.capY - 120); c.fillText('4:5 grid crop', 16, 316); c.restore();
+}
+
+function postFx(c, t, P) {
+  if (P.grade) { c.save(); c.globalCompositeOperation = P.grade.mode || 'soft-light'; c.globalAlpha = P.grade.alpha ?? 0.15; c.fillStyle = P.grade.color || '#ff8800'; c.fillRect(0, 0, W, H); c.restore(); }
+  if (P.bloom > 0) { if (!window._bl) { window._bl = document.createElement('canvas'); _bl.width = W / 4; _bl.height = H / 4; }
+    const b = _bl.getContext('2d'); b.filter = 'blur(7px) contrast(1.55) brightness(0.82)'; b.drawImage(cv, 0, 0, W / 4, H / 4);
+    c.save(); c.globalCompositeOperation = 'screen'; c.globalAlpha = P.bloom; c.drawImage(_bl, 0, 0, W, H); c.restore(); }
+  if (P.vignette > 0) { const vg = c.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, H * 0.75); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, `rgba(0,0,0,${P.vignette})`); c.fillStyle = vg; c.fillRect(0, 0, W, H); }
+  if (P.grain > 0) { const r = rng(Math.floor(t * 30) + 1); for (let i = 0; i < 700; i++) { c.fillStyle = `rgba(255,255,255,${r() * P.grain})`; c.fillRect(r() * W, r() * H, 3, 3); } }
+}
+
 // ---------- main ----------
-window.init = tl => { TL = tl; cv = document.getElementById('c'); ctx = cv.getContext('2d'); return document.fonts.load('800 96px Inter'); };
-window.renderFrame = t => {
-  const c = ctx, P = PAL[TL.theme] || PAL.space;
-  const sc = TL.scenes.find(s => t >= s.start && t < s.end) || TL.scenes[TL.scenes.length - 1];
-  const lt = t - sc.start, d = sc.end - sc.start;
-  c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = 1; c.shadowBlur = 0; c.fillStyle = '#000'; c.fillRect(0, 0, W, H);
-  let sx = 0, sy = 0; for (const k of hits(['knock', 'boom', 'impact'])) { const dt = t - k; if (dt >= 0 && dt < 0.3) { const a = 22 * (1 - dt / 0.3); sx += Math.sin(dt * 95) * a; sy += Math.cos(dt * 80) * a * 0.6; } }
-  const z = 1.03 + 0.05 * clamp(lt / d);
-  c.save(); c.translate(W / 2 + sx, H / 2 + sy); c.scale(z, z); c.translate(-W / 2, -H / 2);
-  (SCENES[sc.visual] || SCENES.space)(c, t, lt, d, sc.params || {}, P);
-  c.restore(); c.shadowBlur = 0; c.globalAlpha = 1;
-  // bloom: blurred highlights screened back over the frame
-  if (!window._bl) { window._bl = document.createElement('canvas'); _bl.width = W / 4; _bl.height = H / 4; }
-  const b = _bl.getContext('2d'); b.filter = 'blur(7px) contrast(1.55) brightness(0.82)'; b.drawImage(cv, 0, 0, W / 4, H / 4);
-  c.save(); c.globalCompositeOperation = 'screen'; c.globalAlpha = TL.bloom ?? 0.38; c.drawImage(_bl, 0, 0, W, H); c.restore();
-  // vignette, grain, cut flash
-  const vg = c.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, H * 0.75); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.72)'); c.fillStyle = vg; c.fillRect(0, 0, W, H);
-  const r = rng(Math.floor(t * 30) + 1); for (let i = 0; i < 700; i++) { c.fillStyle = `rgba(255,255,255,${r() * 0.06})`; c.fillRect(r() * W, r() * H, 3, 3); }
-  if (lt < 0.12) { c.fillStyle = `rgba(0,0,0,${1 - lt / 0.12})`; c.fillRect(0, 0, W, H); }
-  if (d - lt < 0.1 && sc !== TL.scenes[TL.scenes.length - 1]) { c.fillStyle = `rgba(0,0,0,${0.7 * (1 - (d - lt) / 0.1)})`; c.fillRect(0, 0, W, H); }
-  header(c, t, P); captions(c, t, P); choiceCard(c, t, P);
+let _base = null;
+window.init = tl => {
+  TL = tl; cv = document.getElementById('c'); ctx = cv.getContext('2d'); _base = document.createElement('canvas'); _base.width = W; _base.height = H;
+  const fl = (typeof FONT_LIST !== 'undefined' ? FONT_LIST : []).map(f => document.fonts.load(`${f.style === 'italic' ? 'italic ' : ''}${f.weight} 40px "${f.family}"`));
+  return Promise.all([...fl, document.fonts.load('800 96px Inter'), document.fonts.load('600 40px Inter'), document.fonts.load('bold 40px "DejaVu Sans Mono"')]).then(() => true);
 };
+function sceneAt(t) {
+  const cov = TL.cover || 0;
+  if (t < cov && TL.thumb && SCENES[TL.thumb.visual]) return { visual: TL.thumb.visual, params: TL.thumb.params || {}, start: 0, end: TL.thumb.dur || 3, cover: true, words: [] };
+  return TL.scenes.find(s => t >= s.start && t < s.end) || TL.scenes[TL.scenes.length - 1];
+}
+// Draw the picture (scene + look) without any text overlay, and keep a copy so both cuts can share it.
+window.renderBase = t => {
+  const c = ctx, S = sty(), P0 = PAL[TL.theme] || PAL.space, sc = sceneAt(t), cov = TL.cover || 0;
+  const lt = t - sc.start, d = Math.min(sc.end, TL.duration) - sc.start, fn = SCENES[sc.visual] || SCENES.space;
+  c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = 1; c.shadowBlur = 0; c.filter = 'none'; c.globalCompositeOperation = 'source-over'; c.fillStyle = '#000'; c.fillRect(0, 0, W, H);
+  c.save();
+  if (!fn.raw) {   // 2D scenes get a slow push-in and impact shake; 3D shots do both with the real camera
+    let sx = 0, sy = 0; for (const k of hits(['knock', 'boom', 'impact'])) { const dt = t - k; if (dt >= 0 && dt < 0.3) { const a = 22 * (1 - dt / 0.3); sx += Math.sin(dt * 95) * a; sy += Math.cos(dt * 80) * a * 0.6; } }
+    const z = 1.03 + 0.05 * clamp(lt / d); c.translate(W / 2 + sx, H / 2 + sy); c.scale(z, z); c.translate(-W / 2, -H / 2);
+  }
+  fn(c, t, lt, d, sc.params || {}, P0, sc);
+  c.restore(); c.setTransform(1, 0, 0, 1, 0, 0); c.shadowBlur = 0; c.globalAlpha = 1; c.filter = 'none'; c.globalCompositeOperation = 'source-over';
+  postFx(c, t, Object.assign({}, S, fn.post || {}, sc.post || {}));
+  const tin = sc.in || (fn.raw ? 'cut' : 'fade');
+  if (tin === 'fade' && lt < 0.14) { c.fillStyle = `rgba(0,0,0,${1 - lt / 0.14})`; c.fillRect(0, 0, W, H); }
+  if (tin === 'flash' && lt < 0.14) { c.fillStyle = `rgba(255,255,255,${0.9 * (1 - lt / 0.14)})`; c.fillRect(0, 0, W, H); }
+  if (!fn.raw && d - lt < 0.1 && sc !== TL.scenes[TL.scenes.length - 1]) { c.fillStyle = `rgba(0,0,0,${0.7 * (1 - (d - lt) / 0.1)})`; c.fillRect(0, 0, W, H); }
+  if (sc.cover) thumbText(c, S);
+  else if (cov && t - cov < 0.16) { c.fillStyle = `rgba(255,255,255,${0.85 * (1 - (t - cov) / 0.16)})`; c.fillRect(0, 0, W, H); }
+  _base.getContext('2d').drawImage(cv, 0, 0);
+};
+// Draw the text layer over the saved picture. soft = Facebook/Instagram cut (no "comment A or B").
+window.renderOver = (t, soft) => {
+  const c = ctx, S = sty(); c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = 1; c.drawImage(_base, 0, 0);
+  if (!window.CLEAN) { header(c, t, S); captions(c, t, S); choiceCard(c, t, S, !!soft); }
+  if (window.GUIDES) guides(c);
+};
+window.renderFrame = (t, soft) => { renderBase(t); renderOver(t, soft ?? TL.soft); };
