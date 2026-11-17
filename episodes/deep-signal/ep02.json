@@ -1,5 +1,6 @@
 {
   "series": "DEEP SIGNAL", "episode": 2, "theme": "space",
+  "say": {"cryosleep": "cryo sleep"},
   "hook": "YOU CHOSE: KEEP IT SEALED",
   "scenes": [
     {"visual": "ds_window", "params": {"still": true}, "text": "Last time, something knocked on your airlock, wearing your name. You kept the door sealed."},

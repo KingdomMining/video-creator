@@ -234,7 +234,7 @@ function captions(c, t, P) {
 
 function header(c, t, P) {
   const a = t < TL.choice.start ? 1 : 1 - ease((t - TL.choice.start) / 0.3); if (a <= 0) return; c.save(); c.globalAlpha = a;
-  c.font = '800 44px Inter'; c.textAlign = 'center'; const label = `${TL.series}  ·  EP ${TL.episode}`, tw = c.measureText(label).width + 70;
+  c.font = '800 44px Inter'; c.textAlign = 'center'; const label = `${TL.series}  ·  PART ${TL.episode}`, tw = c.measureText(label).width + 70;
   c.fillStyle = 'rgba(0,0,0,.6)'; rrect(c, W / 2 - tw / 2, 150, tw, 80, 40); c.fill(); c.strokeStyle = A(P.accent, 0.9); c.lineWidth = 3; c.stroke(); c.fillStyle = '#fff'; c.fillText(label, W / 2, 206);
   if (TL.hook && t < 3.2) { const k = ease(t / 0.35) * (1 - ease((t - 2.8) / 0.4)); c.globalAlpha = k * a; c.font = '800 84px Inter'; const ls = wrap(c, TL.hook, 920); ls.forEach((l, i) => { c.strokeStyle = '#000'; c.lineWidth = 20; c.lineJoin = 'round'; c.strokeText(l, W / 2, 380 + i * 100); c.fillStyle = P.warn; c.fillText(l, W / 2, 380 + i * 100); }); }
   c.restore();
@@ -244,21 +244,21 @@ function choiceCard(c, t, P) {
   const ch = TL.choice, lt = t - ch.start; if (lt < 0) return;
   c.fillStyle = `rgba(0,0,0,${0.68 * ease(lt / 0.4)})`; c.fillRect(0, 0, W, H);
   c.textAlign = 'center'; c.lineJoin = 'round';
-  let a = ease(lt / 0.4); c.globalAlpha = a; c.font = '800 46px Inter'; c.fillStyle = P.accent; c.fillText(`${TL.series}  ·  EPISODE ${TL.episode}`, W / 2, 330);
+  let a = ease(lt / 0.4); c.globalAlpha = a; c.font = '800 46px Inter'; c.fillStyle = P.accent; c.fillText(`${TL.series}  ·  PART ${TL.episode}`, W / 2, 330);
   c.font = '800 104px Inter'; c.fillStyle = '#fff'; wrap(c, ch.question, 940).forEach((l, i) => c.fillText(l, W / 2, 480 + i * 116 - (1 - a) * 40));
   const panel = (y, letter, text, c0, c1, delay, dir, hot) => {
     const k = ease((lt - delay) / 0.45); if (k <= 0) return; const x = 70 + dir * (1 - k) * W, w = W - 140, h = 300, s = 1 + (hot ? 0.025 : 0);
     c.save(); c.globalAlpha = k; c.translate(W / 2, y + h / 2); c.scale(s, s); c.translate(-W / 2, -(y + h / 2));
     c.shadowColor = c0; c.shadowBlur = hot ? 70 : 30; const g = c.createLinearGradient(x, y, x + w, y + h); g.addColorStop(0, c0); g.addColorStop(1, c1); c.fillStyle = g; rrect(c, x, y, w, h, 44); c.fill(); c.shadowBlur = 0;
     c.strokeStyle = 'rgba(255,255,255,.85)'; c.lineWidth = 5; c.stroke();
-    c.fillStyle = '#fff'; c.beginPath(); c.arc(x + 150, y + h / 2, 96, 0, 7); c.fill(); c.fillStyle = c1; c.font = '800 130px Inter'; c.textAlign = 'center'; c.fillText(letter, x + 150, y + h / 2 + 46);
-    c.fillStyle = '#fff'; c.font = '800 66px Inter'; c.textAlign = 'left'; const ls = wrap(c, text, w - 330); ls.forEach((l, i) => c.fillText(l, x + 285, y + h / 2 + 24 + (i - (ls.length - 1) / 2) * 78)); c.restore();
+    if (!TL.soft) { c.fillStyle = '#fff'; c.beginPath(); c.arc(x + 150, y + h / 2, 96, 0, 7); c.fill(); c.fillStyle = c1; c.font = '800 130px Inter'; c.textAlign = 'center'; c.fillText(letter, x + 150, y + h / 2 + 46); }
+    c.fillStyle = '#fff'; c.font = '800 66px Inter'; c.textAlign = TL.soft ? 'center' : 'left'; const ls = wrap(c, text, w - (TL.soft ? 120 : 330)); ls.forEach((l, i) => c.fillText(l, TL.soft ? x + w / 2 : x + 285, y + h / 2 + 24 + (i - (ls.length - 1) / 2) * 78)); c.restore();
   };
   const hot = lt > 1.4 ? Math.floor(lt / 0.75) % 2 : -1;
   panel(760, 'A', ch.a, '#2f7bff', '#0a2f9c', 0.25, -1, hot === 0); panel(1150, 'B', ch.b, '#ff4646', '#96101f', 0.5, 1, hot === 1);
   a = ease((lt - 0.55) / 0.3); if (a > 0) { c.globalAlpha = a; c.fillStyle = '#0b0b0b'; c.beginPath(); c.arc(W / 2, 1105, 62, 0, 7); c.fill(); c.strokeStyle = '#fff'; c.lineWidth = 5; c.stroke(); c.fillStyle = '#fff'; c.font = '800 50px Inter'; c.textAlign = 'center'; c.fillText('OR', W / 2, 1123); }
-  a = ease((lt - 1.0) / 0.4); if (a > 0) { const pu = 1 + 0.04 * Math.sin(lt * 7); c.save(); c.globalAlpha = a; c.translate(W / 2, 1600); c.scale(pu, pu); c.font = '800 88px Inter'; c.textAlign = 'center'; c.strokeStyle = '#000'; c.lineWidth = 18; c.strokeText('COMMENT  A  OR  B', 0, 0); c.fillStyle = '#ffe14a'; c.fillText('COMMENT  A  OR  B', 0, 0); c.restore();
-    c.globalAlpha = a; c.font = '600 42px Inter'; c.fillStyle = 'rgba(255,255,255,.85)'; c.fillText(`Top answer decides Episode ${TL.episode + 1}`, W / 2, 1680);
+  a = ease((lt - 1.0) / 0.4); if (a > 0) { const pu = 1 + 0.04 * Math.sin(lt * 7); const CTA = TL.soft ? 'WHAT WOULD YOU DO?' : 'COMMENT  A  OR  B'; c.save(); c.globalAlpha = a; c.translate(W / 2, 1600); c.scale(pu, pu); c.font = '800 88px Inter'; c.textAlign = 'center'; c.strokeStyle = '#000'; c.lineWidth = 18; c.strokeText(CTA, 0, 0); c.fillStyle = '#ffe14a'; c.fillText(CTA, 0, 0); c.restore();
+    c.globalAlpha = a; c.font = '600 42px Inter'; c.fillStyle = 'rgba(255,255,255,.85)'; c.fillText(TL.soft ? `Part ${TL.episode + 1} follows what most of you would do` : `Top answer decides Part ${TL.episode + 1}`, W / 2, 1680);
     const rem = clamp(1 - lt / (TL.duration - ch.start)); c.fillStyle = 'rgba(255,255,255,.2)'; rrect(c, 140, 1740, 800, 16, 8); c.fill(); c.fillStyle = P.warn; rrect(c, 140, 1740, Math.max(16, 800 * rem), 16, 8); c.fill(); }
   c.globalAlpha = 1;
 }

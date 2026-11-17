@@ -9,8 +9,10 @@ from pathlib import Path
 import numpy as np
 
 ROOT = Path(__file__).parent
-VOICE = ROOT / "voices" / "en_US-ryan-high.onnx"
-VOICE_URL = "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/ryan/high/"
+# Narrator voice. Must be licensed for commercial use: "bryce" is released as public domain by its speaker ("joe", CC0, is the fallback).
+# Do NOT use en_US-ryan (CC BY-NC-SA: non-commercial) or hfc_male (NC) on a monetized account.
+VOICE = ROOT / "voices" / "en_US-bryce-medium.onnx"
+VOICE_URL = "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/bryce/medium/"
 SR, FPS = 44100, 30
 TAKES = 6
 CHECK = True   # speech-recognise every line to verify pronunciation and time the captions
@@ -31,7 +33,7 @@ def tts(text):
     with wave.open(buf, "wb") as w:
         try:
             from piper import SynthesisConfig
-            _voice.synthesize_wav(text, w, syn_config=SynthesisConfig(length_scale=1.06, noise_scale=0.55, noise_w_scale=0.75))
+            _voice.synthesize_wav(text, w, syn_config=SynthesisConfig(length_scale=0.8, noise_scale=0.55, noise_w_scale=0.75))
         except (ImportError, TypeError):
             _voice.synthesize_wav(text, w)
     buf.seek(0)
@@ -197,9 +199,10 @@ def score(theme, dur, cstart, rs):
     return out * np.minimum(1, t * 1.5) * np.minimum(1, (dur - t) * 1.2), bells + strings
 
 
-def build(ep_path, still=None):
+def build(ep_path, still=None, soft=False):
     ep = json.loads(Path(ep_path).read_text())
     slug = f"{re.sub(r'[^a-z0-9]+', '-', ep['series'].lower()).strip('-')}-ep{ep['episode']:02d}"
+    if soft: slug += "-meta"                      # Facebook/Instagram cut: no "comment A or B" (engagement-bait rules)
     out_dir = ROOT / "out"; out_dir.mkdir(exist_ok=True)
     rs = np.random.default_rng(ep["episode"] * 7 + len(ep["series"]))
 
@@ -246,7 +249,7 @@ def build(ep_path, still=None):
     events += [{"type": "tick", "t": round(x, 3)} for x in np.arange(cstart + 0.5, duration - 0.2, 0.5)]
 
     tl = {"fps": FPS, "duration": duration, "theme": ep["theme"], "series": ep["series"], "episode": ep["episode"], "hook": ep.get("hook"),
-          "bloom": ep.get("bloom"), "scenes": scenes, "chunks": chunk(words[:n_story]), "sfx": events,
+          "bloom": ep.get("bloom"), "soft": soft, "scenes": scenes, "chunks": chunk(words[:n_story]), "sfx": events,
           "choice": {"start": round(cstart, 3), "question": ch["question"], "a": ch["a"], "b": ch["b"]}}
     tl_path = out_dir / f"{slug}.timeline.json"; tl_path.write_text(json.dumps(tl))
     print(f"{slug}: {duration:.1f}s, {len(words)} words")
@@ -275,9 +278,11 @@ def build(ep_path, still=None):
 
     mp4 = out_dir / f"{slug}.mp4"
     subprocess.run(["node", str(ROOT / "renderer/render.js"), str(tl_path), str(wav_path), str(mp4)], check=True)
+    cta = ("What would you do? The story follows what most of you would do." if soft
+           else f"Comment A or B. The top answer decides Part {ep['episode'] + 1}.")
     (out_dir / f"{slug}.txt").write_text(
-        f"{ep['series']} — Episode {ep['episode']}\n{ch['question']}\nA: {ch['a']}\nB: {ch['b']}\n"
-        f"Comment A or B 👇 The top answer decides Episode {ep['episode'] + 1}.\n\n{ep.get('hashtags', '#story #whatwouldyoudo #choose #cliffhanger #interactive')}\n")
+        f"{ep['series']} - Part {ep['episode']} (fiction)\n{ch['question']}\nA: {ch['a']}\nB: {ch['b']}\n{cta}\n\n"
+        f"{ep.get('hashtags', '#story #whatwouldyoudo #fiction')}\n")
     wav_path.unlink(); tl_path.unlink()
     print(f"-> {mp4}")
 
@@ -285,9 +290,11 @@ def build(ep_path, still=None):
 if __name__ == "__main__":
     args = sys.argv[1:]
     still = None
+    soft = "--soft" in args
+    if soft: args.remove("--soft")
     if "--still" in args:
         i = args.index("--still"); still = float(args[i + 1]); del args[i:i + 2]
     if not args:
         sys.exit(__doc__)
     for p in args:
-        build(p, still)
+        build(p, still, soft)

@@ -1,5 +1,6 @@
 {
   "series": "DEEP SIGNAL", "episode": 1, "theme": "space",
+  "say": {"cryosleep": "cryo sleep"},
   "hook": "WOULD YOU OPEN IT?",
   "scenes": [
     {"visual": "ds_exterior", "text": "Two hundred twelve days into your watch. The cargo ship Meridian is passing Saturn, and you are the only one awake."},

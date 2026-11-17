@@ -17,6 +17,7 @@
       "MISREAD: the 'threat' was not hostile; the harm comes from the protagonist's own reaction. Use sparingly so it stays surprising.",
       "The better option must be deducible from a clue shown earlier (in this part or a previous one). No coin flips.",
       "No option ends the story outright before the finale. The worst outcome is a heavy COST.",
+      "All consequences obey docs/PLATFORM_RULES.md: no firearms, no gore or visible wounds, no jump scares, no children in danger, deaths off screen.",
       "A persistent cost must be visible and audible afterwards (a limp changes how fast 'you' can move; low air shortens the next timer)."
     ]
   },
