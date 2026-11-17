@@ -1,0 +1,13 @@
+{
+  "series": "DAY 412", "episode": 1, "theme": "bunker",
+  "hook": "SHE SHOULDN'T BE ALIVE",
+  "scenes": [
+    {"visual": "city", "text": "Four hundred twelve days since the sky turned red. Nobody up there survived."},
+    {"visual": "room", "text": "You've been alone in this bunker ever since."},
+    {"visual": "radio", "params": {"freq": "NO SIGNAL"}, "sfx": [{"type": "static", "at": 0.0}], "text": "Tonight, the dead radio crackles. A child's voice says, I know you're in there."},
+    {"visual": "door", "params": {"variant": "vault", "label": "BLAST DOOR", "alarm": true}, "hold": 1.2, "sfx": [{"type": "knock", "at": -1.15}], "text": "Then, a knock on the blast door."},
+    {"visual": "figure", "params": {"small": true, "eyes": true, "cam": "CAM 01  SURFACE"}, "text": "The camera shows a little girl. Alone. Smiling. The air out there kills in minutes."}
+  ],
+  "choice": {"narration": "Do you open the door? Or leave her outside?", "question": "WHAT DO YOU DO?", "a": "OPEN THE DOOR", "b": "LEAVE HER OUTSIDE"},
+  "hashtags": "#apocalypse #bunker #horror #story #whatwouldyoudo #cliffhanger"
+}

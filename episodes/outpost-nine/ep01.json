@@ -1,0 +1,13 @@
+{
+  "series": "OUTPOST NINE", "episode": 1, "theme": "war",
+  "hook": "60 SECONDS TO DECIDE",
+  "scenes": [
+    {"visual": "wasteland", "params": {"flares": true, "tower": true, "figures": 3}, "sfx": [{"type": "boom", "at": 0.3}], "text": "The war ended three years ago. Nobody told Outpost Nine."},
+    {"visual": "room", "text": "You're the last soldier here, guarding a missile that was never launched."},
+    {"visual": "console", "params": {"radar": false, "lines": ["!ORDERS RECEIVED", "LAUNCH AUTHORIZED", "!TARGET: HOME"]}, "sfx": [{"type": "alarm", "at": 0.1}], "text": "At midnight, the launch computer wakes up. Target: your home city."},
+    {"visual": "radio", "params": {"freq": "CH 09  UNKNOWN"}, "sfx": [{"type": "static", "at": 0.0}], "text": "Then a stranger on the radio begs you. The order is fake. Don't turn the key."},
+    {"visual": "console", "params": {"radar": false, "lines": ["!AWAITING KEY TURN"], "big": {"from": 60, "rate": 1}}, "text": "The countdown says sixty seconds."}
+  ],
+  "choice": {"narration": "Do you turn the key? Or trust the voice?", "question": "WHAT DO YOU DO?", "a": "TURN THE KEY", "b": "TRUST THE VOICE"},
+  "hashtags": "#war #military #story #whatwouldyoudo #cliffhanger #choose"
+}

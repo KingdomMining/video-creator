@@ -1,0 +1,14 @@
+{
+  "series": "DEEP SIGNAL", "episode": 1, "theme": "space",
+  "hook": "WOULD YOU OPEN IT?",
+  "scenes": [
+    {"visual": "space", "text": "Day two hundred twelve. You're the only one awake on the cargo ship Meridian."},
+    {"visual": "console", "params": {"from": 0.95, "to": 0.55, "lines": ["CREW: 1 AWAKE", "NEAREST HUMAN:", "400,000,000 MI"]}, "text": "The nearest human is four hundred million miles away."},
+    {"visual": "corridor", "params": {"alarm": true, "flicker": true}, "sfx": [{"type": "alarm", "at": 0.1}], "text": "Then the proximity alarm goes off. Something is outside."},
+    {"visual": "door", "params": {"label": "AIRLOCK 02", "alarm": true}, "hold": 1.2, "sfx": [{"type": "knock", "at": -1.15}], "text": "You reach the airlock, and you hear it. Three slow knocks."},
+    {"visual": "door", "params": {"label": "AIRLOCK 02", "alarm": true, "figure": true}, "text": "Through the glass, a figure in a spacesuit. Your ship's logo on its chest."},
+    {"visual": "console", "params": {"radar": false, "lines": ["SUIT ID SCAN...", "!MATCH FOUND", "!NAME: YOU"]}, "sfx": [{"type": "beep", "at": 0.2}], "text": "The name tag... is yours."}
+  ],
+  "choice": {"narration": "Do you open the airlock? Or keep it sealed?", "question": "WHAT DO YOU DO?", "a": "OPEN THE AIRLOCK", "b": "KEEP IT SEALED"},
+  "hashtags": "#space #scifi #story #whatwouldyoudo #cliffhanger #choose"
+}
