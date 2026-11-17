@@ -39,6 +39,7 @@ VOICES = {
     "brit_f":  ("en_GB-cori-high",     "en/en_GB/cori/high",     0.95, 1.00),   # public domain (LibriVox)
 }
 HF = "https://huggingface.co/rhasspy/piper-voices/resolve/main/"
+BRAND = json.loads((ROOT / "brand.json").read_text()) if (ROOT / "brand.json").exists() else None   # {"name", "handle"}: drawn on every frame
 _models, _asr = {}, None
 
 
@@ -229,7 +230,7 @@ def timeline(ep, draft=False):
         events += [{"type": "whoosh", "t": round(sc["start"] - 0.25, 3), "gain": 0.6} for sc in scenes[1:]]
     if cover: events.append({"type": "whoosh", "t": round(max(0, cover - 0.3), 3)})
     tl = {"fps": FPS, "duration": duration, "theme": ep.get("theme", "space"), "series": ep["series"], "episode": ep["episode"], "hook": ep.get("hook"),
-          "cover": cover, "style": ep.get("style"), "scripts": ep.get("scripts", []), "soft": False,
+          "cover": cover, "style": ep.get("style"), "scripts": ep.get("scripts", []), "soft": False, "brand": ep.get("brand") or BRAND,
           "thumb": ({**th, "title": th.get("title", ep["series"])} if th.get("visual") else None),
           "scenes": scenes, "chunks": chunk(words[:n_story]), "sfx": sorted(events, key=lambda e: e["t"]),
           "choice": {"start": round(cstart, 3), "question": ch["question"], "a": ch["a"], "b": ch["b"]}}
@@ -278,7 +279,8 @@ def build(ep_path, mode="full", arg=None, draft=False, flags=()):
     for path, cta in ((OUT / f"{slug}.txt", f"Comment A or B. The top answer decides Part {nxt}."),
                       (OUT / f"{slug}-meta.txt", f"What would you do? Part {nxt} follows what most of you would do.")):
         path.write_text(f"TITLE\n{post.get('title', ep['series'] + ' - Part ' + str(ep['episode']))}\n\nDESCRIPTION\n"
-                        f"{post.get('description', ch['question'] + ' (A work of fiction.)')}\n{cta}\n\n"
+                        f"{post.get('description', ch['question'] + ' (A work of fiction.)')}\n{cta}\n"
+                        f"{(BRAND or {}).get('name', '')} {(BRAND or {}).get('handle', '')}\n\n"
                         f"{post.get('hashtags', ep.get('hashtags', '#fiction #story #whatwouldyoudo'))}\n")
     wav.unlink()
     print(f"-> {mp4}\n-> {meta}")

@@ -118,3 +118,18 @@ of this episode.
 Choose the music mood, the ambience per scene and the effects from the lists in `docs/AUDIO.md`. Every visible
 action that would make a sound gets one (footsteps, doors, knocks, phone buzzes, thunder), placed with `on` or
 `at`. No sudden loud shrieks. The narration must stay the clearest thing in the mix.
+
+## 9. The channel handle
+
+The channel is **This or That Galaxy**, handle **@ThisOrThatGalaxy** (`brand.json`). The owner wants the handle in
+every frame so re-uploads carry it, without it being loud.
+
+- The engine draws a small handle under the header on every frame, on the thumbnail and on the choice card. That
+  is automatic; do not remove it.
+- You also put it **inside the world** of the film, where it cannot be cropped off: `renderer/kit/brand.js`
+  (`KitBrand.poster`, `sticker`, `graffiti`, `tag`, `stencil`, `neon`, `sign`, `chalk`, `label`, `patch`,
+  `wear(actor, 'back' | 'chest' | 'armL' | 'armR')`, `draw2d` for screens). Aim for at least one in-world placement
+  visible in every shot where a surface allows: a poster on the wall, a sticker on a laptop, a patch on the
+  hero's jacket, lettering on a crate, a neon sign, a van. It should feel like set dressing a viewer notices on
+  the second look: small, in character for the place, never over the subject, never the brightest thing in frame.
+- The hero's patch is the cheapest way to cover most shots: put one on the back or the arm of the main character.

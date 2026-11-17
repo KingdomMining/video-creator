@@ -245,7 +245,7 @@ function header(c, t, S) {
   c.save(); c.globalAlpha = a; c.font = '800 36px Inter'; c.textAlign = 'center';
   const label = `${TL.series}  ·  PART ${TL.episode}`, tw = c.measureText(label).width + 56;
   c.fillStyle = 'rgba(0,0,0,.55)'; rrect(c, W / 2 - tw / 2, 262, tw, 64, 32); c.fill(); c.strokeStyle = A(S.accent, 0.9); c.lineWidth = 3; c.stroke(); c.fillStyle = '#fff'; c.fillText(label, W / 2, 307);
-  if (TL.hook && t < cov + 3.0) { const k = ease((t - cov) / 0.3) * (1 - ease((t - cov - 2.6) / 0.4)); c.globalAlpha = k * a; c.font = tfont(S, 84); const ls = wrap(c, String(TL.hook).toUpperCase(), 860); ls.forEach((l, i) => { c.strokeStyle = '#000'; c.lineWidth = 18; c.lineJoin = 'round'; c.strokeText(l, W / 2, 430 + i * 96); c.fillStyle = S.warn; c.fillText(l, W / 2, 430 + i * 96); }); }
+  if (TL.hook && t < cov + 3.0) { const k = ease((t - cov) / 0.3) * (1 - ease((t - cov - 2.6) / 0.4)); c.globalAlpha = k * a; c.font = tfont(S, 84); const ls = wrap(c, String(TL.hook).toUpperCase(), 860); ls.forEach((l, i) => { c.strokeStyle = '#000'; c.lineWidth = 18; c.lineJoin = 'round'; c.strokeText(l, W / 2, 468 + i * 96); c.fillStyle = S.warn; c.fillText(l, W / 2, 468 + i * 96); }); }
   c.restore();
 }
 
@@ -253,9 +253,9 @@ function choiceCard(c, t, S, soft) {
   const ch = TL.choice, lt = t - ch.start; if (lt < 0) return;
   c.fillStyle = `rgba(0,0,0,${0.7 * ease(lt / 0.4)})`; c.fillRect(0, 0, W, H);
   c.textAlign = 'center'; c.lineJoin = 'round';
-  let a = ease(lt / 0.4); c.globalAlpha = a; c.font = '800 38px Inter'; c.fillStyle = S.accent; c.fillText(`${TL.series}  ·  PART ${TL.episode}`, W / 2, 312);
-  c.font = '800 92px Inter'; c.fillStyle = '#fff'; const ql = wrap(c, ch.question, 860); ql.forEach((l, i) => c.fillText(l, W / 2, 420 + i * 100 - (1 - a) * 40));
-  const PX = 140, PW = 800, PH = 232, GAP = 76, y0 = 420 + (ql.length - 1) * 100 + 70;
+  let a = ease(lt / 0.4); c.globalAlpha = a; c.font = '800 38px Inter'; c.fillStyle = S.accent; c.fillText(`${TL.series}  ·  PART ${TL.episode}`, W / 2, 300);
+  c.font = '800 92px Inter'; c.fillStyle = '#fff'; const ql = wrap(c, ch.question, 860); ql.forEach((l, i) => c.fillText(l, W / 2, 440 + i * 100 - (1 - a) * 40));
+  const PX = 140, PW = 800, PH = 232, GAP = 76, y0 = 440 + (ql.length - 1) * 100 + 70;
   const panel = (y, letter, text, c0, c1, delay, dir, hot) => {
     const k = ease((lt - delay) / 0.45); if (k <= 0) return; const x = PX + dir * (1 - k) * W, s = 1 + (hot ? 0.025 : 0);
     c.save(); c.globalAlpha = k; c.translate(W / 2, y + PH / 2); c.scale(s, s); c.translate(-W / 2, -(y + PH / 2));
@@ -286,6 +286,16 @@ function thumbText(c, S) {
   lines.forEach((l, i) => { const yy = y + size * 0.84 + i * lh; c.shadowColor = 'rgba(0,0,0,.65)'; c.shadowBlur = 34; c.shadowOffsetY = 12; c.lineWidth = Math.max(16, size * 0.15); c.strokeStyle = '#000'; c.strokeText(l, W / 2, yy); c.shadowColor = 'transparent'; c.shadowBlur = 0; c.shadowOffsetY = 0; c.fillStyle = (th.colors || ['#ffffff', S.hi])[i % 2]; c.fillText(l, W / 2, yy); });
   if (th.tagline) { c.font = '800 54px Inter'; const tl = wrap(c, String(th.tagline).toUpperCase(), 820), ty = y + blockH + 44; tl.forEach((l, i) => { const w = c.measureText(l).width + 60; c.fillStyle = th.tagBg || S.warn; rrect(c, W / 2 - w / 2, ty + i * 84, w, 76, 14); c.fill(); c.fillStyle = th.tagColor || '#ffffff'; c.fillText(l, W / 2, ty + i * 84 + 56); }); }
   c.restore();
+}
+
+// The channel handle, small, on EVERY frame (cover, story and choice card) so re-uploads carry it.
+// Films also place it inside their sets (see renderer/kit/brand.js); this is the guaranteed copy.
+function watermark(c, t, S) {
+  const b = TL.brand; if (!b || !b.handle) return;
+  const cov = TL.cover || 0, ch = TL.choice.start, story = t >= cov && t < ch;
+  const k = t >= ch ? ease((t - ch) / 0.3) : 0, y = story || t >= ch ? lerp(362, 340, k) : 340, big = !story || k > 0;
+  c.save(); c.textAlign = 'center'; c.lineJoin = 'round'; c.font = `600 ${big ? 30 : 27}px Inter`; c.globalAlpha = story ? lerp(0.62, 0.9, k) : 0.9;
+  c.lineWidth = 5; c.strokeStyle = 'rgba(0,0,0,.6)'; c.strokeText(b.handle, W / 2, y); c.fillStyle = '#ffffff'; c.fillText(b.handle, W / 2, y); c.restore();
 }
 
 function guides(c) {   // --guides: where platform UI will cover the frame
@@ -341,6 +351,7 @@ window.renderBase = t => {
 window.renderOver = (t, soft) => {
   const c = ctx, S = sty(); c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = 1; c.drawImage(_base, 0, 0);
   if (!window.CLEAN) { header(c, t, S); captions(c, t, S); choiceCard(c, t, S, !!soft); }
+  if (!window.NOMARK) watermark(c, t, S);
   if (window.GUIDES) guides(c);
 };
 window.renderFrame = (t, soft) => { renderBase(t); renderOver(t, soft ?? TL.soft); };

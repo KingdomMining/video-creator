@@ -11,6 +11,7 @@
 //     node renderer/render.js --shot NAME --scripts renderer/films/x/a.js,renderer/films/x/b.js --n 6 --dur 7 --out sheet.jpg
 //       --at 0,1.5,3     exact local times instead of --n evenly spaced
 //       --params '{"k":1}'  shot params      --text "words shown as captions"
+//   --kits nature,fx   load only these kits from renderer/kit/ (default: all; brand.js always loads)
 //   Common flags: --draft (half-res 3D, 4x faster)  --guides (show platform UI zones)  --clean (no text overlays)
 //                 --soft (Facebook/Instagram end card)  --cols N  --scale 0.3 (sheet tile scale)  --q 0.9
 const { chromium } = require('playwright');
@@ -34,7 +35,9 @@ function kitScripts() {
   const order = fs.existsSync(man) ? JSON.parse(fs.readFileSync(man, 'utf8')) : [];
   return [...order.filter(x => all.includes(x)), ...all.filter(x => !order.includes(x))].map(x => path.join(dir, x));
 }
+const BRAND = fs.existsSync(path.join(R, '..', 'brand.json')) ? JSON.parse(fs.readFileSync(path.join(R, '..', 'brand.json'), 'utf8')) : null;
 async function open(tl, f, extraScripts) {
+  if (!tl.brand && BRAND) tl.brand = BRAND;
   const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--allow-file-access-from-files', '--disable-web-security'] });
   const page = await browser.newPage({ viewport: { width: 1080, height: 1920 } });
   const errs = [];
@@ -44,8 +47,18 @@ async function open(tl, f, extraScripts) {
   const scripts = ['vendor/three.min.js', 'scenes.js', 'fonts.js', 'film_deep_signal.js', 'stage3d.js'].map(x => path.join(R, x))
     .concat(kitScripts(), (tl.scripts || []).map(x => path.resolve(R, '..', x)), extraScripts || []);
   await page.evaluate(o => { window.DRAFT = !!o.draft; window.GUIDES = !!o.guides; window.CLEAN = !!o.clean; }, f);
-  for (const s of scripts) { if (!fs.existsSync(s)) { console.error('missing script', s); process.exit(2); } await page.addScriptTag({ path: s }); }
-  if (errs.length) { await browser.close(); process.exit(3); }
+  // Kits are built by different teams: a broken kit must not break everyone else's previews. A kit that fails to
+  // load is reported and skipped; an error in the core or in the film's own scripts is fatal.
+  const kitDir = path.join(R, 'kit') + path.sep, skip = (f.kits !== undefined) ? f.kits.split(',').filter(Boolean) : null;
+  for (const s of scripts) {
+    const isKit = s.startsWith(kitDir);
+    if (isKit && skip && !skip.includes(path.basename(s, '.js')) && path.basename(s) !== 'brand.js') continue;
+    if (!fs.existsSync(s)) { console.error('missing script', s); process.exit(2); }
+    const before = errs.length;
+    try { await page.addScriptTag({ path: s }); } catch (e) { errs.push(String(e)); }
+    await page.evaluate(() => 0);
+    if (errs.length > before) { if (isKit) { console.error(`WARNING: kit ${path.basename(s)} failed to load and was skipped (not your problem unless it is your kit).`); errs.length = before; } else { console.error('FAILED to load ' + s); await browser.close(); process.exit(3); } }
+  }
   await page.evaluate(t => window.init(t), tl);
   return { browser, page, errs };
 }
