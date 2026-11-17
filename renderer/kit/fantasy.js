@@ -20,7 +20,7 @@ const KitFantasy = (() => {
   // ---------- palette (defaults; every builder takes colour options) ----------
   const C = {
     stone: '#918d85', stoneDk: '#6a6761', stoneLt: '#b0aba0', slate: '#4f5b6b', moss: '#5f7748',
-    wood: '#7d5636', woodDk: '#503823', woodLt: '#a98052', plaster: '#e6d8b9', thatch: '#c8a85e', tile: '#ab4a30',
+    wood: '#7d5636', woodDk: '#503823', woodLt: '#a98052', plaster: '#e6d8b9', thatch: '#b79c5f', tile: '#a5503a',
     iron: '#3a3d45', steel: '#aab2bc', gold: '#f2bf47', brass: '#c9993c', rope: '#b99c6b', cloth: '#ddd1b8', parch: '#e8d9ae',
     red: '#a62c2c', blue: '#2c5196', green: '#2f6b45', purple: '#5e3c93', white: '#ece8de', black: '#1b1c20',
     fire: '#ff8f2e', magic: '#6fe6ff', arcane: '#b98aff', poison: '#86ff7a', dark: '#14161a',
@@ -212,11 +212,11 @@ const KitFantasy = (() => {
     return tmat(key, () => ctex(key, 256, 256, (c, w, h) => {
       const r = R(11, kind.length);
       if (kind === 'thatch') {
-        const rows = 3, rh = h / rows;
+        const rows = 4, rh = h / rows;
         for (let j = 0; j < rows; j++) {
-          const g = c.createLinearGradient(0, j * rh, 0, (j + 1) * rh); g.addColorStop(0, shade(col, 0.62)); g.addColorStop(0.25, shade(col, 0.9)); g.addColorStop(1, shade(col, 1.08)); c.fillStyle = g; c.fillRect(0, j * rh, w, rh);
-          for (let i = 0; i < 90; i++) { const x = r() * w, y = j * rh + r() * rh * 0.9; c.fillStyle = r() < 0.5 ? 'rgba(60,40,10,.22)' : 'rgba(255,240,190,.2)'; c.fillRect(x, y, 2, 8 + r() * rh * 0.4); }
-          for (let x = 0; x < w; x += 6) { c.fillStyle = shade(col, 0.55); c.fillRect(x, (j + 1) * rh - 2 - r() * 5, 4, 7); }
+          const g = c.createLinearGradient(0, j * rh, 0, (j + 1) * rh); g.addColorStop(0, shade(col, 0.6)); g.addColorStop(0.18, shade(col, 0.86)); g.addColorStop(1, shade(col, 1.1)); c.fillStyle = g; c.fillRect(0, j * rh, w, rh);
+          for (let i = 0; i < 70; i++) { const x = r() * w, y = j * rh + r() * rh * 0.85; c.fillStyle = r() < 0.5 ? 'rgba(70,50,15,.2)' : 'rgba(255,244,205,.18)'; c.fillRect(x, y, 2 + r() * 2, 10 + r() * rh * 0.45); }
+          for (let x = 0; x < w;) { const bw = 8 + r() * 16, dy = r() * 7; c.fillStyle = shade(col, 0.5); c.fillRect(x, (j + 1) * rh - 3 - dy, bw, 4 + dy); x += bw + r() * 10; }
         }
       } else {
         const rows = kind === 'tile' ? 6 : 5, cols = kind === 'tile' ? 6 : 5, rh = h / rows, tw = w / cols; c.fillStyle = shade(col, 0.5); c.fillRect(0, 0, w, h);
@@ -288,9 +288,9 @@ const KitFantasy = (() => {
     const color = o.color || C.fire, seed = o.seed || 1, fs = [], hs = [], c = [0, 0, 0];
     pts.forEach((p, i) => {
       const f = (size < 0.12 ? grp(drop(size * 0.22, size, 5, glo(mix(color, '#fff2b8', 0.6), 1.7))) : _flame(size, color, seed + i * 7)).at(p[0], p[1], p[2]); g.add(f); fs.push(f);
-      const h = flare(color, o.halo ?? Math.max(0.5, size * 2.6), o.haloOpacity ?? 0.42).at(p[0], p[1] + size * 0.35, p[2]); g.add(h); hs.push(h); c[0] += p[0] / pts.length; c[1] += p[1] / pts.length; c[2] += p[2] / pts.length;
+      const h = flare(color, o.halo ?? Math.max(0.4, size * 2.4), o.haloOpacity ?? 0.3).at(p[0], p[1] + size * 0.35, p[2]); g.add(h); hs.push(h); c[0] += p[0] / pts.length; c[1] += p[1] / pts.length; c[2] += p[2] / pts.length;
     });
-    const U = g.userData, op = o.haloOpacity ?? 0.42; U.flame = fs[0]; U.flames = fs; U.flares = hs; U.lightPos = [c[0], c[1] + size * 0.4, c[2]]; U.lightColor = color; U.lit = true;
+    const U = g.userData, op = o.haloOpacity ?? 0.3; U.flame = fs[0]; U.flames = fs; U.flares = hs; U.lightPos = [c[0], c[1] + size * 0.4, c[2]]; U.lightColor = color; U.lit = true;
     U.setLit = on => { U.lit = !!on; fs.forEach(f => { f.visible = !!on; }); hs.forEach(h => { h.visible = !!on; }); if (U.embers) U.embers.visible = !!on; };
     chain(g, t => { fs.forEach((f, i) => { if (f.userData.lick) f.userData.lick(t + i * 1.7); else f.scale.y = 1 + 0.18 * noise1(t * 9 + i * 2.3, seed + i); }); hs.forEach((h, i) => { h.material.opacity = op * S3.flicker(t + i, 0.3, 9, seed + i); }); });
     if (o.lit === false) U.setLit(false);
@@ -415,7 +415,7 @@ const KitFantasy = (() => {
   function banner(o = {}) {
     const { width = 1.1, height = 2.8, color = C.red, trim = C.gold, emblem = 'sun', tail = 'swallow', mount = 'wall', wave = 0.05, seed = 1 } = o;
     const y = o.y ?? (mount === 'pole' ? height + 0.85 : 4), g = grp(), st = grp(), geo = new T.PlaneGeometry(width, height, 4, 7), P = geo.attributes.position, base = [], wall = mount === 'wall';
-    for (let i = 0; i < P.count; i++) { const u = P.getX(i) / width + 0.5, v = 0.5 - P.getY(i) / height, sh = tail === 'swallow' ? 1 - Math.abs(2 * u - 1) : tail === 'point' ? Math.abs(2 * u - 1) : 0; P.setY(i, -v * height * (1 - 0.17 * sh)); base.push(u, v); }
+    for (let i = 0; i < P.count; i++) { const u = P.getX(i) / width + 0.5, v = 0.5 - P.getY(i) / height, sh = tail === 'swallow' ? 1 - Math.abs(2 * u - 1) : tail === 'point' ? Math.abs(2 * u - 1) : 0; P.setY(i, -height * (v <= 5 / 7 ? v : 5 / 7 + (v - 5 / 7) * (1 - 0.6 * sh))); base.push(u, v); }
     const cloth = mesh(geo, clothMat({ color, trim, emblem, emblemColor: o.emblemColor })); cloth.position.set(0, y - 0.05, wall ? 0.1 : mount === 'pole' ? 0.07 : 0);
     const shape = t => { for (let i = 0; i < P.count; i++) { const u = base[i * 2], v = base[i * 2 + 1]; P.setZ(i, wave * (0.25 + v) * Math.sin(u * 7.5 + seed * 1.7 + t * 1.5) + (wall ? 0 : wave * 1.8 * v * v * Math.sin(t * 0.9 + seed))); } P.needsUpdate = true; };
     shape(0); g.add(cloth);
@@ -644,6 +644,316 @@ const KitFantasy = (() => {
     const U = g.userData; U.bucket = bk; U.rim = 1.0; U.lower = k => { const y = lerp(1.08, -1.2, clamp(k)); bk.position.set(0.05, y, 0); stretch(rope, [0.05, y + 0.46, 0], [0.05, ay - 0.1, 0]); bk.visible = rope.visible = true; }; U.lower(0); return g;
   }
 
+  // ---------- small goods shared by many builders ----------
+  /**
+   * Barrel. o: {radius: 0.36, height: 0.95, color, hoops (colour), lying: false, open: false (lid off), fill: 'water' | 'apples' | 'gold' | 'fish' | 'ale' (shown when open), tap: false, seed}
+   */
+  function barrel(o = {}) {
+    const { radius: r = 0.36, height: h = 0.95, color = C.wood, hoops = C.iron, lying = false, open = false, fill = 'water', tap = false, seed = 1 } = o, g = grp(), st = grp();
+    const prof = [[r * 0.8, 0], [r * 0.94, h * 0.2], [r, h * 0.5], [r * 0.94, h * 0.8], [r * 0.8, h], [r * 0.73, h], [r * 0.73, h - 0.05]], rAt = y => { const k = Math.abs(y / h - 0.5) * 2; return r * (1 - 0.2 * k * k); };
+    tlathe(prof, 10, woodMat(color, { planks: 4, seed }), 0.5).to(st);
+    for (const k of [0.07, 0.27, 0.73, 0.93]) { const y = h * k; cyl(rAt(y + 0.025) + 0.012, rAt(y - 0.025) + 0.012, 0.05, 10, hoops, IRON).at(0, y, 0).rot(0, PI / 10, 0).to(st); }
+    cyl(r * 0.74, r * 0.74, 0.02, 10, shade(color, 0.8)).at(0, 0.02, 0).rot(0, PI / 10, 0).to(st);
+    if (!open) cyl(r * 0.74, r * 0.74, 0.02, 10, shade(color, 1.12)).at(0, h - 0.05, 0).rot(0, PI / 10, 0).to(st);
+    else {
+      const fc = { water: '#24505f', ale: '#b5761f', apples: '#7a3a22', gold: C.gold, fish: '#3b5560' }[fill] || '#24505f', fy = h - 0.14;
+      cyl(r * 0.73, r * 0.73, 0.02, 10, fc, fill === 'gold' ? GOLD : { rough: 0.15 }).at(0, fy, 0).rot(0, PI / 10, 0).to(st); const rr = R(seed, 4);
+      if (fill === 'apples') for (let i = 0; i < 9; i++) ball(0.055, pick(rr, ['#b8322a', '#c84a2c', '#8fae3a']), 0).at((rr() - 0.5) * r, fy + 0.04 + rr() * 0.04, (rr() - 0.5) * r).to(st);
+      if (fill === 'gold') for (let i = 0; i < 12; i++) cyl(0.03, 0.03, 0.008, 6, C.gold, GOLD).at((rr() - 0.5) * r, fy + 0.02 + rr() * 0.03, (rr() - 0.5) * r).rot(rr() - 0.5, rr() * 3, rr() - 0.5).to(st);
+      if (fill === 'fish') for (let i = 0; i < 5; i++) ball(0.07, '#9fb2bd', 0, STEEL).scl(0.45, 0.3, 1.5).at((rr() - 0.5) * r * 0.8, fy + 0.04, (rr() - 0.5) * r * 0.5).rot(0, rr() * 3, 0).to(st);
+    }
+    if (tap) { rod([0, h * 0.5, r], [0, h * 0.5, r + 0.12], 0.02, C.woodDk).to(st); box(0.03, 0.08, 0.03, C.woodDk).at(0, h * 0.5 + 0.03, r + 0.09).to(st); }
+    const b = bake(st); if (lying) { b.rotation.x = PI / 2; b.rotation.z = 0; b.position.set(0, r, -h / 2); for (const sx of [-1, 1]) box(0.08, 0.1, h * 0.7, C.woodDk).at(sx * r * 0.6, 0.05, 0).to(g); }
+    g.add(b); return g;
+  }
+  /** Wooden crate. o: {size: 0.6 | [w, h, d], color, open: false, seed} */
+  function crate(o = {}) {
+    const { size = 0.6, color = C.woodLt, seed = 1 } = o, [w, h, d] = Array.isArray(size) ? size : [size, size, size], g = grp(), st = grp(), key = ['crate', hex(color), seed].join('|');
+    const m = tmat(key, () => ctex(key, 128, 128, (c, W, H) => { const r = R(seed, 6); for (let i = 0; i < 4; i++) { c.fillStyle = shade(hex(color), 0.86 + r() * 0.22); c.fillRect(0, i * H / 4, W, H / 4); c.fillStyle = 'rgba(0,0,0,.3)'; c.fillRect(0, i * H / 4, W, 3); } c.strokeStyle = shade(hex(color), 0.7); c.lineWidth = 14; c.beginPath(); c.moveTo(10, 10); c.lineTo(W - 10, H - 10); c.stroke(); c.lineWidth = 16; c.strokeRect(8, 8, W - 16, H - 16); c.fillStyle = 'rgba(0,0,0,.45)'; for (const [x, y] of [[12, 12], [W - 16, 12], [12, H - 16], [W - 16, H - 16]]) c.fillRect(x, y, 5, 5); }), { rough: 0.9 });
+    const b = mesh(new T.BoxGeometry(w, h, d).translate(0, h / 2, 0), m); st.add(b);
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) boxB(0.05, h + 0.01, 0.05, shade(color, 0.72)).at(sx * (w / 2 - 0.015), 0, sz * (d / 2 - 0.015)).to(st);
+    g.add(bake(st)); return g;
+  }
+  /** Tied sack of grain. o: {size: 0.45, color, seed} */
+  function sack(o = {}) {
+    const { size: s = 0.45, color = '#b99b68', seed = 1 } = o, g = grp(), st = grp();
+    blob(s * 0.5, color, seed, { squash: [1, 1.15, 0.85], bump: 0.1 }).at(0, s * 0.52, 0).to(st); cone(s * 0.16, s * 0.24, 6, shade(color, 0.9)).at(0, s * 1.14, 0).rot(PI, 0, 0).to(st); cyl(s * 0.07, s * 0.07, 0.03, 6, C.rope).at(0, s * 1.05, 0).to(st);
+    g.add(bake(st)); return g;
+  }
+  /**
+   * Lantern: iron frame with glowing panes. Stands on y = 0, or hangs with its base at o.y on a chain of o.chain metres.
+   * o: {size: 0.32, lit: true, color (glow), y: 0, chain: 0}   userData: {lightPos, flares, setLit(on), update(t)}
+   */
+  function lantern(o = {}) {
+    const { size: s = 0.32, lit = true, color = '#ffb347', y = 0, chain: ch = 0 } = o, g = grp(), st = grp(), w = s * 0.5;
+    box(w * 1.2, s * 0.08, w * 1.2, C.iron, IRON).at(0, y + s * 0.04, 0).to(st); box(w * 1.2, s * 0.06, w * 1.2, C.iron, IRON).at(0, y + s * 0.75, 0).to(st);
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) box(s * 0.05, s * 0.7, s * 0.05, C.iron, IRON).at(sx * w * 0.5, y + s * 0.42, sz * w * 0.5).to(st);
+    cone(w * 0.78, s * 0.22, 4, C.iron, IRON).at(0, y + s * 0.89, 0).rot(0, PI / 4, 0).to(st); torus(s * 0.07, s * 0.018, C.iron, { ...IRON, rs: 4, ts: 8 }).at(0, y + s * 1.05, 0).to(st);
+    if (ch) rod([0, y + s * 1.1, 0], [0, y + s * 1.1 + ch, 0], 0.012, C.iron, IRON).to(st);
+    g.add(bake(st));
+    const core = box(w * 0.86, s * 0.66, w * 0.86, lit ? glo(color, 1.5, { own: true }) : mat('#3a3326', { own: true })).at(0, y + s * 0.42, 0); g.add(core);
+    const fl = flare(color, s * 5, 0.4).at(0, y + s * 0.42, 0); fl.visible = lit; g.add(fl);
+    const U = g.userData; U.lightPos = [0, y + s * 0.42, 0]; U.lightColor = color; U.lightPower = 0.7; U.lit = lit; U.flares = [fl]; U.core = core;
+    U.setLit = on => { U.lit = !!on; fl.visible = !!on; core.material = on ? glo(color, 1.5) : mat('#3a3326'); };
+    U.update = t => { fl.material.opacity = 0.4 * S3.flicker(t, 0.12, 5, 3); };
+    return g;
+  }
+
+  // ---------- village ----------
+  /** Timber-framed window: back on z = 0, bottom of the pane at y = 0. o: {lit, frame, shutters: colour | null, flowers: bool, seed} */
+  function houseWin(w, h, o = {}) {
+    const g = grp(), fc = o.frame || C.woodDk, t = 0.07;
+    box(w + t * 2, h + t * 2, 0.07, fc).at(0, h / 2, 0.035).to(g); const pane = quad(w, h, glassMat(o.lit)).at(0, h / 2, 0.073); g.add(pane);
+    box(0.045, h, 0.025, fc).at(0, h / 2, 0.085).to(g); box(w, 0.045, 0.025, fc).at(0, h * 0.6, 0.085).to(g); box(w + 0.34, 0.07, 0.17, fc).at(0, -t - 0.035, 0.085).to(g);
+    if (o.shutters) for (const sx of [-1, 1]) tbox(w / 2, h + 0.08, 0.035, woodMat(o.shutters, { planks: 3 }), 0.5).at(sx * (w * 0.75 + t + 0.01), -0.04, 0.07).to(g);
+    if (o.flowers) { const r = R(o.seed, 5); box(w + 0.16, 0.15, 0.2, C.wood).at(0, -t - 0.15, 0.19).to(g); for (let i = 0; i < 6; i++) { const x = (i / 5 - 0.5) * w; blob(0.075, '#4f8a43', i + 1, { detail: 0 }).at(x, -t - 0.04, 0.2).to(g); ball(0.04, pick(r, ['#e0484a', '#f2c14e', '#d86fb0', '#f4f1e8', '#e8743a']), 0).at(x + (r() - 0.5) * 0.06, -t + 0.03 + r() * 0.03, 0.22 + r() * 0.05).to(g); } }
+    g.userData.pane = pane; return g;
+  }
+  /**
+   * The timber-framed building behind house() and tavern(). Canonical build has the ridge along X; `front` chooses which wall carries the door.
+   * Returns {g, st (static parts, not yet baked), U (userData), dims}.
+   */
+  function timberBuilding(o) {
+    const { length: L = 6, span: S = 5, storeys = 2, roof = 'thatch', front = 'gable', jetty: j = 0.22, color = C.plaster, timber = C.woodDk, stone = C.stone, lit = false, chimney = true, shutters = null, flowers = false, seed = 1, doorBay, doorW = 0.95 } = o;
+    const g = grp(), st = grp(), b = grp(), r = R(seed, 1), pm = plasterMat(color, seed), sm = stoneMat(stone, { seed }), bw = 0.16, bt = 0.05, h0 = 0.35, H = [2.45, 2.3, 2.2], U = { windows: [] }; st.add(b);
+    tbox(L + 0.14, h0, S + 0.14, sm, 1.5).to(b);
+    const pitch = (roof === 'thatch' ? 52 : 47) * PI / 180;
+    // one wall face: local x across, y up, z outward
+    const faceG = (which, off) => { const f = grp(); if (which === 'front') f.position.set(0, 0, S / 2 + off); else if (which === 'back') { f.position.set(0, 0, -S / 2 - off); f.rotation.y = PI; } else if (which === 'right') { f.position.set(L / 2 + off, 0, 0); f.rotation.y = PI / 2; } else { f.position.set(-L / 2 - off, 0, 0); f.rotation.y = -PI / 2; } b.add(f); return f; };
+    const tim = (f, x0, y0, x1, y1, w = bw) => { const len = Math.hypot(x1 - x0, y1 - y0); box(len, w, bt, timber).at((x0 + x1) / 2, (y0 + y1) / 2, bt / 2).rot(0, 0, Math.atan2(y1 - y0, x1 - x0)).to(f); };
+    const doorFace = front === 'gable' ? 'right' : 'front';
+    let y = h0, eaveY = 0;
+    for (let s = 0; s < storeys; s++) {
+      const off = s ? j : 0, h = H[Math.min(s, 2)], w = L + off * 2, d = S + off * 2;
+      tbox(w, h, d, pm, 2, 0, y, 0).to(b);
+      if (s) { tbox(w + 0.04, 0.2, d + 0.04, woodMat(timber, { planks: 2, horiz: true }), 1, 0, y - 0.1, 0).to(b); }
+      for (const which of ['front', 'back', 'right', 'left']) {
+        const f = faceG(which, off + 0.001), W = which === 'front' || which === 'back' ? w : d, bays = Math.max(2, Math.round(W / 1.75)), bx = i => -W / 2 + (i + 0.5) * W / bays, isDoor = which === doorFace && s === 0, db = doorBay ?? Math.floor((bays - 1) / 2);
+        tim(f, -W / 2, y + bw / 2, W / 2, y + bw / 2); tim(f, -W / 2, y + h - bw / 2, W / 2, y + h - bw / 2);
+        for (let i = 0; i <= bays; i++) { const x = clamp(-W / 2 + i * W / bays, -W / 2 + bw / 2, W / 2 - bw / 2); tim(f, x, y, x, y + h); }
+        if (s && which === doorFace) for (let i = 0; i < Math.round(W / 0.55); i++) box(0.12, 0.14, j + 0.08, timber).at(-W / 2 + 0.2 + i * (W - 0.4) / (Math.round(W / 0.55) - 1), y - 0.17, -j / 2).to(f);
+        for (let i = 0; i < bays; i++) {
+          const x = bx(i), winBay = Math.min(i, bays - 1 - i) % 2 === 0, x0 = -W / 2 + i * W / bays, x1 = x0 + W / bays, ww = Math.min(0.85, W / bays - 0.6);
+          if (isDoor && i === db) {
+            const pd = plankDoor(doorW, 2.0, { color: o.doorColor || C.wood }); pd.position.set(x, y, 0.012); f.add(pd); U.door = pd.userData.leaf; U.open = pd.userData.open; U.doorX = x;
+            box(doorW + 0.3, 0.14, 0.09, timber).at(x, y + 2.07, 0.045).to(f); for (const sx of [-1, 1]) box(0.13, 2.0, 0.09, timber).at(x + sx * (doorW / 2 + 0.065), y + 1.0, 0.045).to(f);
+            tbox(doorW + 0.5, h0, 0.55, sm, 1.5, x, 0, 0.275).to(f); tbox(doorW + 0.9, h0 / 2, 0.35, sm, 1.5, x, 0, 0.72).to(f);
+          } else if (winBay || (s === 0 && which === doorFace)) {
+            const wn = houseWin(ww, s ? 1.0 : 1.1, { lit, frame: timber, shutters: (which === doorFace || which === 'front') ? shutters : null, flowers: flowers && s > 0 && which === doorFace, seed: seed + i + s * 7 }); wn.position.set(x, y + (s ? 0.82 : 0.95), 0.004); f.add(wn); U.windows.push(wn.userData.pane);
+            tim(f, x0, y + (s ? 0.66 : 0.78), x1, y + (s ? 0.66 : 0.78), 0.12);
+          } else if (s) { if (bays % 2 && i === (bays - 1) / 2) { tim(f, x0 + 0.1, y + 0.1, x1 - 0.1, y + h - 0.1, 0.12); tim(f, x0 + 0.1, y + h - 0.1, x1 - 0.1, y + 0.1, 0.12); } else if (i < bays / 2) tim(f, x0 + 0.08, y + 0.1, x1 - 0.08, y + h - 0.1, 0.12); else tim(f, x0 + 0.08, y + h - 0.1, x1 - 0.08, y + 0.1, 0.12); }
+          else tim(f, x0, y + h * 0.5, x1, y + h * 0.5, 0.12);
+        }
+      }
+      y += h; eaveY = y;
+    }
+    const off = storeys > 1 ? j : 0, w = L + off * 2, d = S + off * 2, rise = d / 2 * Math.tan(pitch), thick = roof === 'thatch' ? 0.3 : 0.13;
+    for (const sx of [-1, 1]) {   // gables
+      const gb = textr([[-d / 2, 0], [d / 2, 0], [0, rise]], 0.2, pm, 2); gb.position.set(sx * (w / 2 - 0.1), eaveY, 0); gb.rotation.y = sx * PI / 2; b.add(gb);
+      const f = grp(); f.position.set(sx * (w / 2 + 0.001), eaveY, 0); f.rotation.y = sx * PI / 2; b.add(f);
+      tim(f, 0, 0, 0, rise - 0.2); tim(f, -d / 2 * 0.52, rise * 0.48, d / 2 * 0.52, rise * 0.48, 0.13); tim(f, -d / 2 * 0.5, 0.05, -0.1, rise * 0.44, 0.11); tim(f, d / 2 * 0.5, 0.05, 0.1, rise * 0.44, 0.11);
+      for (const sz of [-1, 1]) { const len = Math.hypot(d / 2 + 0.3, rise + 0.3 * Math.tan(pitch)); box(len, 0.2, 0.07, shade(timber, 0.85)).at(sz * (d / 4 + 0.13), rise / 2 - 0.12 * Math.tan(pitch) + 0.06, 0.32).rot(0, 0, -sz * pitch).to(f); }
+      if (rise > 2.4) { const wn = houseWin(0.5, 0.6, { lit, frame: timber }); wn.position.set(0.0, rise * 0.48 + 0.2, 0.004); f.add(wn); U.windows.push(wn.userData.pane); }
+    }
+    const rf = gableRoof(w + 0.7, d, rise, roofMat(roof, o.roofColor), { over: 0.45, thick, cap: roof === 'thatch' ? false : shade(o.roofColor || C.tile, 0.7) }); rf.position.y = eaveY; b.add(rf);
+    if (roof === 'thatch') { const cp = cyl(0.3, 0.3, w + 0.74, 5, shade(o.roofColor || C.thatch, 0.86), { vary: 0.1 }); cp.rotation.z = PI / 2; cp.position.y = eaveY + rise + 0.2; b.add(cp); }
+    if (chimney) { const cx = -L * 0.22, cz = -S * 0.18, ch = rise * (1 - Math.abs(cz) / (d / 2)) + 1.1; tbox(0.72, ch + 1.2, 0.72, sm, 1.2, cx, eaveY - 1.2, cz).to(b); box(0.86, 0.12, 0.86, shade(stone, 0.8)).at(cx, eaveY + ch + 0.06, cz).to(b); for (const dx of [-0.16, 0.16]) cylB(0.1, 0.12, 0.26, 6, '#8a4a36').at(cx + dx, eaveY + ch + 0.12, cz).to(b); U._smoke = [cx, eaveY + ch + 0.4, cz]; }
+    if (front === 'gable') b.rotation.y = -PI / 2;
+    U._b = b; U.eaveY = eaveY; U.ridgeY = eaveY + rise; U.size = front === 'gable' ? [d, eaveY + rise, w] : [w, eaveY + rise, d];
+    return { g, st, b, U, dims: { w, d, eaveY, rise, frontZ: (front === 'gable' ? w : d) / 2 } };
+  }
+  const _toLocal = (b, p) => { b.updateMatrix(); const v = V(p).applyMatrix4(b.matrix); return [v.x, v.y, v.z]; };
+  /**
+   * Timber-framed house on a stone footing, jettied upper floor, thatched or tiled roof.
+   * o: {width: 5 (across the front), depth: 6, storeys: 2, roof: 'thatch' | 'tile' | 'slate' | 'shingle', front: 'gable' | 'eave' (which side faces +Z),
+   *     color (plaster), timber, stone, roofColor, lit: false (glowing windows), chimney: true, shutters: colour | null, flowers: true, seed}
+   * userData: {door, open(k), windows (panes), smokePos, doorPos, size: [w, h, d]}
+   */
+  function house(o = {}) {
+    const { width = 5, depth = 6, front = 'gable', flowers = true } = o;
+    const { g, st, b, U, dims } = timberBuilding({ ...o, flowers, front, length: front === 'gable' ? depth : width, span: front === 'gable' ? width : depth });
+    g.add(bake(st)); if (U._smoke) U.smokePos = _toLocal(b, U._smoke); U.doorPos = [U.doorX || 0, 0, dims.frontZ + 1.1]; delete U._b; delete U._smoke; g.userData = U; return g;
+  }
+  /**
+   * Tavern exterior: a broad timber-framed inn with a hanging sign, a lantern by the door, a bench and barrels.
+   * o: {width: 9, depth: 6.5, sign: 'THE GOLDEN STAG', signColor, signText (colour), roof: 'tile', lit: true, color, timber, roofColor, seed}
+   * userData: {door, open(k), windows, sign (swinging board), smokePos, doorPos, lightPos (lantern), update(t)}
+   */
+  function tavern(o = {}) {
+    const { width = 9, depth = 6.5, sign = 'THE GOLDEN STAG', signColor = '#27402f', signText = C.gold, roof = 'tile', lit = true, seed = 1 } = o;
+    const { g, st, b, U, dims } = timberBuilding({ shutters: '#2f5d49', ...o, roof, lit, seed, front: 'eave', length: width, span: depth, doorBay: 1, doorW: 1.15, flowers: true });
+    const fz = dims.frontZ, bays = Math.max(2, Math.round(width / 1.75)), dx = -width / 2 + 1.5 * width / bays;
+    crate({ size: [0.5, 0.45, 0.5] }).at(width / 2 - 0.5, 0, fz + 0.2).to(st);
+    for (const [x, z, l] of [[width / 2 - 1.3, fz + 0.5, 0], [width / 2 - 2.0, fz + 0.42, 0]]) barrel({ seed: seed + x }).at(x, 0, z).to(st);
+    const bx = -width / 2 + 1.0; tbox(1.7, 0.07, 0.36, woodMat(C.wood, { planks: 2, horiz: true }), 0.6, bx, 0.42, fz + 0.3).to(st); for (const sx of [-1, 1]) boxB(0.07, 0.42, 0.3, C.woodDk).at(bx + sx * 0.7, 0, fz + 0.3).to(st);
+    // gallows bracket and swinging sign over the door
+    const sy = 3.42, sw = 1.7, sh = 0.72, sz = fz + 0.85;
+    for (const sx of [-1, 1]) { beam([dx + sx * (sw / 2 + 0.1), sy + 0.18, fz + 0.05], [dx + sx * (sw / 2 + 0.1), sy + 0.18, sz + 0.12], 0.1, 0.12, C.woodDk).to(st); beam([dx + sx * (sw / 2 + 0.1), sy - 0.5, fz + 0.05], [dx + sx * (sw / 2 + 0.1), sy + 0.12, sz - 0.1], 0.07, 0.07, C.woodDk).to(st); }
+    cyl(0.03, 0.03, sw + 0.3, 6, C.iron, IRON).rot(0, 0, PI / 2).at(dx, sy + 0.18, sz).to(st);
+    g.add(bake(st));
+    const sg = grp().at(dx, sy + 0.18, sz), ss = grp(), tm = S3.texMat(textTex(sign, { w: 512, h: 216, bg: hex(signColor), color: hex(signText), border: hex(signText) }), { rough: 0.8 });
+    const bd = box(sw, sh, 0.06, C.woodDk).at(0, -0.22 - sh / 2, 0); ss.add(bd); for (const s of [1, -1]) { const q = quad(sw - 0.06, sh - 0.06, tm).at(0, -0.22 - sh / 2, s * 0.032); if (s < 0) q.rotation.y = PI; ss.add(q); }
+    for (const sx of [-1, 1]) rod([sx * sw * 0.4, 0, 0], [sx * sw * 0.4, -0.22, 0], 0.012, C.iron, IRON).to(ss);
+    sg.add(bake(ss)); g.add(sg);
+    const ln = lantern({ lit, y: 2.25, chain: 0.11 }); ln.position.set(dx + 1.0, 0, fz + 0.32); g.add(ln); const hk = bake(grp(beam([dx + 1.0, 2.72, fz + 0.03], [dx + 1.0, 2.72, fz + 0.38], 0.04, 0.04, C.iron, IRON))); g.add(hk);
+    if (U._smoke) U.smokePos = _toLocal(b, U._smoke); U.doorPos = [dx, 0, fz + 1.0]; U.sign = sg; U.lantern = ln; delete U._b; delete U._smoke;
+    U.update = t => { sg.rotation.x = 0.07 * Math.sin(t * 1.4) + 0.03 * noise1(t * 0.7, 4); }; g.userData = U; return compose(g);
+  }
+  /**
+   * Market stall with a striped awning and a counter of goods. Customers stand at +Z.
+   * o: {width: 2.6, depth: 1.5, color (awning), stripe, goods: 'fruit' | 'bread' | 'fish' | 'cloth' | 'pots' | 'potions', wood, seed}
+   * userData: {vendor: [x,y,z], customer: [x,y,z], counterY}
+   */
+  function marketStall(o = {}) {
+    const { width: w = 2.6, depth: d = 1.5, color = C.red, stripe = C.white, goods = 'fruit', wood = C.wood, seed = 1 } = o, g = grp(), st = grp(), r = R(seed, 8), hf = 2.0, hb = 2.5, cy = 0.9;
+    for (const sx of [-1, 1]) { boxB(0.09, hf, 0.09, wood).at(sx * (w / 2 - 0.05), 0, d / 2 - 0.05).to(st); boxB(0.09, hb, 0.09, wood).at(sx * (w / 2 - 0.05), 0, -d / 2 + 0.05).to(st); beam([sx * (w / 2 - 0.05), hb, -d / 2 + 0.05], [sx * (w / 2 - 0.05), hf, d / 2 - 0.05], 0.07, 0.07, shade(wood, 0.8)).to(st); }
+    box(w, 0.07, 0.07, shade(wood, 0.8)).at(0, hf, d / 2 - 0.05).to(st); box(w, 0.07, 0.07, shade(wood, 0.8)).at(0, hb, -d / 2 + 0.05).to(st);
+    const am = clothMat({ color, stripes: stripe, emblem: 'none', border: false, w: 256, h: 64 }), run = Math.hypot(d + 0.5, hb - hf + 0.18), aw = box(w + 0.3, 0.03, run, am); aw.position.set(0, (hb + hf) / 2 + 0.03, 0.2); aw.rotation.x = Math.atan2(hb - hf + 0.18, d + 0.5); st.add(aw);
+    const sc = [], ns = 8, fw = w + 0.3; sc.push([-fw / 2, 0]); for (let i = 0; i < ns; i++) for (let k = 1; k <= 4; k++) { const t = k / 4 * PI; sc.push([-fw / 2 + (i + 0.5 - Math.cos(t) / 2) * fw / ns, -0.16 - 0.1 * Math.sin(t)]); } sc.push([fw / 2, 0]);
+    const va = face(sc, am); va.position.set(0, hf - 0.03, d / 2 + 0.43); st.add(va);
+    tbox(w - 0.1, 0.06, d * 0.72, woodMat(wood, { planks: 3, horiz: true }), 0.9, 0, cy - 0.06, d * 0.1).to(st); tbox(w - 0.2, 0.5, 0.04, woodMat(shade(wood, 0.85), { planks: 4 }), 0.8, 0, cy - 0.58, d * 0.44).to(st); tbox(w - 0.2, 0.04, d * 0.6, woodMat(wood, { planks: 3, horiz: true }), 0.9, 0, 0.3, 0.05).to(st);
+    for (const sx of [-1, 1]) boxB(0.07, cy - 0.06, 0.07, wood).at(sx * (w / 2 - 0.22), 0, -d * 0.2).to(st);
+    // goods on the counter: three tilted trays
+    for (let i = 0; i < 3; i++) {
+      const tr = grp().at((i - 1) * (w - 0.5) / 3, cy, d * 0.12), tw = (w - 0.6) / 3, td = 0.6; tr.rotation.x = 0.22; st.add(tr);
+      box(tw, 0.05, td, shade(wood, 1.12)).at(0, 0.07, 0).to(tr); for (const sx of [-1, 1]) box(0.03, 0.14, td, shade(wood, 0.9)).at(sx * tw / 2, 0.11, 0).to(tr); box(tw, 0.14, 0.03, shade(wood, 0.9)).at(0, 0.11, td / 2).to(tr); box(tw, 0.14, 0.03, shade(wood, 0.9)).at(0, 0.11, -td / 2).to(tr);
+      const n = goods === 'cloth' ? 4 : goods === 'pots' ? 4 : goods === 'potions' ? 5 : 14;
+      for (let k = 0; k < n; k++) {
+        const x = (r() - 0.5) * (tw - 0.14), z = (r() - 0.5) * (td - 0.14);
+        if (goods === 'fruit') ball(0.055 + r() * 0.015, pick(r, [['#b8322a', '#c8502c'], ['#e08a2a', '#e8a13a'], ['#8fae3a', '#b9c04a']][i]), 0).at(x, 0.14 + r() * 0.05, z).to(tr);
+        else if (goods === 'bread') ball(0.08, pick(r, ['#b9803f', '#c9924a', '#a36a30']), 0).scl(1 + r() * 0.5, 0.6, 0.8).at(x, 0.15 + r() * 0.04, z).rot(0, r() * 3, 0).to(tr);
+        else if (goods === 'fish') ball(0.09, pick(r, ['#9fb2bd', '#b7c4cb', '#7f95a3']), 0, STEEL).scl(0.42, 0.28, 1.5).at(x * 0.9, 0.14 + r() * 0.03, z * 0.6).rot(0, (r() - 0.5) * 0.8, 0).to(tr);
+        else if (goods === 'cloth') cyl(0.07, 0.07, tw - 0.1, 7, pick(r, [C.red, C.blue, C.green, C.purple, '#d9a441', '#d8d2c2']), { vary: 0.06 }).rot(0, 0, PI / 2).at(0, 0.17 + (k % 2) * 0.02, -td / 2 + 0.12 + k * 0.13).to(tr);
+        else if (goods === 'pots') lathe([[0.05, 0], [0.09, 0.06], [0.07, 0.16], [0.045, 0.2], [0.06, 0.23], [0.045, 0.23], [0.03, 0.19]], 7, pick(r, ['#b5653c', '#9c5632', '#c98a56', '#6d7f8a'])).at((k % 2 - 0.5) * tw * 0.5, 0.1, (Math.floor(k / 2) - 0.5) * td * 0.5).to(tr);
+        else { const pc = pick(r, [C.poison, C.magic, C.arcane, '#ff6a8a', '#ffd24a']); lathe([[0.035, 0], [0.05, 0.03], [0.05, 0.09], [0.018, 0.13], [0.018, 0.17], [0.026, 0.18]], 6, glo(pc, 1.2)).at((k % 3 - 1) * tw * 0.28, 0.1, (Math.floor(k / 3) - 0.5) * td * 0.45).to(tr); }
+      }
+    }
+    sack({ seed }).at(-w / 2 - 0.3, 0, 0.3).to(st); sack({ seed: seed + 2, size: 0.4 }).at(-w / 2 - 0.25, 0, -0.25).to(st); crate({ size: 0.5, seed }).at(w / 2 + 0.33, 0, 0.1).to(st);
+    g.add(bake(st)); g.userData = { vendor: [0, 0, -d / 2 - 0.45], customer: [0, 0, d / 2 + 0.9], counterY: cy }; return g;
+  }
+  /** Anvil on a stump with a hammer. o: {stump: true, color (iron), seed}   userData: {top: y of the face} */
+  function anvil(o = {}) {
+    const { stump = true, color = '#4a4e57', seed = 1 } = o, g = grp(), st = grp(), y0 = stump ? 0.5 : 0, m = { metal: 0.5, rough: 0.42 };
+    if (stump) { cylB(0.25, 0.29, 0.5, 9, '#6b4a2e', { vary: 0.12, seed }).to(st); cyl(0.235, 0.235, 0.012, 9, '#c9a877').at(0, 0.5, 0).to(st); }
+    xtr([[-0.2, 0], [0.2, 0], [0.2, 0.06], [0.1, 0.1], [0.09, 0.19], [0.22, 0.23], [0.22, 0.32], [-0.3, 0.32], [-0.3, 0.25], [-0.1, 0.19], [-0.1, 0.1], [-0.2, 0.06]], 0.17, color, m).at(0, y0, 0).to(st);
+    cone(0.075, 0.3, 6, color, m).rot(0, 0, -PI / 2).at(0.37, y0 + 0.262, 0).to(st); box(0.5, 0.012, 0.172, shade(color, 1.5), { metal: 0.6, rough: 0.25 }).at(-0.04, y0 + 0.326, 0).to(st);
+    box(0.11, 0.055, 0.055, '#5c616b', m).at(-0.1, y0 + 0.36, 0.03).rot(0, 0.5, 0).to(st); rod([-0.1, y0 + 0.36, 0.03], [0.14, y0 + 0.37, -0.12], 0.014, C.woodLt).to(st);
+    g.add(bake(st)); g.userData = { top: y0 + 0.33 }; return g;
+  }
+  /**
+   * Blacksmith's forge: an open-fronted smithy with a glowing hearth, bellows, anvil, quench barrel and tools.
+   * o: {width: 5, depth: 3.6, lit: true, color (stone), wood, roofColor, seed}
+   * userData: {flame, lightPos, setLit(on), smith: [x,y,z], anvilPos, smokePos, update(t)}
+   */
+  function forge(o = {}) {
+    const { width: w = 5, depth: d = 3.6, lit = true, color = C.stone, wood = C.woodDk, roofColor, seed = 1 } = o, g = grp(), st = grp(), sm = stoneMat(color, { seed }), hx = -w / 2 + 1.05, hzz = -d / 2 + 0.85, eave = 2.5, rise = 1.25;
+    tbox(w, eave, 0.36, sm, 1.5, 0, 0, -d / 2 + 0.18).to(st); tbox(0.36, eave, d * 0.55, sm, 1.5, -w / 2 + 0.18, 0, -d / 2 + d * 0.275).to(st); tbox(w, 0.06, d, paveMat('flag', shade(color, 0.85)), 2).to(st);
+    for (const sx of [-1, 1]) { boxB(0.2, eave, 0.2, wood).at(sx * (w / 2 - 0.1), 0, d / 2 - 0.1).to(st); beam([sx * (w / 2 - 0.1), eave - 0.75, d / 2 - 0.1], [sx * (w / 2 - 0.85), eave - 0.08, d / 2 - 0.1], 0.11, 0.11, wood).to(st); }
+    boxB(0.2, eave, 0.2, wood).at(w / 2 - 0.1, 0, -d / 2 + 0.46).to(st); box(w, 0.2, 0.2, wood).at(0, eave + 0.1, d / 2 - 0.1).to(st); box(0.2, 0.2, d, wood).at(w / 2 - 0.1, eave + 0.1, 0).to(st); box(0.2, 0.2, d, wood).at(-w / 2 + 0.1, eave + 0.1, 0).to(st);
+    gableRoof(w + 0.7, d + 0.2, rise, roofMat('shingle', roofColor), { over: 0.4, thick: 0.1, cap: shade(wood, 0.8) }).at(0, eave + 0.2, 0).to(st);
+    for (const sx of [-1, 1]) xtr([[-d / 2 - 0.1, 0], [d / 2 + 0.1, 0], [0, rise]], 0.08, shade(wood, 1.25)).rot(0, PI / 2, 0).at(sx * (w / 2 - 0.1), eave + 0.2, 0).to(st);
+    // hearth with hood and chimney
+    tbox(1.5, 0.82, 1.15, sm, 1.2, hx, 0, hzz).to(st); tbox(1.62, 0.1, 1.27, stoneMat(shade(color, 0.8), { seed: seed + 4 }), 1.2, hx, 0.82, hzz).to(st); box(1.1, 0.06, 0.8, '#241f1d').at(hx, 0.925, hzz).to(st);
+    const hood = cylB(0.3, 0.86, 1.25, 4, shade(color, 0.72), { vary: 0.06 }); hood.rotation.y = PI / 4; hood.scale.set(1, 1, 0.78); hood.position.set(hx, 1.75, hzz - 0.1); st.add(hood); tbox(0.55, 2.3, 0.5, sm, 1.2, hx, 2.9, hzz - 0.12).to(st); box(0.68, 0.1, 0.62, shade(color, 0.75)).at(hx, 5.25, hzz - 0.12).to(st);
+    const r = R(seed, 9); for (let i = 0; i < 9; i++) blob(0.07 + r() * 0.04, '#2a2321', seed + i, { detail: 0 }).at(hx + (r() - 0.5) * 0.9, 0.97, hzz + (r() - 0.5) * 0.6).to(st);
+    // bellows
+    const bl = grp().at(hx + 1.2, 1.0, hzz), bp = [[0, -0.06], [0.75, -0.3], [0.85, 0], [0.75, 0.3], [0, 0.06]]; xtr(bp, 0.2, '#6b4630').rot(PI / 2, 0, 0).to(bl); for (const sy of [-1, 1]) xtr(bp.map(p => [p[0] * 1.04, p[1] * 1.08]), 0.035, wood).rot(PI / 2, 0, 0).at(0, sy * 0.115, 0).to(bl); rod([-0.44, 0, 0], [0.02, 0, 0], 0.03, C.iron, IRON).to(bl); rod([0.8, 0.13, 0], [1.3, 0.3, 0], 0.025, wood).to(bl); st.add(bl);
+    boxB(0.08, 0.87, 0.08, wood).at(hx + 1.6, 0, hzz - 0.2).to(st); boxB(0.08, 0.87, 0.08, wood).at(hx + 1.6, 0, hzz + 0.2).to(st); box(0.08, 0.06, 0.5, wood).at(hx + 1.6, 0.85, hzz).to(st);
+    // anvil, quench barrel, bench, tools on the wall
+    const av = anvil({ seed }); av.position.set(0.25, 0.06, 0.45); av.rotation.y = -0.5; st.add(av); barrel({ open: true, fill: 'water', seed, height: 0.8 }).at(w / 2 - 0.75, 0.06, 0.85).to(st);
+    const tx0 = 0.9; tbox(1.6, 0.07, 0.6, woodMat(C.wood, { planks: 3, horiz: true }), 0.8, tx0, 0.84, -d / 2 + 0.72).to(st); for (const sx of [-1, 1]) for (const sz of [-1, 1]) boxB(0.08, 0.84, 0.08, wood).at(tx0 + sx * 0.7, 0, -d / 2 + 0.72 + sz * 0.22).to(st);
+    box(0.78, 0.02, 0.07, glo('#ff7a2a', 1.4)).at(tx0 - 0.1, 0.925, -d / 2 + 0.7).rot(0, 0.25, 0).to(st); box(0.22, 0.03, 0.05, '#3b2a1f').at(tx0 + 0.36, 0.925, -d / 2 + 0.83).rot(0, 0.25, 0).to(st);
+    box(1.9, 0.09, 0.05, wood).at(tx0 + 0.1, 1.95, -d / 2 + 0.39).to(st);
+    for (let i = 0; i < 5; i++) { const x = tx0 - 0.65 + i * 0.38, yy = 1.9; if (i % 2) { rod([x, yy, -d / 2 + 0.42], [x, yy - 0.5, -d / 2 + 0.42], 0.015, C.woodLt).to(st); box(0.14, 0.07, 0.07, '#565b65', IRON).at(x, yy - 0.5, -d / 2 + 0.42).to(st); } else { rod([x - 0.03, yy, -d / 2 + 0.42], [x + 0.02, yy - 0.55, -d / 2 + 0.42], 0.011, C.iron, IRON).to(st); rod([x + 0.03, yy, -d / 2 + 0.42], [x - 0.02, yy - 0.55, -d / 2 + 0.42], 0.011, C.iron, IRON).to(st); } }
+    for (let i = 0; i < 3; i++) torus(0.075, 0.018, '#565b65', { ...IRON, rs: 4, ts: 8, arc: PI * 1.5 }).at(w / 2 - 0.9 + i * 0.25, 1.75, -d / 2 + 0.39).rot(0, 0, -PI * 0.25).to(st);
+    g.add(bake(st));
+    const em = grp(); for (let i = 0; i < 6; i++) blob(0.06 + r() * 0.03, glo('#ff5a1a', 1.5), seed + 30 + i, { detail: 0 }).at(hx + (r() - 0.5) * 0.7, 0.99, hzz + (r() - 0.5) * 0.45).to(em); g.add(em); g.userData.embers = em;
+    addFire(g, [hx, 0.98, hzz], 0.55, { seed, lit, halo: 1.6 });
+    Object.assign(g.userData, { smith: [0.2, 0.06, 1.2], anvilPos: [0.25, 0.9, 0.45], smokePos: [hx, 5.4, hzz - 0.12] }); return g;
+  }
+  /**
+   * Tower windmill whose sails turn with time.
+   * o: {height: 9.5 (tower), radius: 2.7 (at the base), color (walls), capColor, sailColor, speed: 0.7 (rad/s), lit: false, seed}
+   * userData: {sails, hub: [x,y,z], update(t), door, open(k), top}
+   */
+  function windmill(o = {}) {
+    const { height: h = 9.5, radius: rb = 2.7, color = '#ddd3bd', capColor = C.woodDk, sailColor = '#e9e1cc', speed = 0.7, lit = false, seed = 1 } = o, g = grp(), st = grp(), rt = rb * 0.66, sides = 10, ap = Math.cos(PI / sides);
+    const pm = plasterMat(color, seed), sm = stoneMat(C.stone, { seed }), rAt = y => lerp(rb, rt, y / h);
+    tcyl(rt, rb, h, sides, pm, 2).to(st); tcyl(rAt(1.3) + 0.06, rb + 0.14, 1.3, sides, sm, 1.5).to(st); cyl(rt + 0.2, rt + 0.1, 0.22, sides, capColor).at(0, h + 0.05, 0).rot(0, PI / sides, 0).to(st);
+    const cap = lathe([[rt + 0.28, 0], [rt + 0.16, 0.55], [rt * 0.7, 1.45], [rt * 0.3, 1.95], [0.0001, 2.1]], sides, shade(capColor, 1.15), { vary: 0.1 }); cap.rotation.y = PI / sides; cap.position.y = h + 0.16; st.add(cap);
+    const onFace = (obj, i, y, off = 0.01, tilt = true) => { const a = i * TAU / sides, rr = rAt(y) * ap + off; obj.position.set(Math.sin(a) * rr, y, Math.cos(a) * rr); obj.rotation.order = 'YXZ'; obj.rotation.y = a; if (tilt) obj.rotation.x = -Math.atan2(rb - rt, h); st.add(obj); return obj; };
+    const pd = plankDoor(1.0, 2.05, { arch: 'round' }); onFace(grp(xtr(archFrame(1.5, 2.4, 1.0, 2.05), 0.6, C.stoneLt), pd.at(0, 0, -0.08), tbox(1.5, 0.12, 0.5, sm, 1.5).at(0, 0, 0.45)), 1, 0, 0.32, false); g.userData.door = pd.userData.leaf; g.userData.open = pd.userData.open;
+    onFace(archWin(0.55, 1.0, { lit }), 0, 3.3, 0.0); onFace(archWin(0.5, 0.9, { lit }), 9, 5.6, 0.0); onFace(archWin(0.5, 0.9, { lit }), 2, 5.9, 0.0); onFace(archWin(0.45, 0.8, { lit }), 0, 7.6, 0.0);
+    const hy = h + 0.95, hz0 = rt * 0.75; rod([0, hy - 0.12, -0.6], [0, hy + 0.1, hz0 + 1.0], 0.13, capColor, { sides: 6 }).to(st);
+    g.add(bake(st));
+    const sails = grp(), ss = grp(), len = Math.min(6.4, hy - 3.2), blades = 4; sails.position.set(0, hy + 0.1, hz0 + 1.0); sails.rotation.x = -0.12;
+    cyl(0.24, 0.24, 0.3, 8, shade(capColor, 0.8)).rot(PI / 2, 0, 0).to(ss); cone(0.2, 0.3, 8, shade(capColor, 0.8)).rot(PI / 2, 0, 0).at(0, 0, 0.3).to(ss);
+    const key = ['sail', hex(sailColor)].join('|'), sm2 = tmat(key, () => ctex(key, 64, 256, (c, W, H) => { c.fillStyle = hex(sailColor); c.fillRect(0, 0, W, H); for (let y = 0; y < H; y += 32) { c.fillStyle = 'rgba(90,70,40,.35)'; c.fillRect(0, y, W, 3); } c.fillStyle = 'rgba(90,70,40,.3)'; c.fillRect(30, 0, 3, H); }), { side: 'double', rough: 1 });
+    for (let i = 0; i < blades; i++) {
+      const a = grp(); a.rotation.z = i * TAU / blades; ss.add(a);
+      box(0.13, len, 0.13, capColor).at(0, len / 2, 0.08).to(a); box(0.07, len - 1.2, 0.07, capColor).at(-1.15, 1.2 + (len - 1.2) / 2, 0.12).to(a);
+      for (let k = 0; k <= 7; k++) box(1.2, 0.05, 0.05, capColor).at(-0.58, 1.2 + k * (len - 1.25) / 7, 0.12).to(a);
+      const cl = quad(1.08, len - 1.3, sm2).at(-0.58, 1.2 + (len - 1.3) / 2 + 0.02, 0.085); cl.rotation.y = 0.09; a.add(cl);
+    }
+    sails.add(bake(ss)); g.add(sails);
+    Object.assign(g.userData, { sails, hub: [0, hy + 0.1, hz0 + 1.0], top: [0, h + 2.3, 0], update: t => { sails.rotation.z = t * speed; } }); return g;
+  }
+  /**
+   * Humpback stone bridge, running along X (seen from +Z you look at the arch). Stands on flat ground: the stream runs under the arch at y = 0.
+   * o: {length: 12, width: 3.6, rise: 2.0 (deck height at the crown), span: 6 (arch opening), color, seed}
+   * userData: {deckY(x) (height of the roadway at x), top: [0, rise, 0], length, width}
+   */
+  function stoneBridge(o = {}) {
+    const { length: L = 12, width: w = 3.6, rise = 2.0, span = 6, color = C.stone, seed = 1 } = o, g = grp(), st = grp(), { sm, lt, tc } = stoneSet(color, seed), a = span / 2, ah = rise - 0.55, n = 14;
+    const deckY = x => rise * 0.5 * (1 + Math.cos(PI * clamp(Math.abs(x) / (L / 2)))), top = []; for (let i = 0; i <= n; i++) { const x = L / 2 - i * L / n; top.push([x, deckY(x)]); }
+    const arch = []; for (let i = 0; i <= 10; i++) { const t = PI - i / 10 * PI; arch.push([a * Math.cos(t), ah * Math.sin(t)]); }
+    textr([...arch, [L / 2, 0], ...top.slice(1, -1), [-L / 2, 0]], w, sm, 3).to(st);
+    for (const sz of [-1, 1]) {
+      const z = sz * (w / 2 - 0.14), par = [...top.map(p => [p[0], p[1] - 0.05]), ...top.slice().reverse().map(p => [p[0], p[1] + 0.85])], cop = [...top.map(p => [p[0], p[1] + 0.85]), ...top.slice().reverse().map(p => [p[0], p[1] + 0.97])];
+      textr(par, 0.3, sm, 3).at(0, 0, z).to(st); xtr(cop, 0.42, tc).at(0, 0, z).to(st);
+      for (const sx of [-1, 1]) { tbox(0.5, 1.25, 0.5, sm, 1.5).at(sx * (L / 2 - 0.2), 0, z).to(st); coneB(0.4, 0.3, 4, tc).rot(0, PI / 4, 0).at(sx * (L / 2 - 0.2), 1.25, z).to(st); }
+      for (let i = 0; i < 11; i++) { const t = (i + 0.5) / 11 * PI, key = i === 5, rr = 1 + (key ? 0.06 : 0); box(a * PI / 11 * 0.82, key ? 0.52 : 0.4, 0.1, shade(color, key ? 1.3 : i % 2 ? 1.1 : 1.2)).at(Math.cos(t) * (a + 0.2) * rr, Math.sin(t) * (ah + 0.2) * rr, sz * (w / 2 + 0.03)).rot(0, 0, Math.atan2(Math.cos(t) * ah, -Math.sin(t) * a)).to(st); }
+    }
+    g.add(bake(st)); g.userData = { deckY, top: [0, rise, 0], length: L, width: w }; return g;
+  }
+  /** Haystack with a pitchfork. o: {radius: 1.3, height: 2.1, color, fork: true, seed} */
+  function haystack(o = {}) {
+    const { radius: r = 1.3, height: h = 2.1, color = C.thatch, fork = true, seed = 1 } = o, g = grp(), st = grp(), rr = R(seed, 3);
+    lathe([[r * 0.96, 0], [r * 1.06, h * 0.22], [r * 0.95, h * 0.5], [r * 0.6, h * 0.8], [r * 0.2, h * 0.97], [0.0001, h]], 9, color, { vary: 0.14, jitter: r * 0.045, seed }).to(st);
+    cylB(0.04, 0.05, h + 0.45, 5, C.woodDk).to(st);
+    for (let i = 0; i < 9; i++) { const an = rr() * TAU, d = r * (0.95 + rr() * 0.25); cone(0.1 + rr() * 0.08, 0.3 + rr() * 0.25, 4, shade(color, 0.9 + rr() * 0.2)).at(Math.sin(an) * d, 0.12, Math.cos(an) * d).rot((rr() - 0.5) * 0.9, rr() * 3, (rr() - 0.5) * 0.9).to(st); }
+    if (fork) { const f = grp().at(r * 0.8, 0, r * 0.75); rod([0, 0, 0], [0, 1.45, 0], 0.02, C.woodLt).to(f); box(0.22, 0.025, 0.025, C.iron, IRON).at(0, 1.45, 0).to(f); for (const x of [-0.1, 0, 0.1]) rod([x, 1.45, 0], [x, 1.75, 0.03], 0.01, C.iron, IRON).to(f); f.rotation.set(-0.42, 0.6, 0.12); st.add(f); }
+    g.add(bake(st)); return g;
+  }
+  /** Spoked wheel in the YZ plane (axle along X), centred on its axle. Returns a group to spin with rotation.x. */
+  function wheel(r = 0.55, color = C.wood, spokes = 8) {
+    const st = grp(); torus(r - 0.045, 0.045, color, { rs: 4, ts: 12 }).rot(0, PI / 2, 0).to(st); torus(r - 0.01, 0.02, C.iron, { ...IRON, rs: 4, ts: 12 }).rot(0, PI / 2, 0).to(st);
+    for (let i = 0; i < spokes; i++) { const a = i * TAU / spokes; box(0.045, r - 0.1, 0.05, shade(color, 0.85)).at(0, Math.cos(a) * (r - 0.05) / 2, Math.sin(a) * (r - 0.05) / 2).rot(a, 0, 0).to(st); }
+    cyl(0.085, 0.085, 0.18, 8, shade(color, 0.7)).rot(0, 0, PI / 2).to(st); cyl(0.04, 0.04, 0.22, 6, C.iron, IRON).rot(0, 0, PI / 2).to(st);
+    const w = grp(bake(st)); w.userData.r = r; return w;
+  }
+  /**
+   * Hand cart (two wheels) or wagon (four). Shafts point toward +Z.
+   * o: {type: 'cart' | 'wagon', load: 'hay' | 'barrels' | 'sacks' | 'crates' | 'none', color, seed}
+   * userData: {wheels, roll(distance) (turns the wheels for that much travel), bedY, seat}
+   */
+  function cart(o = {}) {
+    const { type = 'cart', load = 'hay', color = C.wood, seed = 1 } = o, g = grp(), st = grp(), wag = type === 'wagon', Lb = wag ? 3.0 : 2.0, wb = 1.25, by = wag ? 0.92 : 0.84, r = R(seed, 2), wm = woodMat(color, { planks: 4, horiz: true, seed }), dk = shade(color, 0.72);
+    tbox(wb, 0.06, Lb, woodMat(color, { planks: 5, seed }), 1.2, 0, by, 0).to(st);
+    for (const sx of [-1, 1]) { tbox(0.045, 0.36, Lb, wm, 0.72, sx * (wb / 2 - 0.02), by + 0.06, 0).to(st); for (let i = 0; i < (wag ? 4 : 3); i++) boxB(0.06, 0.62, 0.06, dk).at(sx * (wb / 2 + 0.03), by - 0.08, -Lb / 2 + 0.15 + i * (Lb - 0.3) / (wag ? 3 : 2)).to(st); box(0.07, 0.07, Lb + 0.5, dk).at(sx * (wb / 2 - 0.12), by - 0.04, 0.15).to(st); }
+    tbox(wb, 0.36, 0.045, wm, 0.72, 0, by + 0.06, -Lb / 2 + 0.02).to(st); tbox(wb, 0.24, 0.045, wm, 0.72, 0, by + 0.06, Lb / 2 - 0.02).to(st);
+    const wheels = [], addW = (x, z, rad) => { const wl = wheel(rad, color, 8); wl.position.set(x, rad, z); g.add(wl); wheels.push(wl); };
+    if (wag) { for (const sx of [-1, 1]) { addW(sx * (wb / 2 + 0.14), -Lb / 2 + 0.6, 0.6); addW(sx * (wb / 2 + 0.14), Lb / 2 - 0.5, 0.48); } cyl(0.045, 0.045, wb + 0.4, 6, dk).rot(0, 0, PI / 2).at(0, 0.6, -Lb / 2 + 0.6).to(st); cyl(0.045, 0.045, wb + 0.4, 6, dk).rot(0, 0, PI / 2).at(0, 0.48, Lb / 2 - 0.5).to(st); box(0.3, by - 0.6, 0.12, dk).at(0, (by + 0.6) / 2, -Lb / 2 + 0.6).to(st); box(0.3, by - 0.48, 0.12, dk).at(0, (by + 0.48) / 2, Lb / 2 - 0.5).to(st);
+      beam([0, 0.48, Lb / 2 - 0.4], [0, 0.42, Lb / 2 + 2.3], 0.08, 0.08, dk).to(st); box(1.0, 0.06, 0.06, dk).at(0, 0.43, Lb / 2 + 1.9).to(st); tbox(wb + 0.1, 0.06, 0.38, woodMat(color, { planks: 2, horiz: true }), 0.5, 0, by + 0.5, Lb / 2 - 0.3).to(st); for (const sx of [-1, 1]) boxB(0.06, 0.5, 0.3, dk).at(sx * (wb / 2 - 0.05), by + 0.04, Lb / 2 - 0.3).to(st); }
+    else { for (const sx of [-1, 1]) { addW(sx * (wb / 2 + 0.14), -0.1, 0.62); beam([sx * (wb / 2 - 0.12), by - 0.04, Lb / 2], [sx * (wb / 2 - 0.2), by - 0.1, Lb / 2 + 1.5], 0.06, 0.07, dk).to(st); } cyl(0.045, 0.045, wb + 0.4, 6, dk).rot(0, 0, PI / 2).at(0, 0.62, -0.1).to(st); box(0.3, by - 0.62, 0.12, dk).at(0, (by + 0.62) / 2, -0.1).to(st); rod([0, by - 0.04, Lb / 2 - 0.1], [0, 0, Lb / 2 + 0.25], 0.035, dk).to(st); rod([0, by - 0.04, -Lb / 2 + 0.1], [0, 0, -Lb / 2 - 0.2], 0.035, dk).to(st); }
+    const ly = by + 0.06;
+    if (load === 'hay') { blob(wb * 0.55, C.thatch, seed, { squash: [1, 0.62, Lb / wb * 0.92], bump: 0.16 }).at(0, ly + 0.42, 0).to(st); blob(wb * 0.4, shade(C.thatch, 1.08), seed + 3, { squash: [1, 0.7, 1.2] }).at(0.05, ly + 0.75, -0.1).to(st); }
+    else if (load === 'barrels') { barrel({ seed }).at(-0.28, ly, -Lb / 2 + 0.45).to(st); barrel({ seed: seed + 1 }).at(0.3, ly, -Lb / 2 + 0.5).to(st); const lb = barrel({ seed: seed + 2, lying: true }); lb.position.set(0, ly, Lb / 2 - 0.6); st.add(lb); }
+    else if (load === 'sacks') { for (let i = 0; i < (wag ? 6 : 4); i++) sack({ seed: seed + i, size: 0.42 + r() * 0.08 }).at((i % 2 - 0.5) * 0.55 + (r() - 0.5) * 0.1, ly, -Lb / 2 + 0.4 + Math.floor(i / 2) * 0.62).rot(0, r() * 3, 0).to(st); }
+    else if (load === 'crates') { crate({ size: 0.55, seed }).at(-0.28, ly, -Lb / 2 + 0.4).to(st); crate({ size: 0.5, seed: seed + 1 }).at(0.3, ly, -Lb / 2 + 0.42).to(st); crate({ size: 0.45, seed: seed + 2 }).at(-0.2, ly + 0.55, -Lb / 2 + 0.42).rot(0, 0.3, 0).to(st); crate({ size: [0.7, 0.4, 0.5], seed: seed + 3 }).at(0, ly, Lb / 2 - 0.55).to(st); }
+    g.add(bake(st)); g.userData = { wheels, bedY: ly, seat: wag ? [0, by + 0.56, Lb / 2 - 0.3] : null, roll: dist => wheels.forEach(wl => { wl.rotation.x = dist / wl.userData.r; }) }; return g;
+  }
+
   // @@NEXT@@
 
   // ---------- stage helpers ----------
@@ -675,5 +985,6 @@ const KitFantasy = (() => {
     stoneMat, woodMat, roofMat, plasterMat, paveMat, glassMat,
     flame, wallTorch, brazier,
     wall, towerRound, towerSquare, gatehouse, drawbridge, keep, well, banner, shield, plankDoor, doubleDoor,
+    house, tavern, marketStall, forge, anvil, windmill, stoneBridge, haystack, cart, barrel, crate, sack, lantern,
   };
 })();

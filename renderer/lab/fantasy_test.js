@@ -90,14 +90,26 @@
     ['towerSquare {top:"roof"}', () => K.towerSquare({ top: 'roof', height: 8, flag: null })],
   ], { cols: 2, cell: [18, 24], title: 'KitFantasy 1 · castle', label: 0.9 });
 
-  catalogue('fantasy_catL', [
-    ['wallTorch', () => K.wallTorch()],
-    ['brazier', () => K.brazier()],
-    ['brazier {style:"pillar"}', () => K.brazier({ style: 'pillar' })],
+  catalogue('fantasy_cat2', [
+    ['house', () => K.house()],
+    ['house {roof:"tile", front:"eave"}', () => K.house({ roof: 'tile', front: 'eave', width: 7, depth: 5, seed: 3, shutters: '#3d6a8a' })],
+    ['tavern', () => K.tavern()],
+    ['forge', () => K.forge()],
+    ['windmill', () => K.windmill()],
+    ['stoneBridge', () => K.stoneBridge()],
+  ], { cols: 2, cell: [14, 16], title: 'KitFantasy 2 · village buildings', label: 0.7 });
+
+  catalogue('fantasy_cat3', [
+    ['marketStall', () => K.marketStall()],
+    ['marketStall {goods:"potions"}', () => K.marketStall({ goods: 'potions', color: '#5e3c93', stripe: '#e9d8a6' })],
+    ['cart', () => K.cart()],
+    ['cart {type:"wagon"}', () => K.cart({ type: 'wagon', load: 'barrels' })],
+    ['haystack', () => K.haystack()],
     ['well', () => K.well()],
-    ['banner {mount:"pole"}', () => K.banner({ mount: 'pole' })],
-    ['shield', () => K.shield({ mount: 'lean' })],
-  ], { cols: 2, cell: [2.6, 3.2], title: 'lights test', figs: false });
+    ['anvil', () => K.anvil()],
+    ['barrel / crate / sack', () => grp(K.barrel().at(-0.6, 0, 0), K.barrel({ open: true, fill: 'apples' }).at(0.25, 0, -0.3), K.crate().at(0.9, 0, 0.3), K.sack().at(0.1, 0, 0.6))],
+    ['lantern', () => K.lantern()],
+  ], { cols: 2, cell: [5, 5.4], title: 'KitFantasy 3 · village props', figs: false });
 
   /** Any builder, close up: --params '{"b":"chest","o":{...},"k":1,"az":25,"el":15,"fov":30,"night":false,"fig":true}' */
   S3.shot('fantasy_close', {

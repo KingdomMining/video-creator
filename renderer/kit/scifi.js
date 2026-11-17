@@ -94,16 +94,16 @@ const KitSciFi = (() => {
   function pipeRun(pts, r, col, o = {}) { const g = grp(); for (let i = 0; i < pts.length - 1; i++) { g.add(rod(pts[i], pts[i + 1], r, col, o)); if (i) g.add(ball(r * 1.12, col, 0, o).at(pts[i])); } return g; }
   /** Quad from four corners (counter-clockwise seen from the front) with uv 0..1. */
   function quad4(a, b, c, d, col, o) { const geo = new T.BufferGeometry(); geo.setAttribute('position', new T.Float32BufferAttribute([...a, ...b, ...c, ...a, ...c, ...d], 3)); geo.setAttribute('uv', new T.Float32BufferAttribute([0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1], 2)); geo.computeVertexNormals(); return mesh(geo, col, o); }
-  /** Closed faceted skin through rings of points (all rings the same count). Oriented outward automatically. o: {cap:false, inside:true} plus material options. */
+  /** Closed faceted skin through rings of points (all rings the same count). Oriented outward automatically. o: {cap:false, inside:true, strip:true (rings are open arcs)} plus material options. */
   function loft(rings, col, o = {}) {
     const n = rings[0].length, pos = [], tri = (a, b, c) => pos.push(a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2]);
-    for (let i = 0; i < rings.length - 1; i++) for (let j = 0; j < n; j++) { const a = rings[i][j], b = rings[i][(j + 1) % n], c = rings[i + 1][(j + 1) % n], d = rings[i + 1][j]; tri(a, b, c); tri(a, c, d); }
+    for (let i = 0; i < rings.length - 1; i++) for (let j = 0; j < (o.strip ? n - 1 : n); j++) { const a = rings[i][j], b = rings[i][(j + 1) % n], c = rings[i + 1][(j + 1) % n], d = rings[i + 1][j]; tri(a, b, c); tri(a, c, d); }
     const cap = (ring, fl) => { const m = [0, 0, 0]; ring.forEach(p => { m[0] += p[0] / n; m[1] += p[1] / n; m[2] += p[2] / n; }); for (let j = 0; j < n; j++) { const a = ring[j], b = ring[(j + 1) % n]; fl ? tri(m, b, a) : tri(m, a, b); } };
     if (o.cap !== false) { cap(rings[0], true); cap(rings[rings.length - 1], false); }
     let vol = 0; for (let i = 0; i < pos.length; i += 9) vol += pos[i] * (pos[i + 4] * pos[i + 8] - pos[i + 5] * pos[i + 7]) - pos[i + 1] * (pos[i + 3] * pos[i + 8] - pos[i + 5] * pos[i + 6]) + pos[i + 2] * (pos[i + 3] * pos[i + 7] - pos[i + 4] * pos[i + 6]);
     if ((vol < 0) !== !!o.inside) for (let i = 0; i < pos.length; i += 9) for (let k = 0; k < 3; k++) { const t = pos[i + 3 + k]; pos[i + 3 + k] = pos[i + 6 + k]; pos[i + 6 + k] = t; }
     const geo = new T.BufferGeometry(); geo.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); geo.computeVertexNormals();
-    const { cap: _c, inside, ...mo } = o; return mesh(geo, col, mo);
+    const { cap: _c, inside, strip, ...mo } = o; return mesh(geo, col, mo);
   }
   /** Eight-sided cross-section w x h with chamfers (ct top, cb bottom), centred on (x, y). Counter-clockwise seen from +Z. */
   const oct = (w, h, ct = 0.2, cb = ct, y = 0, x = 0) => { const a = w / 2, b = h / 2; ct = min(ct, a * 0.98, b * 0.98); cb = min(cb, a * 0.98, b * 0.98); return [[a - cb, -b], [a, -b + cb], [a, b - ct], [a - ct, b], [-a + ct, b], [-a, b - ct], [-a, -b + cb], [-a + cb, -b]].map(p => [p[0] + x, p[1] + y]); };
@@ -545,6 +545,206 @@ const KitSciFi = (() => {
     Object.assign(g.userData, { sparkMat: spark, sparkPos: sp }); return fin(g, 'cables', seed, 0.02);
   }
 
+  // =====================================================================================================
+  // INTERIORS: consoles, seats, bridge, cryo pod, reactor, hologram table, medical bed
+  // =====================================================================================================
+  const atlasUV = (geo, name) => { const c = atlas().map[name], uv = geo.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, lerp(c[0], c[2], uv.getX(i)), lerp(c[1], c[3], uv.getY(i))); return geo; };
+  const CON_PROF = [[-0.38, 0], [0.22, 0], [0.22, 0.1], [0.3, 0.14], [0.3, 0.7], [0.36, 0.78], [0.36, 0.84], [-0.02, 0.98], [-0.06, 1.0], [-0.2, 1.42], [-0.38, 1.42]];
+  /**
+   * Control console. The operator stands at +Z; screens face +Z.
+   * o: {style: 'desk' (1.5 wide, 1.42 high) | 'wall' (back on z = 0, 2 m high) | 'pedestal' (kiosk), width, screens: count, kind: screen picture,
+   *     light (screen and trim colour), screen (screen colour only), color, seed}
+   * userData: screens [display quads], lightMat, setLight(color, k)
+   */
+  function controlConsole(o = {}) {
+    const style = o.style || 'desk', light = o.light || PAL.light, col = o.color || PAL.hullDk, seed = o.seed || 1, r = rng(seed * 37 + 1), g = grp(), screens = [], lm = glowM(light, 1.2), dk = shade(col, 0.5);
+    const scr = (w, h, kind) => { const d = display(w, h, { kind: kind || o.kind || KINDS[floor(r() * KINDS.length)], color: o.screen || light, seed: seed * 10 + screens.length + 1 }); screens.push(d); return d; };
+    if (style === 'desk') {
+      const w = o.width ?? 1.5, ns = o.screens ?? max(1, round(w / 0.62)), sw = (w - 0.16) / ns, tilt = -Math.atan2(0.14, 0.42), dt = -(PI / 2 - Math.atan2(0.14, 0.38));
+      extrudeX(CON_PROF, w, col, PA).to(g);
+      [-1, 1].forEach(s => extrudeX(CON_PROF.map(p => [p[0] * 1.04 + 0.006, p[1] * 1.014]), 0.05, dk, PA).at(s * (w / 2 + 0.02), 0, 0).to(g));
+      for (let i = 0; i < ns; i++) { const x = (i - (ns - 1) / 2) * sw; box(sw - 0.03, 0.39, 0.02, '#0b0e12', RU).rot(tilt, 0, 0).at(x, 1.211, -0.126).to(g); scr(sw - 0.07, 0.33).rot(tilt, 0, 0).at(x, 1.216, -0.112).to(g); }
+      decal('keys', min(0.5, w * 0.38), null, { glow: true }).rot(dt, 0, 0).at(0, 0.914, 0.172).to(g);
+      if (w > 1.1) [-1, 1].forEach(s => decal(s < 0 ? 'buttons' : 'switches', min(0.34, w * 0.24), null, { glow: s < 0 }).rot(dt, 0, 0).at(s * w * 0.34, 0.914, 0.172).to(g));
+      box(w - 0.1, 0.025, 0.02, lm).at(0, 0.735, 0.325).to(g); decal('vent', 0.24).at(-w * 0.26, 0.4, 0.302).to(g); box(w * 0.3, 0.32, 0.02, shade(col, 0.82), PA).at(w * 0.2, 0.42, 0.305).to(g); box(w * 0.2, 0.025, 0.035, dk, ME).at(w * 0.2, 0.5, 0.33).to(g);
+    } else if (style === 'wall') {
+      const w = o.width ?? 1.1, st = -(PI / 2 - Math.atan2(0.09, 0.3));
+      boxB(w, 2.0, 0.12, col, PA).at(0, 0, 0.06).to(g); box(w - 0.08, 0.74, 0.06, dk, PA).at(0, 1.5, 0.15).to(g); scr(w - 0.18, 0.62).at(0, 1.5, 0.183).to(g);
+      extrudeX([[0.12, 0.92], [0.44, 0.98], [0.44, 1.03], [0.12, 1.12]], w - 0.06, shade(col, 0.8), PA).to(g); decal('keys', min(0.5, w * 0.5), null, { glow: true }).rot(st, 0, 0).at(0, 1.079, 0.285).to(g);
+      decal('rack', 0.28, null, { glow: true }).at(-w * 0.24, 0.48, 0.123).to(g); decal('vent', 0.28).at(w * 0.22, 0.42, 0.123).to(g); box(w - 0.16, 0.03, 0.03, lm).at(0, 1.95, 0.125).to(g); box(w, 0.08, 0.16, dk, PA).at(0, 0.04, 0.08).to(g);
+    } else {
+      cylB(0.24, 0.28, 0.05, 8, dk, ME).to(g); cboxB(0.16, 0.95, 0.14, 0.03, col, PA).at(0, 0.05, 0).to(g);
+      const hd = grp().at(0, 1.08, 0.04).rot(-0.5, 0, 0).to(g); box(0.52, 0.36, 0.05, dk, PA).to(hd); scr(0.45, 0.29).at(0, 0, 0.027).to(hd); box(0.52, 0.016, 0.056, lm).at(0, -0.19, 0).to(hd);
+    }
+    Object.assign(g.userData, { screens, lightMat: lm, setLight: (c, k = 1.2) => (setGlow(lm, c, k), g) });
+    return fin(g, 'console', seed, 0.02);
+  }
+
+  /**
+   * Pilot seat on a swivel post, facing +Z. o: {color (shell), cushion, trim (harness), stick: true}
+   * userData: swivel (group: rotation.y), sit [x, y, z] (where the hips go)
+   */
+  function pilotSeat(o = {}) {
+    const col = o.color || '#39424e', cu = o.cushion || '#56677c', trim = o.trim || PAL.trim, dk = '#20252c', g = grp(), sw = grp().at(0, 0.34, 0).to(g);
+    cylB(0.27, 0.31, 0.05, 8, dk, ME).to(g); cylB(0.07, 0.1, 0.3, 6, shade(col, 0.7), ME).at(0, 0.05, 0).to(g);
+    cboxB(0.54, 0.13, 0.5, 0.035, col, PA).at(0, 0, 0.03).to(sw); box(0.45, 0.05, 0.42, cu, RU).at(0, 0.145, 0.04).to(sw);
+    const bk = grp().at(0, 0.1, -0.2).rot(-0.16, 0, 0).to(sw);
+    extrude([[-0.27, 0], [0.27, 0], [0.25, 0.62], [0.16, 0.9], [-0.16, 0.9], [-0.25, 0.62]], 0.07, col, PA).at(0, 0, -0.035).to(bk);
+    box(0.4, 0.5, 0.045, cu, RU).at(0, 0.33, 0.045).to(bk); box(0.25, 0.2, 0.06, cu, RU).at(0, 0.75, 0.05).to(bk);
+    [-1, 1].forEach(s => { box(0.045, 0.52, 0.012, trim, RU).at(s * 0.11, 0.36, 0.074).to(bk); box(0.07, 0.04, 0.4, col, PA).at(s * 0.31, 0.3, 0.03).to(sw); box(0.05, 0.2, 0.06, shade(col, 0.7), PA).at(s * 0.31, 0.19, -0.1).to(sw); });
+    if (o.stick !== false) { rod([0.31, 0.32, 0.18], [0.31, 0.44, 0.2], 0.014, dk, ME).to(sw); ball(0.03, trim, 0, PA).at(0.31, 0.45, 0.2).to(sw); }
+    live(sw); Object.assign(g.userData, { swivel: sw, sit: [0, 0.5, 0.03] });
+    return fin(g, 'pilotSeat', 1, 0.02);
+  }
+
+  /**
+   * Bridge / cockpit set: wrap-around console under a three-pane forward window (a real opening, toward +Z), two pilot
+   * seats facing it, side walls with displays, an overhead panel. The back (-Z) is open for the camera or a door().
+   * o: {width: 5.2, depth: 4.6, height: 2.7, light, color (consoles), wall, dark, trim, seats: 2, glass: false, ceiling: true, seed}
+   * userData: screens, seats [groups], window {sill, head, z, half} (the opening), lightMat, setLight(color, k)
+   */
+  function bridge(o = {}) {
+    const Wd = o.width ?? 5.2, D = o.depth ?? 4.6, H = o.height ?? 2.7, light = o.light || PAL.light, col = o.color || PAL.hullDk, wallC = o.wall || PAL.hull, dark = o.dark || PAL.dark, trim = o.trim || PAL.trim, seed = o.seed || 1, r = rng(seed * 83 + 9);
+    const g = grp(), screens = [], seats = [], lm = glowM(light, 1.3), dk = shade(col, 0.5), hw = Wd / 2, zf = D / 2, zb = -D / 2, cx = Wd * 0.27, zs = zf - D * 0.3, sill = 1.05, head = 2.42;
+    const plan = [[-hw, zb], [hw, zb], [hw, zs], [cx, zf], [-cx, zf], [-hw, zs]], BP = [[0, 0], [0.56, 0], [0.56, 0.1], [0.64, 0.14], [0.64, 0.62], [0.7, 0.68], [0.7, 0.72], [0.12, 1.04], [0, 1.04]], st = -(PI / 2 - Math.atan2(0.32, 0.58));
+    polyFlat(plan.map(p => [p[0], -p[1]]), shade(dark, 0.72), PA).shadows(false, true).to(g);
+    if (o.ceiling !== false) polyFlat(plan, shade(dark, 0.85), PA, true).at(0, H, 0).shadows(false, true).to(g);
+    const scr = (w, h, kind) => { const d = display(w, h, { kind: kind || KINDS[floor(r() * KINDS.length)], color: light, seed: seed * 10 + screens.length + 1 }); screens.push(d); return d; };
+    const bay = (p0, p1, win) => {
+      const dx = p1[0] - p0[0], dz = p1[1] - p0[1], w = hypot(dx, dz), f = grp().at((p0[0] + p1[0]) / 2, 0, (p0[1] + p1[1]) / 2).rot(0, Math.atan2(-dz, dx), 0).to(g);
+      if (win) {
+        box(w + 0.1, sill, 0.14, wallC, PA).at(0, sill / 2, -0.07).shadows(false, true).to(f); box(w + 0.1, H - head + 0.14, 0.14, wallC, PA).at(0, (H + head + 0.14) / 2 - 0.07, -0.07).shadows(false, true).to(f);
+        [sill, head].forEach(y => box(w + 0.12, 0.1, 0.2, dk, ME).at(0, y, -0.05).to(f)); [-1, 1].forEach(s => box(0.12, head - sill, 0.2, dk, ME).at(s * w / 2, (sill + head) / 2, -0.05).to(f));
+        if (o.glass) noShadow(box(w, head - sill, 0.02, PAL.glass, GL(PAL.glass, 0.1, 0.1))).at(0, (sill + head) / 2, -0.06).to(f);
+        extrudeX(BP, w, col, PA).to(f);
+        const ns = max(1, round(w / 0.85)), sw = (w - 0.55) / ns;
+        for (let i = 0; i < ns; i++) { const x = (i - (ns - 1) / 2) * sw; box(sw - 0.03, 0.34, 0.02, '#0b0e12', RU).rot(st, 0, 0).at(x, 0.941, 0.308).to(f); scr(sw - 0.08, 0.29).rot(st, 0, 0).at(x, 0.95, 0.313).to(f); }
+        decal('keys', min(0.46, w * 0.26), null, { glow: true }).rot(st, 0, 0).at(0, 0.79, 0.586).to(f);
+        [-1, 1].forEach(s => decal(s < 0 ? 'buttons' : 'switches', min(0.3, w * 0.17), null, { glow: true }).rot(st, 0, 0).at(s * w * 0.3, 0.79, 0.586).to(f));
+        box(w - 0.5, 0.022, 0.02, lm).at(0, 0.655, 0.652).to(f);
+      } else {
+        quad(w, H, shade(wallC, 0.2), PA).at(0, H / 2, 0).shadows(false, true).to(f);
+        const cols = [wallC, shade(wallC, 1.12), shade(wallC, 0.86)];
+        panels(f, -w / 2 + 0.03, 0.03, w - 0.06, 0.55, { rnd: r, colors: [shade(wallC, 0.4), shade(wallC, 0.5)], levels: 1, depth: 0.03 }); panels(f, -w / 2 + 0.03, 0.62, w - 0.06, 1.5, { rnd: r, colors: cols, levels: 2 }); panels(f, -w / 2 + 0.03, 2.22, w - 0.06, H - 2.25, { rnd: r, colors: cols, levels: 1 });
+        box(w, 0.075, 0.03, trim, PA).at(0, 2.16, 0.015).to(f); box(1.0, 0.62, 0.05, '#0b0e12', RU).at(w * 0.12, 1.45, 0.05).to(f); scr(0.92, 0.54).at(w * 0.12, 1.45, 0.078).to(f);
+      }
+    };
+    bay([hw, zs], [cx, zf], true); bay([cx, zf], [-cx, zf], true); bay([-cx, zf], [-hw, zs], true); bay([-hw, zs], [-hw, zb], false); bay([hw, zb], [hw, zs], false);
+    const ns = o.seats ?? 2; for (let i = 0; i < ns; i++) { const s = pilotSeat({ trim }).at(ns === 1 ? 0 : (i ? -0.8 : 0.8), 0, zf - 1.45).to(g); s.userData.live = true; seats.push(s); }
+    if (ns !== 1) { cboxB(0.42, 0.6, 1.0, 0.04, col, PA).at(0, 0, zf - 1.15).to(g); [-1, 1].forEach(s => { rod([s * 0.08, 0.6, zf - 1.3], [s * 0.08, 0.76, zf - 1.22], 0.014, dk, ME).to(g); box(0.07, 0.05, 0.05, s < 0 ? trim : PAL.warn, PA).at(s * 0.08, 0.77, zf - 1.215).to(g); }); scr(0.3, 0.2, 'power').rot(-PI / 2 + 0.25, 0, 0).at(0, 0.615, zf - 0.95).to(g); }
+    box(1.7, 0.12, 0.9, dk, PA).at(0, H - 0.06, zf - 1.1).to(g); decal('switches', 0.8, null, { glow: true }).rot(PI / 2, 0, 0).at(0, H - 0.123, zf - 1.1).to(g); [-1, 1].forEach(s => { box(0.05, 0.03, 0.8, lm).at(s * 0.8, H - 0.125, zf - 1.1).to(g); box(0.07, 0.03, D * 0.5, lm).at(s * (hw - 0.35), H - 0.016, zb + D * 0.3).to(g); });
+    box(1.5, 0.014, D * 0.62, PAL.floor, ME).at(0, 0.007, zb + D * 0.31).shadows(false, true).to(g); [-1, 1].forEach(s => box(0.03, 0.012, D * 0.6, lm).at(s * 0.8, 0.008, zb + D * 0.31).to(g));
+    Object.assign(g.userData, { screens, seats, window: { sill, head, z: zf, half: cx }, lightMat: lm, setLight: (c, k = 1.3) => (setGlow(lm, c, k), g) });
+    return fin(g, 'bridge', seed);
+  }
+
+  /**
+   * Cryo / stasis pod with a glass lid that swings open. o: {pose: 'upright' | 'flat', lean: 0.2 (radians back from vertical, upright only),
+   *   occupied: true, color, light: '#8fe9ff', glass, seed}
+   * userData: open(k), lid, occupant (group: .visible), lightMat, setLight(color, k), screens, update(t) (slow breathing of the inner light)
+   */
+  function cryoPod(o = {}) {
+    const flat = o.pose === 'flat', lean = flat ? PI / 2 : (o.lean ?? 0.2), col = o.color || PAL.white, dk = '#2a3038', light = o.light || PAL.light, g = grp(), pod = grp().to(g), lm = glowM(light, 1.3), L = 2.15, screens = [];
+    const tub = [[-0.44, 0], [-0.44, -0.2], [-0.3, -0.36], [0.3, -0.36], [0.44, -0.2], [0.44, 0]], sc = [0.72, 1, 1, 0.74], ys = [0, 0.18, L - 0.22, L];
+    loft(ys.map((y, i) => tub.map(p => [p[0] * sc[i], y, p[1] * (i % 3 ? 1 : 0.8)])), col, PA).to(pod);
+    box(0.74, L - 0.5, 0.02, '#161b21', RU).at(0, L / 2, 0.006).to(pod); [-1, 1].forEach(s => { box(0.07, L - 0.36, 0.05, shade(col, 0.72), PA).at(s * 0.405, L / 2, 0.02).to(pod); box(0.025, L - 0.8, 0.02, lm).at(s * 0.345, L / 2, 0.03).to(pod); });
+    [0.21, L - 0.25].forEach(y => box(0.86, 0.08, 0.05, shade(col, 0.72), PA).at(0, y, 0.02).to(pod));
+    box(0.3, 0.1, 0.06, dk, ME).at(0, L - 0.1, -0.02).to(pod); box(0.5, 0.2, 0.3, dk, ME).at(0, 0.5, -0.4).to(pod); box(0.36, 0.5, 0.2, shade(col, 0.6), PA).at(0, 1.3, -0.4).to(pod);
+    const occ = grp().to(pod); if (o.occupied !== false) { ball(0.105, '#93a7b8', 1, RU).at(0, 1.72, 0.1).to(occ); box(0.4, 0.56, 0.16, '#3c4a5c', RU).at(0, 1.3, 0.09).to(occ); [-1, 1].forEach(s => { box(0.1, 0.56, 0.11, '#3c4a5c', RU).at(s * 0.26, 1.28, 0.08).to(occ); box(0.16, 0.84, 0.14, '#333f4f', RU).at(s * 0.1, 0.6, 0.08).to(occ); }); live(occ); }
+    const lid = grp().at(-0.44, 0, 0.03).to(pod), cs = [[-0.4, 0], [-0.33, 0.2], [-0.13, 0.31], [0.13, 0.31], [0.33, 0.2], [0.4, 0]], cy = [0.2, 0.44, L - 0.52, L - 0.24], ck = [0.82, 1, 1, 0.82], gc = o.glass || '#a8e6ff';
+    const can = loft(cy.map((y, i) => cs.map(p => [0.44 + p[0] * ck[i], y, p[1] * (i % 3 ? 1 : 0.55)])), gc, { strip: true, ...GL(gc, 0.3, 0.22) }); can.userData.keep = true; lid.add(can);
+    [-1, 1].forEach(s => box(0.05, L - 0.44, 0.045, dk, ME).at(0.44 + s * 0.4, L / 2 - 0.02, 0.02).to(lid));
+    [1, 2].forEach(i => { for (let j = 0; j < 5; j++) rod([0.44 + cs[j][0], cy[i], cs[j][1]], [0.44 + cs[j + 1][0], cy[i], cs[j + 1][1]], 0.018, dk, ME).to(lid); });
+    [0, 3].forEach(i => { for (let j = 0; j < 5; j++) rod([0.44 + cs[j][0] * ck[i], cy[i], cs[j][1] * 0.55], [0.44 + cs[j + 1][0] * ck[i], cy[i], cs[j + 1][1] * 0.55], 0.018, dk, ME).to(lid); });
+    box(0.05, 0.3, 0.07, shade(col, 0.6), ME).at(0.86, L / 2, 0.04).to(lid); live(lid);
+    box(0.22, 0.32, 0.05, dk, PA).at(0.57, 1.22, -0.02).to(pod); const d = display(0.16, 0.22, { kind: 'vitals', color: light, seed: o.seed || 1, px: 128 }).at(0.57, 1.24, 0.007); pod.add(d); screens.push(d); decal('s_cold', 0.12).at(0.57, 1.0, 0.006).to(pod);
+    pod.rotation.x = -lean;
+    if (flat) { pod.position.set(0, 0.5 + 0.36, L / 2); cboxB(1.0, 0.5, L + 0.16, 0.07, dk, PA).to(g); box(0.86, 0.04, L, shade(col, 0.6), PA).at(0, 0.5, 0).to(g); [-1, 1].forEach(s => box(0.02, 0.03, L - 0.3, lm).at(s * 0.5, 0.3, 0).to(g)); }
+    else { const s = sin(lean), c = cos(lean), py = 0.3 + 0.29 * s + 0.01, pz = (L * s + 0.29 * c - 0.3) / 2; pod.position.set(0, py, pz);
+      cboxB(1.2, 0.3, 1.2, 0.06, dk, PA).to(g); box(1.0, 0.03, 1.0, shade(col, 0.6), PA).at(0, 0.3, 0).to(g); box(1.0, 0.02, 0.02, lm).at(0, 0.16, 0.6).to(g);
+      [-1, 1].forEach(sd => { rod([sd * 0.36, 0.3, -0.48], [sd * 0.2, py + 1.25 * c - 0.36 * s, pz - 1.25 * s - 0.36 * c], 0.04, shade(col, 0.5), ME).to(g); vine([[sd * 0.5, 0.3, 0.3], [sd * 0.62, 0.55, 0.2], [sd * 0.5, py + 0.35, pz - 0.2]], 0.03, 0.03, '#15181c', { rs: 5, seg: 8, ...RU }).to(g); }); }
+    anim(g, t => { setGlow(lm, g.userData.lightColor, 1.05 + 0.25 * sin(t * 1.3)); d.userData.update(t); }); d.userData.driven = true;
+    Object.assign(g.userData, { lid, occupant: occ, lightMat: lm, lightColor: light, screens, k: 0, setLight: c => { g.userData.lightColor = c; setGlow(lm, c, 1.3); return g; }, open: k => { k = clamp(k); g.userData.k = k; lid.rotation.y = -k * 1.9; return g; } });
+    return fin(g, 'cryoPod', o.seed || 1, 0.02);
+  }
+
+  /**
+   * Reactor / power core: a plasma column in a cage of pylons with energy rings that travel and a glow that pulses.
+   * o: {radius: 1.5, height: 4.2, color, light: '#6fd8ff' (plasma), power: 1, seed}
+   * userData: update(t, power), coreMat, setLight(color), power (0 = dead .. 1 normal .. 1.6 overload), level (current brightness 0..1.5, for syncing a point light), lightPos
+   */
+  function reactor(o = {}) {
+    const R = o.radius ?? 1.5, H = o.height ?? 4.2, col = o.color || PAL.hullDk, dk = shade(col, 0.5), g = grp(), seed = o.seed || 1, u = g.userData; u.lightColor = o.light || '#6fd8ff'; u.power = o.power ?? 1;
+    const core = glow(u.lightColor, 1.6), hot = glow('#ffffff', 1.5), rm = glowM(u.lightColor, 1.3), y0 = 1.0, y1 = H - 1.0;
+    cylB(R, R * 1.07, 0.3, 12, dk, PA).to(g); cylB(R * 0.8, R * 0.84, 0.16, 12, col, PA).at(0, 0.3, 0).to(g); cylB(0.52, 0.8, 0.54, 10, shade(col, 0.8), ME).at(0, 0.46, 0).to(g);
+    cylB(R * 0.8, R * 0.76, 0.28, 12, dk, PA).at(0, H - 0.28, 0).to(g); cylB(0.8, 0.52, 0.54, 10, shade(col, 0.8), ME).at(0, H - 1.0 + 0.0, 0).to(g); cyl(0.3, 0.3, 0.3, 8, dk, ME).at(0, H - 0.4, 0).to(g);
+    annulus(R * 0.68, R * 0.76, 12, rm).at(0, 0.465, 0).to(g);
+    const colm = cyl(0.26, 0.26, y1 - y0, 10, core).at(0, (y0 + y1) / 2, 0), inner = cyl(0.12, 0.12, y1 - y0, 8, hot).at(0, (y0 + y1) / 2, 0); g.add(colm, inner);
+    noShadow(cyl(0.44, 0.44, y1 - y0, 12, PAL.glass, GL(PAL.glass, 0.16, 0.25))).at(0, (y0 + y1) / 2, 0).to(g);
+    ring(4, (a, i) => { const p = grp().rot(0, -a, 0).to(g); boxB(0.3, H - 0.56, 0.22, col, PA).at(R * 0.8, 0.3, 0).to(p); boxB(0.12, H - 1.2, 0.24, shade(col, 1.25), PA).at(R * 0.8 - 0.12, 0.6, 0).to(p);
+      [0.3, 0.5, 0.7].forEach(k => box(R * 0.8 - 0.6, 0.07, 0.1, dk, ME).at((R * 0.8 + 0.6) / 2, lerp(y0, y1, k), 0).to(p)); box(0.02, H * 0.3, 0.06, rm).at(R * 0.8 + 0.155, H * 0.5, 0).to(p);
+      decal(i % 2 ? 's_rad' : 's_volt', 0.2).rot(0, PI / 2, 0).at(R * 0.8 + 0.153, 1.1, 0).to(p); rod([R * 0.95, 0.12, 0], [R * 1.5, 0.12, 0], 0.09, shade(col, 0.7), { ...ME, sides: 7 }).to(p); cyl(0.13, 0.13, 0.06, 7, dk, ME).rot(0, 0, PI / 2).at(R * 1.5, 0.12, 0).to(p); }, PI / 4);
+    [0.3, 0.5, 0.7].forEach(k => torus(0.6, 0.045, dk, { rs: 5, ts: 12, ...ME }).rot(PI / 2, 0, 0).at(0, lerp(y0, y1, k), 0).to(g));
+    const rings = [0, 1, 2].map(() => { const t = torus(0.5, 0.035, glow(u.lightColor, 1.6), { rs: 5, ts: 14 }).rot(PI / 2, 0, 0); g.add(t); return t; }), fl = flare(u.lightColor, R * 3.2, 0.5).at(0, H / 2, 0); g.add(fl);
+    anim(g, (t, pw) => { const p = pw ?? u.power, beat = 0.78 + 0.16 * sin(t * 3.4) + 0.06 * n1(t * 9, seed), k = p * beat * (p > 1.2 ? 1 + 0.25 * sin(t * 17) : 1), c = p > 1.25 ? mix(u.lightColor, '#ff5a3a', clamp((p - 1.25) * 3)) : u.lightColor;
+      setGlow(core, c, 1.7 * k); setGlow(hot, mix(c, '#ffffff', 0.8), 1.6 * k); setGlow(rm, c, 1.2 * k); colm.scale.set(1 + 0.08 * sin(t * 6.8), 1, 1 + 0.08 * sin(t * 6.8)); fl.material.color.set(c); fl.material.opacity = 0.5 * clamp(k); fl.scale.setScalar(R * 3.2 * (0.9 + 0.2 * k));
+      rings.forEach((rg, i) => { const ph = mod(t * 0.35 * (0.5 + p * 0.5) + i / 3, 1); rg.position.y = lerp(y0 + 0.1, y1 - 0.1, ph); const s = 1 + 0.25 * sin(ph * PI); rg.scale.set(s, s, 1); setGlow(rg.material, c, 1.7 * k * sin(ph * PI)); }); u.level = k; });
+    Object.assign(u, { coreMat: core, lightPos: [0, H / 2, 0], setLight: c => { u.lightColor = c; return g; } }); u.update(0);
+    return fin(g, 'reactor', seed, 0.03);
+  }
+
+  /**
+   * Hologram table: an additive light cone and base disc with a slowly turning hologram above a round table.
+   * o: {radius: 0.85, height: 0.92, holo: 'planet' | 'ship' | 'map' | 'none', light, color, size: 1 (hologram scale), seed}
+   * userData: holo (group above the table: add your own additive meshes), update(t) (turn + flicker), setOn(k) (0 = off .. 1), lightMat, lightPos
+   */
+  function holoTable(o = {}) {
+    const R = o.radius ?? 0.85, h = o.height ?? 0.92, col = o.color || PAL.hullDk, dk = shade(col, 0.5), light = o.light || PAL.light, kind = o.holo ?? 'planet', sz = o.size ?? 1, seed = o.seed || 1, g = grp(), lm = glowM(light, 1.3), u = g.userData, A = atlas(), mats = [];
+    const hm = (op, map) => { const m = beamMat(light, op, map ? { map: A.tex } : {}); m.userData.op = op; mats.push(m); return m; };
+    cylB(R * 0.56, R * 0.66, 0.1, 8, dk, ME).to(g); cylB(R * 0.36, R * 0.46, h - 0.26, 8, col, PA).at(0, 0.1, 0).to(g); cylB(R, R * 0.5, 0.16, 8, shade(col, 0.85), PA).at(0, h - 0.21, 0).to(g);
+    cyl(R * 1.02, R * 1.02, 0.05, 16, dk, PA).at(0, h - 0.025, 0).to(g); cyl(R * 0.88, R * 0.88, 0.012, 16, '#07151c', { rough: 0.15, emissive: light, ei: 0.08 }).at(0, h + 0.002, 0).to(g);
+    torus(R * 0.88, 0.016, lm, { rs: 4, ts: 20 }).rot(PI / 2, 0, 0).at(0, h + 0.012, 0).to(g); cylB(0.1, 0.14, 0.04, 8, dk, ME).at(0, h, 0).to(g); cyl(0.07, 0.07, 0.01, 8, lm).at(0, h + 0.045, 0).to(g);
+    ring(4, a => { decal('keys', 0.3, 0.1, { glow: true }).rot(-PI / 2, 0, -a).at(sin(a) * R * 0.945, h + 0.003, cos(a) * R * 0.945).to(g); box(0.5, 0.03, 0.02, lm).rot(0, a, 0).at(sin(a) * R * 0.76, h - 0.2, cos(a) * R * 0.76).to(g); }, PI / 4);
+    const holo = grp().at(0, h + 0.05, 0).to(g), turn = grp().to(holo), hh = 0.75 * sz, Rh = R * 0.8 * sz; holo.userData.live = true;
+    const coneM = hm(0.1), cn = new T.Mesh(new T.ConeGeometry(Rh, hh, 20, 1, true), coneM); cn.rotation.x = PI; cn.position.y = hh / 2; holo.add(cn);
+    const disc = decal('holo', Rh * 2.1, Rh * 2.1, { mat: hm(0.55, true) }).rot(-PI / 2, 0, 0).at(0, 0.02, 0); holo.add(disc);
+    const scan = new T.Mesh(new T.TorusGeometry(Rh * 0.6, 0.008, 4, 24).rotateX(PI / 2), hm(0.8)); holo.add(scan);
+    if (kind === 'planet') { const pr = 0.34 * sz; turn.add(new T.Mesh(atlasUV(new T.SphereGeometry(pr, 16, 10), 'grid'), hm(0.5, true)).at(0, hh, 0), new T.Mesh(new T.IcosahedronGeometry(pr * 0.97, 1), hm(0.16)).at(0, hh, 0));
+      const orb = grp().at(0, hh, 0).rot(0.35, 0, 0.2).to(turn); orb.add(new T.Mesh(new T.TorusGeometry(pr * 1.6, 0.006, 4, 32).rotateX(PI / 2), hm(0.8)), new T.Mesh(new T.IcosahedronGeometry(pr * 0.12, 0), hm(0.9)).at(pr * 1.6, 0, 0)); }
+    else if (kind === 'ship') { const sh = hullZ([{ z: -0.5, w: 0.2, h: 0.14 }, { z: -0.3, w: 0.36, h: 0.2, ct: 0.06 }, { z: 0.15, w: 0.3, h: 0.18, ct: 0.06 }, { z: 0.5, w: 0.06, h: 0.06, ct: 0.02 }], light, { basic: true }); const m = new T.Mesh(sh.geometry, hm(0.28)); m.scale.setScalar(sz); m.position.y = hh; m.rotation.z = 0.15; turn.add(m);
+      const e = new T.LineSegments(new T.EdgesGeometry(sh.geometry, 20), new T.LineBasicMaterial({ color: light, transparent: true, opacity: 0.9, blending: T.AdditiveBlending, depthWrite: false, toneMapped: false })); e.material.userData.op = 0.9; mats.push(e.material); m.add(e);
+      [-1, 1].forEach(s => m.add(new T.Mesh(new T.BoxGeometry(0.34, 0.02, 0.2), hm(0.28)).at(s * 0.3, -0.02, -0.25))); }
+    else if (kind === 'map') { const pg = new T.PlaneGeometry(1.2 * sz, 1.2 * sz, 12, 12).rotateX(-PI / 2), P = pg.attributes.position; for (let i = 0; i < P.count; i++) P.setY(i, S3.noise2(P.getX(i) * 2.2 + 5, P.getZ(i) * 2.2 + 9, seed) * 0.34 * sz); const wm = new T.MeshBasicMaterial({ color: light, wireframe: true, transparent: true, opacity: 0.7, blending: T.AdditiveBlending, depthWrite: false, toneMapped: false }); wm.userData.op = 0.7; mats.push(wm);
+      turn.add(new T.Mesh(pg, wm).at(0, hh * 0.5, 0), new T.Mesh(pg, hm(0.12)).at(0, hh * 0.5, 0)); const pin = beamMat(PAL.warn, 0.95); pin.userData.op = 0.95; mats.push(pin); turn.add(new T.Mesh(new T.ConeGeometry(0.04 * sz, 0.16 * sz, 4).rotateX(PI), pin).at(0.2 * sz, hh * 0.5 + 0.36 * sz, -0.1 * sz)); }
+    u.on = 1;
+    anim(g, t => { const on = u.on, fk = (0.86 + 0.14 * n1(t * 11, seed)) * (n1(t * 2.3, seed + 7) > 0.86 ? 0.55 : 1) * on; mats.forEach(m => { m.opacity = m.userData.op * fk; }); turn.rotation.y = t * 0.45; disc.rotation.z = -t * 0.2; scan.position.y = hh * (0.25 + 0.75 * mod(t * 0.3, 1)); scan.scale.setScalar(0.4 + 1.2 * sin(mod(t * 0.3, 1) * PI)); holo.scale.set(1, max(0.001, on), 1); u.level = fk; });
+    Object.assign(u, { holo: turn, lightMat: lm, lightPos: [0, h + 0.5, 0], setOn: k => { u.on = clamp(k); return g; } }); u.update(0);
+    return fin(g, 'holoTable', seed, 0.02);
+  }
+
+  /**
+   * Medical scanner bed (long axis along X, head at -X) with a scanning arch that travels along it and a vitals monitor.
+   * o: {color, accent (mattress), light: '#7dffd9', seed}
+   * userData: scan(k) (arch position 0..1), arch, update(t) (sweeps the arch, animates the monitor), screens, pad [x, y, z] (centre of the mattress top), lightMat
+   */
+  function medBed(o = {}) {
+    const col = o.color || PAL.white, acc = o.accent || '#3aa6a0', light = o.light || '#7dffd9', L = 2.1, w = 0.8, top = 0.84, g = grp(), lm = glowM(light, 1.3), dk = '#2a3038', screens = [], u = g.userData;
+    boxB(1.5, 0.1, 0.62, dk, ME).to(g); boxB(0.95, top - 0.3, 0.42, shade(col, 0.7), PA).at(0, 0.1, 0).to(g); extrude([[-w / 2, 0], [w / 2, 0], [w / 2 + 0.03, 0.05], [w / 2 + 0.03, 0.16], [-w / 2 - 0.03, 0.16], [-w / 2 - 0.03, 0.05]].map(p => [p[0], p[1]]), L, col, PA).rot(0, PI / 2, 0).at(-L / 2, top - 0.2, 0).to(g);
+    box(L - 0.16, 0.06, w - 0.12, acc, RU).at(0, top - 0.02, 0).to(g); box(0.34, 0.07, 0.46, shade(acc, 1.35), RU).at(-L / 2 + 0.32, top + 0.035, 0).to(g);
+    [-1, 1].forEach(s => { box(L - 0.3, 0.022, 0.02, lm).at(0, top - 0.115, s * (w / 2 + 0.035)).to(g); box(L - 0.1, 0.03, 0.03, dk, ME).at(0, top - 0.17, s * (w / 2 + 0.05)).to(g); });
+    const arch = grp().to(g), ao = [[-0.56, top - 0.24], [-0.56, top + 0.42], [-0.34, top + 0.68], [0.34, top + 0.68], [0.56, top + 0.42], [0.56, top - 0.24]], ai = [[-0.46, top - 0.24], [-0.46, top + 0.38], [-0.3, top + 0.58], [0.3, top + 0.58], [0.46, top + 0.38], [0.46, top - 0.24]];
+    const U = (k, dy) => [...ao.map(p => [p[0] * k, p[1] + dy]), ...ai.slice().reverse().map(p => [p[0] * (2 - k), p[1] - dy])];
+    extrude(U(1, 0), 0.18, col, PA).rot(0, PI / 2, 0).at(-0.09, 0, 0).to(arch); extrude(U(1.02, 0.012), 0.05, acc, PA).rot(0, PI / 2, 0).at(-0.025, 0, 0).to(arch);
+    box(0.03, 0.02, 0.58, lm).at(0, top + 0.575, 0).to(arch); [-1, 1].forEach(s => box(0.06, 0.05, 0.012, lm).at(0, top + 0.2, s * 0.567).to(arch));
+    const cur = new T.Mesh(new T.PlaneGeometry(0.6, 0.54).rotateY(PI / 2), beamMat(light, 0.22)); cur.position.set(0, top + 0.3, 0); arch.add(cur); live(arch);
+    rod([-L / 2 - 0.14, 0.1, -0.24], [-L / 2 - 0.14, 1.5, -0.24], 0.03, dk, ME).to(g); const mon = grp().at(-L / 2 - 0.02, 1.62, -0.2).rot(-0.12, 0.35, 0).to(g); box(0.56, 0.4, 0.05, dk, PA).to(mon);
+    const d = display(0.5, 0.34, { kind: 'vitals', color: light, seed: o.seed || 2 }).at(0, 0, 0.027); mon.add(d); screens.push(d); d.userData.driven = true; decal('s_med', 0.16).at(0.2, 0.5, 0.212).to(g);
+    u.scan = k => { arch.position.x = lerp(-L / 2 + 0.4, L / 2 - 0.3, clamp(k)); return g; };
+    anim(g, t => { u.scan(0.5 - 0.5 * cos(t * 0.9)); cur.material.opacity = 0.2 + 0.06 * n1(t * 14, 3); d.userData.update(t); });
+    Object.assign(u, { arch, screens, lightMat: lm, pad: [0, top + 0.01, 0] }); u.update(0);
+    return fin(g, 'medBed', o.seed || 1, 0.02);
+  }
+
   // ==== builders ====
 
   // ==== exports ====
@@ -554,5 +754,6 @@ const KitSciFi = (() => {
     if (list.length) s.tick(lt => { for (const o of list) o.userData.update(lt); }); return roots[0];
   }
   return { PAL, animate, display, decal, bake, shade, mix,
-    corridor, junction, door, airlock, crate, canister, crateStack, pipes, vent, cables };
+    corridor, junction, door, airlock, crate, canister, crateStack, pipes, vent, cables,
+    console: controlConsole, pilotSeat, bridge, cryoPod, reactor, holoTable, medBed };
 })();

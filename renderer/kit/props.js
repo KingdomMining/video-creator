@@ -197,7 +197,7 @@ const KitProps = (() => {
     torus(0.008, 0.0016, C.steel, { rs: 4, ts: 8, ...METAL }).rot(0, PI / 2, 0).at(0, 0, -L / 2 - 0.005).to(g);                         // lanyard ring
     const lens = keep(disc(rh * 0.8, 8, glo(on ? lc : '#1c232b', on ? 1.6 : 1), { up: false })).at(0, 0, L / 2 - 0.004).to(g);
     disc(rh * 0.8, 8, '#aeb7c0', { up: false, ...METAL }).at(0, 0, L / 2 - 0.0045).to(g);
-    const halo = fx(flare(lc, 0.26, on ? 0.75 : 0)).at(0, 0, L / 2 + 0.005).to(g);
+    const halo = fx(flare(lc, 0.13, on ? 0.9 : 0)).at(0, 0, L / 2 + 0.004).to(g);
     // optional visible beam: an additive cone that fades with distance
     const bl = o.beamLength || 3.5, bg = new T.CylinderGeometry(rh * 0.8, bl * 0.24, bl, 14, 1, true), bc = new Float32Array(bg.attributes.position.count * 3), cc = new T.Color(lc);
     for (let i = 0; i < bg.attributes.position.count; i++) { const k = bg.attributes.position.getY(i) > 0 ? 1 : 0; bc[i * 3] = cc.r * k; bc[i * 3 + 1] = cc.g * k; bc[i * 3 + 2] = cc.b * k; }
@@ -206,7 +206,7 @@ const KitProps = (() => {
     const bo = socket(0, 0, L / 2).to(g), bt = socket(0, 0, L / 2 + 6).to(g);
     Object.assign(ud, { lens, halo, beam, beamOrigin: bo, beamTarget: bt, beamDir: [0, 0, 1], lightColor: lc, lights: [] });
     /** setOn(k): 0 = off, 1 = on. beam: opacity of the visible light cone (0 = none). */
-    ud.setOn = (k, beamK = o.beam || 0) => { k = clamp(k); lens.material.color.set(k > 0.02 ? lc : '#1c232b').multiplyScalar(k > 0.02 ? 0.4 + 1.2 * k : 1); halo.material.opacity = 0.75 * k; beam.material.opacity = beamK * k; beam.visible = beamK * k > 0.002; ud.lights.forEach(l => { l.intensity = l.userData.base * k; }); ud.on = k; };
+    ud.setOn = (k, beamK = o.beam || 0) => { k = clamp(k); lens.material.color.set(k > 0.02 ? lc : '#1c232b').multiplyScalar(k > 0.02 ? 0.4 + 1.2 * k : 1); halo.material.opacity = 0.9 * k; beam.material.opacity = beamK * k; beam.visible = beamK * k > 0.002; ud.lights.forEach(l => { l.intensity = l.userData.base * k; }); ud.on = k; };
     ud.setOn(on ? 1 : 0);
     return { grip: [0, 0, -L * 0.14], hold: 'x z', aim: [0, 0, 1] };
   });
@@ -222,7 +222,7 @@ const KitProps = (() => {
     for (const y of [0.115, 0.185]) torus(0.06 - (y > 0.15 ? 0.004 : 0), 0.0022, shade(col, 1.2), { rs: 4, ts: 8, ...METAL }).rot(PI / 2, 0, 0).at(0, y, 0).to(g);                              // guard wires
     const glass = lathe([[0.034, 0.086], [0.05, 0.115], [0.055, 0.15], [0.048, 0.19], [0.034, 0.214]], 8, '#d9eef2', { opacity: 0.25, rough: 0.08, side: 'double' }).to(g); glass.renderOrder = 2;
     cylB(0.005, 0.007, 0.012, 5, '#2a2622').at(0, 0.084, 0).to(g);                                                                                     // wick
-    const flame = flameOf(0.055, { haloSize: 9, haloOpacity: 0.55, halo: lc }).at(0, 0.094, 0).to(g);
+    const flame = flameOf(0.055, { haloSize: 5.5, haloOpacity: 0.5, halo: lc }).at(0, 0.094, 0).to(g);
     const core = keep(ball(0.03, glo(lc, 1.1, { opacity: 0.35, add: true }), 1)).at(0, 0.14, 0).to(g); fx(core);
     const handle = part(arcTube(0.076, 0.003, PI, shade(col, 1.2), { rs: 4, ts: 10, ...METAL }), cyl(0.008, 0.008, 0.05, 6, C.woodD).rot(0, 0, PI / 2).at(0, 0.076, 0)).at(0, 0.238, 0).to(g);
     if (o.handle === 'down') handle.rotation.x = 1.25;
@@ -296,6 +296,231 @@ const KitProps = (() => {
     ud.update = t => { if (ud.on <= 0.01) return; let f = 1; fs.forEach((q, i) => { const v = q.userData.flick(t * (1 + i * 0.13), 1.5); if (!i) f = v; }); ud.lights.forEach(l => { l.intensity = l.userData.base * ud.on * (0.78 + 0.22 * f); }); };
     ud.setLit(lit ? 1 : 0);
     return { grip: [0, L * 0.16, 0], hold: 'x z', anchor: 'floor', poses: { lying: { rot: [0, 0, -PI / 2] } } };
+  });
+
+  // =====================================================================================================
+  // SCREENS: pictures for phones, tablets, laptops and monitors. scr.name(ctx, w, h, o) works at any size.
+  // =====================================================================================================
+  const scr = {
+    off(c, w, h) { c.fillStyle = '#06080b'; c.fillRect(0, 0, w, h); const g = c.createLinearGradient(0, 0, w, h); g.addColorStop(0.3, 'rgba(255,255,255,0)'); g.addColorStop(0.5, 'rgba(255,255,255,.08)'); g.addColorStop(0.7, 'rgba(255,255,255,0)'); c.fillStyle = g; c.fillRect(0, 0, w, h); },
+    wall(c, w, h, o = {}) { const g = c.createLinearGradient(0, 0, w * 0.5, h); g.addColorStop(0, o.bg0 || '#16254a'); g.addColorStop(0.55, o.bg1 || '#54376b'); g.addColorStop(1, o.bg2 || '#e2805a'); c.fillStyle = g; c.fillRect(0, 0, w, h); c.fillStyle = 'rgba(8,10,28,.4)'; c.beginPath(); c.moveTo(0, h * 0.82); c.quadraticCurveTo(w * 0.3, h * 0.66, w * 0.62, h * 0.8); c.quadraticCurveTo(w * 0.85, h * 0.9, w, h * 0.74); c.lineTo(w, h); c.lineTo(0, h); c.fill(); c.fillStyle = 'rgba(255,240,210,.85)'; c.beginPath(); c.arc(w * 0.72, h * 0.6, min(w, h) * 0.07, 0, 7); c.fill(); },
+    status(c, w, h, o = {}) { const u = min(w, h) / 100; txt(c, o.time || '23:47', 7 * u, 5.5 * u, `600 ${4.6 * u}px Inter`, '#fff', 'left'); c.fillStyle = '#fff'; for (let i = 0; i < 4; i++) c.fillRect(w - 26 * u + i * 2.4 * u, 7 * u - i * 0.9 * u, 1.6 * u, 1.5 * u + i * 0.9 * u); c.strokeStyle = '#fff'; c.lineWidth = 0.5 * u; c.strokeRect(w - 14 * u, 3.6 * u, 8 * u, 4 * u); c.fillRect(w - 13.3 * u, 4.3 * u, (o.battery ?? 0.3) * 6.6 * u, 2.6 * u); },
+    lock(c, w, h, o = {}) { const u = min(w, h) / 100; scr.wall(c, w, h, o); scr.status(c, w, h, o); txt(c, o.time || '23:47', w / 2, h * 0.2, `300 ${27 * u}px Inter`, '#fff'); txt(c, o.date || 'Friday 13 October', w / 2, h * 0.2 + 19 * u, `500 ${5.6 * u}px Inter`, 'rgba(255,255,255,.9)');
+      if (o.text) { const bw = w - 12 * u, by = h * 0.46; c.fillStyle = 'rgba(245,247,250,.92)'; R2(c, 6 * u, by, bw, 30 * u, 5 * u); c.fill(); c.fillStyle = '#2f7bff'; R2(c, 10 * u, by + 4 * u, 8 * u, 8 * u, 2 * u); c.fill(); txt(c, o.from || 'Unknown', 21 * u, by + 8 * u, `700 ${5.2 * u}px Inter`, '#10141c', 'left'); c.font = `500 ${5 * u}px Inter`; wrapT(c, o.text, bw - 12 * u).slice(0, 2).forEach((l, i) => txt(c, l, 10 * u, by + 17.5 * u + i * 6.4 * u, `500 ${5 * u}px Inter`, '#1c222c', 'left')); }
+      c.fillStyle = 'rgba(255,255,255,.8)'; R2(c, w / 2 - 16 * u, h - 5 * u, 32 * u, 1.4 * u, 0.7 * u); c.fill(); },
+    call(c, w, h, o = {}) { const u = min(w, h) / 100, g = c.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#1c2433'); g.addColorStop(1, '#07090d'); c.fillStyle = g; c.fillRect(0, 0, w, h); scr.status(c, w, h, o);
+      c.fillStyle = '#39445a'; c.beginPath(); c.arc(w / 2, h * 0.3, 17 * u, 0, 7); c.fill(); c.fillStyle = '#8f9bb3'; c.beginPath(); c.arc(w / 2, h * 0.3 - 4 * u, 6.5 * u, 0, 7); c.fill(); c.beginPath(); c.arc(w / 2, h * 0.3 + 14 * u, 11 * u, PI, 0); c.fill();
+      c.font = `700 ${10 * u}px Inter`; fitFont(c, o.caller || 'UNKNOWN', w - 14 * u, 10 * u, '700 $px Inter'); c.fillStyle = '#fff'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(o.caller || 'UNKNOWN', w / 2, h * 0.3 + 30 * u); txt(c, o.sub || 'incoming call…', w / 2, h * 0.3 + 40 * u, `500 ${5.2 * u}px Inter`, '#9fb0c8');
+      [['#e5484d', 0.27, 2.36], ['#3cc96a', 0.73, 0.6]].forEach(([col, x, a]) => { c.fillStyle = col; c.beginPath(); c.arc(w * x, h * 0.83, 11 * u, 0, 7); c.fill(); c.save(); c.translate(w * x, h * 0.83); c.rotate(a); c.fillStyle = '#fff'; R2(c, -6.5 * u, -1.6 * u, 13 * u, 3.2 * u, 1.6 * u); c.fill(); R2(c, -7 * u, -1.6 * u, 4 * u, 5 * u, 1.4 * u); c.fill(); R2(c, 3 * u, -1.6 * u, 4 * u, 5 * u, 1.4 * u); c.fill(); c.restore(); }); },
+    chat(c, w, h, o = {}) { const u = min(w, h) / 100; c.fillStyle = o.dark === false ? '#f3f4f6' : '#0d1016'; c.fillRect(0, 0, w, h); c.fillStyle = o.dark === false ? '#ffffff' : '#171b24'; c.fillRect(0, 0, w, 22 * u); scr.status(c, w, h, o); c.fillStyle = '#5b6b8a'; c.beginPath(); c.arc(11 * u, 15 * u, 4.4 * u, 0, 7); c.fill(); txt(c, o.name || 'Unknown number', 18.5 * u, 15.2 * u, `700 ${5.4 * u}px Inter`, o.dark === false ? '#111' : '#fff', 'left');
+      const msgs = (o.messages || ['Are you home?', '>Who is this?', 'Look outside.']).map(m => typeof m === 'string' ? (m[0] === '>' ? { t: m.slice(1), me: true } : { t: m }) : m), fs = (o.fontSize || 5.6) * u, lh = fs * 1.22, maxW = w * 0.68; c.font = `500 ${fs}px Inter`;
+      const lay = msgs.map(m => { const ls = wrapT(c, m.t, maxW); return { m, ls, bw: max(...ls.map(l => c.measureText(l).width)) + 7 * u, bh: ls.length * lh + 5 * u }; }); let tot = lay.reduce((s, b) => s + b.bh + 3 * u, 0), y = max(26 * u, h - 16 * u - tot); if (tot < h - 44 * u) y = 27 * u;
+      lay.forEach(b => { const x = b.m.me ? w - 5 * u - b.bw : 5 * u; c.fillStyle = b.m.me ? '#2f7bff' : (o.dark === false ? '#e3e6ea' : '#262c38'); R2(c, x, y, b.bw, b.bh, 3.6 * u); c.fill(); b.ls.forEach((l, i) => txt(c, l, x + 3.5 * u, y + 2.5 * u + lh * (i + 0.5), `500 ${fs}px Inter`, b.m.me || o.dark !== false ? '#fff' : '#111', 'left')); y += b.bh + 3 * u; });
+      c.fillStyle = o.dark === false ? '#ffffff' : '#171b24'; c.fillRect(0, h - 14 * u, w, 14 * u); c.fillStyle = o.dark === false ? '#e9ebee' : '#262c38'; R2(c, 5 * u, h - 11.5 * u, w - 22 * u, 8 * u, 4 * u); c.fill(); c.fillStyle = '#2f7bff'; c.beginPath(); c.arc(w - 9.5 * u, h - 7.5 * u, 4.2 * u, 0, 7); c.fill(); },
+    alert(c, w, h, o = {}) { const u = min(w, h) / 100, col = o.color || '#ffcc33'; c.fillStyle = '#0b0c10'; c.fillRect(0, 0, w, h); c.fillStyle = col; c.fillRect(0, 0, w, 3 * u); c.fillRect(0, h - 3 * u, w, 3 * u); const cy = h * 0.27; c.beginPath(); c.moveTo(w / 2, cy - 15 * u); c.lineTo(w / 2 + 17 * u, cy + 13 * u); c.lineTo(w / 2 - 17 * u, cy + 13 * u); c.closePath(); c.fill(); c.fillStyle = '#0b0c10'; c.fillRect(w / 2 - 1.7 * u, cy - 6 * u, 3.4 * u, 11 * u); c.fillRect(w / 2 - 1.7 * u, cy + 7 * u, 3.4 * u, 3.4 * u);
+      textBox(c, o.title || 'EMERGENCY ALERT', 6 * u, cy + 18 * u, w - 12 * u, 20 * u, '800 $px Inter', col, 9 * u); textBox(c, o.text || 'Stay indoors. Lock your doors. Do not go outside.', 8 * u, cy + 40 * u, w - 16 * u, h - cy - 56 * u, '500 $px Inter', '#f2f3f5', 6.4 * u, { lh: 1.3 }); },
+    home(c, w, h, o = {}) { const u = min(w, h) / 100, r = rng(o.seed || 4), cols = w > h ? 6 : 4, cw = w / cols, pal = ['#2f7bff', '#3cc96a', '#ffb23f', '#e5484d', '#9b6bff', '#18b7c9', '#f2f3f5', '#ff7a45']; scr.wall(c, w, h, o); scr.status(c, w, h, o);
+      for (let j = 0; j < (w > h ? 3 : 5); j++) for (let i = 0; i < cols; i++) { if (r() < 0.12) continue; const s = min(cw * 0.56, 15 * u), x = cw * (i + 0.5) - s / 2, y = 14 * u + j * s * 1.62; c.fillStyle = pal[flr(r() * pal.length)]; R2(c, x, y, s, s, s * 0.26); c.fill(); c.fillStyle = 'rgba(255,255,255,.75)'; c.beginPath(); c.arc(x + s / 2, y + s / 2, s * 0.2, 0, 7); c.fill(); c.fillStyle = 'rgba(255,255,255,.8)'; c.fillRect(x + s * 0.1, y + s * 1.16, s * 0.8, s * 0.1); }
+      c.fillStyle = 'rgba(255,255,255,.2)'; R2(c, 5 * u, h - 22 * u, w - 10 * u, 18 * u, 6 * u); c.fill(); },
+    map(c, w, h, o = {}) { const u = min(w, h) / 100, r = rng(o.seed || 9), dk = !!o.dark; c.fillStyle = dk ? '#18202b' : '#e8e2d4'; c.fillRect(0, 0, w, h); c.fillStyle = dk ? '#1f3b33' : '#bfdcae'; for (let i = 0; i < 4; i++) { c.beginPath(); c.ellipse(r() * w, r() * h, (10 + r() * 16) * u, (8 + r() * 12) * u, r() * 3, 0, 7); c.fill(); }
+      c.strokeStyle = dk ? '#27506e' : '#9cc7e6'; c.lineWidth = 9 * u; c.beginPath(); c.moveTo(-5 * u, h * 0.2); c.bezierCurveTo(w * 0.4, h * 0.3, w * 0.5, h * 0.6, w + 5 * u, h * 0.72); c.stroke();
+      c.strokeStyle = dk ? '#39475c' : '#ffffff'; for (let i = 0; i < 9; i++) { c.lineWidth = (i % 3 ? 1.6 : 3.2) * u; const a = (i % 2 ? 0.12 : -0.08), p = (i + 0.5) / 9; c.beginPath(); c.moveTo(-w * 0.1, h * p - w * a); c.lineTo(w * 1.1, h * p + w * a); c.stroke(); c.beginPath(); c.moveTo(w * p + h * a * 0.5, -5); c.lineTo(w * p - h * a * 0.5, h + 5); c.stroke(); }
+      const p0 = [w * 0.24, h * 0.8], p1 = o.pin ? [w * o.pin[0], h * o.pin[1]] : [w * 0.68, h * 0.3]; c.strokeStyle = '#2f7bff'; c.lineWidth = 2.6 * u; c.lineJoin = 'round'; c.beginPath(); c.moveTo(p0[0], p0[1]); c.lineTo(p0[0], (p0[1] + p1[1]) / 2); c.lineTo(p1[0], (p0[1] + p1[1]) / 2); c.lineTo(p1[0], p1[1]); c.stroke(); c.fillStyle = '#2f7bff'; c.beginPath(); c.arc(p0[0], p0[1], 3.4 * u, 0, 7); c.fill(); c.strokeStyle = '#fff'; c.lineWidth = u; c.stroke();
+      c.fillStyle = '#e5484d'; c.beginPath(); c.arc(p1[0], p1[1] - 6 * u, 4.6 * u, 0, 7); c.fill(); c.beginPath(); c.moveTo(p1[0] - 3.6 * u, p1[1] - 3.4 * u); c.lineTo(p1[0] + 3.6 * u, p1[1] - 3.4 * u); c.lineTo(p1[0], p1[1] + 1.5 * u); c.fill(); c.fillStyle = '#fff'; c.beginPath(); c.arc(p1[0], p1[1] - 6 * u, 1.7 * u, 0, 7); c.fill();
+      if (o.text) { c.fillStyle = dk ? 'rgba(12,16,22,.9)' : 'rgba(255,255,255,.94)'; R2(c, 5 * u, h - 20 * u, w - 10 * u, 15 * u, 4 * u); c.fill(); textBox(c, o.text, 9 * u, h - 20 * u, w - 18 * u, 15 * u, '700 $px Inter', dk ? '#fff' : '#111', 5.6 * u); } },
+    desktop(c, w, h, o = {}) { const u = min(w, h) / 100; scr.wall(c, w, h, { bg0: '#14213f', bg1: '#2c4a7c', bg2: '#5aa0c8', ...o }); c.fillStyle = 'rgba(8,10,16,.82)'; c.fillRect(0, h - 7 * u, w, 7 * u); for (let i = 0; i < 6; i++) { c.fillStyle = ['#2f7bff', '#3cc96a', '#ffb23f', '#e5484d', '#9b6bff', '#f2f3f5'][i]; R2(c, 3 * u + i * 6.5 * u, h - 5.8 * u, 4.6 * u, 4.6 * u, u); c.fill(); } txt(c, o.time || '23:47', w - 4 * u, h - 3.4 * u, `600 ${3.4 * u}px Inter`, '#fff', 'right');
+      const win = (x, y, ww, hh, bar, body) => { c.fillStyle = 'rgba(0,0,0,.3)'; R2(c, x + u, y + 1.5 * u, ww, hh, 2 * u); c.fill(); c.fillStyle = body; R2(c, x, y, ww, hh, 2 * u); c.fill(); c.fillStyle = bar; R2(c, x, y, ww, 5 * u, 2 * u); c.fill(); c.fillRect(x, y + 3 * u, ww, 2 * u); ['#e5484d', '#ffb23f', '#3cc96a'].forEach((k, i) => { c.fillStyle = k; c.beginPath(); c.arc(x + 3 * u + i * 3 * u, y + 2.5 * u, 0.9 * u, 0, 7); c.fill(); }); };
+      win(w * 0.07, h * 0.1, w * 0.52, h * 0.62, '#d9dde3', '#f6f7f9'); greek(c, w * 0.1, h * 0.22, w * 0.46, 9, 4.6 * u, '#9aa3b0', 3); win(w * 0.5, h * 0.3, w * 0.42, h * 0.5, '#20242c', '#11141a'); greek(c, w * 0.53, h * 0.4, w * 0.36, 7, 4.4 * u, '#3cc96a', 5);
+      if (o.text) { c.fillStyle = 'rgba(255,255,255,.96)'; R2(c, w * 0.2, h * 0.34, w * 0.6, h * 0.3, 2 * u); c.fill(); textBox(c, o.text, w * 0.23, h * 0.36, w * 0.54, h * 0.26, '700 $px Inter', '#111', 7 * u); } },
+    code(c, w, h, o = {}) { const u = min(w, h) / 100, r = rng(o.seed || 7), pal = ['#7fd4ff', '#c3e88d', '#f78c6c', '#c792ea', '#d6deeb', '#ffcb6b']; c.fillStyle = '#0d1117'; c.fillRect(0, 0, w, h); c.fillStyle = '#161b22'; c.fillRect(0, 0, w * 0.17, h); c.fillRect(0, 0, w, 6 * u); greek(c, 2 * u, 10 * u, w * 0.13, 12, 5 * u, '#4b5565', 2, 0.35);
+      for (let i = 0; i < flr((h - 12 * u) / (4.6 * u)); i++) { let x = w * 0.2 + flr(r() * 4) * 3 * u; const n = 1 + flr(r() * 5); if (r() < 0.14) continue; for (let k = 0; k < n; k++) { const ww = (3 + r() * 13) * u; c.fillStyle = pal[flr(r() * pal.length)]; c.fillRect(x, 10 * u + i * 4.6 * u, ww, 2 * u); x += ww + 1.6 * u; if (x > w * 0.92) break; } } },
+    terminal(c, w, h, o = {}) { const u = min(w, h) / 100, col = o.color || '#49f28a', lines = o.lines || ['> connect 10.4.7.31', 'handshake ok', '> bypass --door 3', 'ACCESS GRANTED', '> _']; c.fillStyle = '#04080a'; c.fillRect(0, 0, w, h); const fs = min(6.2 * u, (h - 10 * u) / (lines.length * 1.35)); lines.forEach((l, i) => { c.font = `700 ${fs}px "Share Tech Mono", monospace`; c.fillStyle = col; c.textAlign = 'left'; c.textBaseline = 'middle'; c.fillText(l, 5 * u, 8 * u + i * fs * 1.35, w - 10 * u); }); },
+    cctv(c, w, h, o = {}) { const u = min(w, h) / 100, r = rng(o.seed || 12); c.fillStyle = '#05070a'; c.fillRect(0, 0, w, h); for (let k = 0; k < 4; k++) { const x = (k % 2) * w / 2 + u, y = flr(k / 2) * h / 2 + u, ww = w / 2 - 2 * u, hh = h / 2 - 2 * u, g = c.createLinearGradient(x, y, x, y + hh); g.addColorStop(0, '#27323a'); g.addColorStop(1, '#3d4a50'); c.fillStyle = g; c.fillRect(x, y, ww, hh);
+        c.fillStyle = '#566469'; c.beginPath(); c.moveTo(x, y + hh); c.lineTo(x + ww * 0.3, y + hh * 0.45); c.lineTo(x + ww * 0.7, y + hh * 0.45); c.lineTo(x + ww, y + hh); c.fill(); c.fillStyle = '#1b2227'; c.fillRect(x + ww * (0.36 + r() * 0.1), y + hh * 0.2, ww * 0.16, hh * 0.25); if (k === (o.figure ?? 2)) { c.fillStyle = '#0b0e10'; c.fillRect(x + ww * 0.58, y + hh * 0.42, ww * 0.06, hh * 0.3); c.beginPath(); c.arc(x + ww * 0.61, y + hh * 0.38, ww * 0.035, 0, 7); c.fill(); }
+        txt(c, 'CAM 0' + (k + 1), x + 2 * u, y + 4 * u, `700 ${3.6 * u}px "Share Tech Mono", monospace`, '#e8f0f2', 'left'); c.fillStyle = '#e5484d'; c.beginPath(); c.arc(x + ww - 3.4 * u, y + 4 * u, 1.3 * u, 0, 7); c.fill(); txt(c, o.time || '03:07:41', x + ww - 2 * u, y + hh - 3.4 * u, `700 ${3.2 * u}px "Share Tech Mono", monospace`, '#e8f0f2', 'right'); }
+      c.fillStyle = 'rgba(0,0,0,.18)'; for (let y = 0; y < h; y += 4) c.fillRect(0, y, w, 1.4); },
+    login(c, w, h, o = {}) { const u = min(w, h) / 100; scr.wall(c, w, h, { bg0: '#0c1322', bg1: '#162a48', bg2: '#27506e', ...o }); c.fillStyle = 'rgba(255,255,255,.14)'; c.beginPath(); c.arc(w / 2, h * 0.32, 11 * u, 0, 7); c.fill(); c.fillStyle = '#dfe6ee'; c.beginPath(); c.arc(w / 2, h * 0.32 - 3 * u, 4.2 * u, 0, 7); c.fill(); c.beginPath(); c.arc(w / 2, h * 0.32 + 9 * u, 7 * u, PI, 0); c.fill();
+      txt(c, o.title || 'ENTER PASSWORD', w / 2, h * 0.32 + 20 * u, `700 ${5.2 * u}px Inter`, '#fff'); c.fillStyle = 'rgba(255,255,255,.92)'; R2(c, w / 2 - 26 * u, h * 0.32 + 27 * u, 52 * u, 10 * u, 2 * u); c.fill(); c.fillStyle = '#111'; const n = o.dots ?? 5; for (let i = 0; i < n; i++) { c.beginPath(); c.arc(w / 2 - 21 * u + i * 5 * u, h * 0.32 + 32 * u, 1.5 * u, 0, 7); c.fill(); } if (o.text) txt(c, o.text, w / 2, h * 0.32 + 45 * u, `700 ${4.6 * u}px Inter`, o.color || '#ff6b6b'); },
+    countdown(c, w, h, o = {}) { const u = min(w, h) / 100, col = o.color || '#ff3b2f'; c.fillStyle = '#060607'; c.fillRect(0, 0, w, h); if (o.title) txt(c, o.title, w / 2, h * 0.24, `700 ${6 * u}px Inter`, rgba(col, 0.85)); const s = fitFont(c, o.text || '00:59', w * 0.84, 40 * u, '700 $px "Share Tech Mono", monospace'); c.shadowColor = col; c.shadowBlur = s * 0.25; txt(c, o.text || '00:59', w / 2, h * 0.52, c.font, col); c.shadowBlur = 0; },
+    access(c, w, h, o = {}) { const u = min(w, h) / 100, ok = !!o.granted, col = o.color || (ok ? '#3cf08a' : '#ff3b2f'); c.fillStyle = ok ? '#04140b' : '#170506'; c.fillRect(0, 0, w, h); c.strokeStyle = col; c.lineWidth = 1.6 * u; c.strokeRect(4 * u, 4 * u, w - 8 * u, h - 8 * u); c.shadowColor = col; c.shadowBlur = 5 * u; textBox(c, o.text || (ok ? 'ACCESS GRANTED' : 'ACCESS DENIED'), 8 * u, h * 0.3, w - 16 * u, h * 0.4, '700 $px "Share Tech Mono", monospace', col, 16 * u); c.shadowBlur = 0; },
+    static(c, w, h, o = {}) { const r = rng(o.seed || 21), n = 5; for (let y = 0; y < h; y += n) for (let x = 0; x < w; x += n) { const v = flr(30 + r() * 200); c.fillStyle = `rgb(${v},${v},${v})`; c.fillRect(x, y, n, n); } c.fillStyle = 'rgba(0,0,0,.25)'; for (let y = 0; y < h; y += 6) c.fillRect(0, y, w, 2); },
+    photo(c, w, h, o = {}) { const g = c.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#f2a25a'); g.addColorStop(0.6, '#f7d9a0'); g.addColorStop(1, '#4a6a5a'); c.fillStyle = g; c.fillRect(0, 0, w, h); c.fillStyle = '#fff2c8'; c.beginPath(); c.arc(w * 0.68, h * 0.42, min(w, h) * 0.12, 0, 7); c.fill(); c.fillStyle = '#2d4a44'; c.beginPath(); c.moveTo(0, h * 0.75); c.lineTo(w * 0.3, h * 0.5); c.lineTo(w * 0.55, h * 0.72); c.lineTo(w * 0.78, h * 0.56); c.lineTo(w, h * 0.74); c.lineTo(w, h); c.lineTo(0, h); c.fill(); },
+  };
+  /** Draw a built-in screen picture: drawScreen(ctx, 'chat', w, h, {messages}). kind may also be a function (ctx, w, h, o). */
+  const drawScreen = (c, kind, w, h, o = {}) => { c.save(); (typeof kind === 'function' ? kind : (scr[kind] || scr.off))(c, w, h, o); c.restore(); };
+  /** Screen quad for a builder: a glowing picture w x h metres (facing +Z, or +Y with up). Returns the mesh; marks it keep. */
+  function screenOf(w, h, ppm, kind, o, up) {
+    const pw = Math.round(w * ppm), ph = Math.round(h * ppm), off = kind === 'off';
+    const key = 'scr|' + (typeof kind === 'function' ? kind.toString().length + kind.name : kind) + '|' + pw + 'x' + ph + '|' + JSON.stringify([o.time, o.date, o.text, o.from, o.caller, o.sub, o.name, o.messages, o.title, o.lines, o.seed, o.dark, o.pin, o.granted, o.color2, o.dots, o.figure, o.bg0, o.bg1, o.bg2]);
+    const m = off ? mat('#080a0d', { rough: 0.15, own: true }) : tm(key, pw, ph, (c, cw, ch) => drawScreen(c, kind, cw, ch, o), { basic: true, own: true, decal: false });
+    m.polygonOffset = true; m.polygonOffsetFactor = -2; m.polygonOffsetUnits = -2;
+    const q = keep(decal(w, h, m, { up })); q.userData.px = [pw, ph]; return q;
+  }
+  const screenUD = (ud, q, w, h, ppm, glowK = 1) => { ud.screen = q; ud.screenSize = [w, h]; ud.screenPpm = ppm; ud.lights = ud.lights || []; ud.on = 1; ud.setOn = k => { ud.on = clamp(k); if (q.material.isMeshBasicMaterial) q.material.color.setScalar(ud.on * glowK); ud.lights.forEach(l => { l.intensity = l.userData.base * ud.on; }); }; if (glowK !== 1) ud.setOn(1); };
+
+  // =====================================================================================================
+  // TECH
+  // =====================================================================================================
+  def('smartphone', 'tech', (o, g, ud) => {
+    const w = 0.072, h = 0.152, t = 0.0082, col = o.color || C.black, sw = w - 0.006, sh = h - 0.008, ppm = 4400;
+    slab(w, h, t, 0.0115, col, { bevel: 0.0016, n: 3, rough: 0.35, metal: 0.25 }).to(g);
+    const q = screenOf(sw, sh, ppm, o.screen || 'lock', o, true).at(0, t + 0.0002, 0).to(g);
+    box(0.0012, 0.003, 0.016, shade(col, 1.5), METAL).at(w / 2, t / 2, -0.02).to(g); box(0.0012, 0.003, 0.011, shade(col, 1.5), METAL).at(-w / 2, t / 2, -0.035).to(g); box(0.0012, 0.003, 0.011, shade(col, 1.5), METAL).at(-w / 2, t / 2, -0.02).to(g);
+    slab(0.032, 0.034, 0.0016, 0.008, shade(col, 1.35), { n: 2, rough: 0.3, metal: 0.3 }).rot(PI, 0, 0).at(-0.014, 0, -h / 2 + 0.024).to(g);                 // camera island on the back
+    [[-0.021, -0.008], [-0.021, 0.008], [-0.007, 0]].forEach(([x, z]) => { cyl(0.0052, 0.0052, 0.0012, 8, '#0c0e12', GLOSS).at(x, -0.0021, -h / 2 + 0.024 + z).to(g); cyl(0.0026, 0.0026, 0.0014, 6, '#2a3550', GLOSS).at(x, -0.0022, -h / 2 + 0.024 + z).to(g); });
+    cyl(0.002, 0.002, 0.0006, 6, '#f6e7b0').at(-0.007, -0.0018, -h / 2 + 0.036).to(g);
+    screenUD(ud, q, sw, sh, ppm, o.glow ?? 1); ud.lightAt = socket(0, 0.06, 0).to(g); ud.lightColor = o.lightColor || '#9fc4ff';
+    return { grip: [0, t / 2, 0.03], hold: '-x y', aim: [0, 1, 0], top: [0, 0, -1] };
+  });
+  alias('phone', 'smartphone');
+
+  def('tablet', 'tech', (o, g, ud) => {
+    const land = !!o.landscape, w = land ? 0.248 : 0.178, h = land ? 0.178 : 0.248, t = 0.0072, col = o.color || '#3a3f48', sw = w - 0.016, sh = h - 0.016, ppm = 2600;
+    slab(w, h, t, 0.012, col, { bevel: 0.0015, n: 3, rough: 0.35, metal: 0.3 }).to(g); slab(w - 0.004, h - 0.004, 0.0004, 0.011, '#0b0d10', { n: 3, rough: 0.2 }).at(0, t, 0).to(g);
+    const q = screenOf(sw, sh, ppm, o.screen || 'home', o, true).at(0, t + 0.0006, 0).to(g);
+    cyl(0.0045, 0.0045, 0.001, 8, '#0c0e12', GLOSS).at(w / 2 - 0.014, -0.0005, -h / 2 + 0.014).to(g);
+    screenUD(ud, q, sw, sh, ppm, o.glow ?? 1); ud.lightAt = socket(0, 0.1, 0).to(g); ud.lightColor = o.lightColor || '#9fc4ff';
+    return { grip: [0, t / 2, h * 0.36], hold: '-x y', aim: [0, 1, 0], top: [0, 0, -1] };
+  });
+
+  def('laptop', 'tech', (o, g, ud) => {
+    const w = 0.33, d = 0.228, tb = 0.013, tl = 0.0065, col = o.color || '#a9b1ba', sw = w - 0.022, sh = d - 0.03, ppm = 1900;
+    slab(w, d, tb, 0.012, col, { bevel: 0.002, n: 2, ...SATIN }).to(g);
+    decal(w - 0.03, d * 0.46, tm('laptopKeys|' + (o.backlit ? 1 : 0), 512, 176, (c, cw, ch) => { c.fillStyle = '#15171b'; c.fillRect(0, 0, cw, ch); const rows = 6, kh = ch / rows; for (let j = 0; j < rows; j++) { const n = j === 5 ? 9 : 14, kw = cw / 14; for (let i = 0; i < n; i++) { let x = i * kw, ww = kw; if (j === 5) { x = [0, 1, 2, 3, 4, 9, 10, 11, 12][i] * kw; ww = i === 4 ? kw * 5 : kw; } c.fillStyle = '#2b2f36'; R2(c, x + 2, j * kh + 2, ww - 4, kh - 4, 4); c.fill(); c.fillStyle = o.backlit ? '#eaf4ff' : '#9aa3ae'; c.fillRect(x + ww / 2 - 4, j * kh + kh / 2 - 3, i % 3 ? 8 : 5, 5); } } }, { emissive: !!o.backlit, ei: 0.55, rough: 0.6 }), { up: true }).at(0, tb + 0.0003, -d * 0.16).to(g);
+    slab(0.1, 0.062, 0.0004, 0.004, shade(col, 0.9), { n: 1, rough: 0.3 }).at(0, tb, d * 0.3).to(g);                                                     // trackpad
+    cyl(0.0055, 0.0055, w * 0.8, 6, shade(col, 0.55), SATIN).rot(0, 0, PI / 2).at(0, tb - 0.001, -d / 2 + 0.006).to(g);                                     // hinge barrel
+    const lid = part().at(0, tb + 0.0016, -d / 2 + 0.006).to(g), zc = (d - 0.006) / 2 - 0.003;
+    slab(w, d - 0.006, tl, 0.012, col, { bevel: 0.002, n: 2, ...SATIN }).at(0, 0, zc).to(lid);
+    slab(w - 0.004, d - 0.01, 0.0005, 0.011, '#0b0d10', { n: 2, rough: 0.25 }).rot(PI, 0, 0).at(0, 0, zc).to(lid);                                          // bezel (inner face)
+    plate(0.03, 0.03, 0.0006, 0.007, shade(col, 0.82), { n: 2, ...SATIN }).rot(PI / 2, 0, 0).at(0, tl + 0.0001, zc).to(lid);                                // emblem on the back
+    const kind = o.screen || 'desktop', q = screenOf(sw, sh, ppm, kind, o, false); q.geometry.rotateX(PI / 2); q.position.set(0, -0.0009, zc + 0.002); lid.add(q);
+    const la = socket(0, -0.12, zc).to(lid);
+    screenUD(ud, q, sw, sh, ppm, o.glow ?? 1); ud.lid = lid; ud.lightAt = la; ud.lightColor = o.lightColor || '#9fc4ff';
+    /** open(k): 0 = closed, 1 = fully open (135 degrees). */
+    ud.open = k => { ud.openK = clamp(k); lid.rotation.x = -ud.openK * PI * 0.75; return ud.openK; };
+    ud.open(o.open ?? 0.8);
+    return { grip: [0, tb / 2, d / 2], hold: 'z x', anchor: 'keep', aim: [0, 0, 1] };
+  });
+
+  def('walkieTalkie', 'tech', (o, g, ud) => {
+    const col = o.color || '#2a2d33', acc = o.accent || C.orange, w = 0.06, h = 0.118, d = 0.034;
+    plate(w, h, d, 0.009, col, { bevel: 0.003, n: 2, rough: 0.7 }).at(0, h / 2, 0).to(g);
+    decal(w - 0.01, h - 0.012, tm('walkie|' + acc, 200, 424, (c, cw, ch) => { c.fillStyle = '#1b1d21'; c.fillRect(0, 0, cw, ch); c.fillStyle = '#0c0d10'; for (let j = 0; j < 9; j++) for (let i = 0; i < 6; i++) { c.beginPath(); c.arc(40 + i * 24, 196 + j * 20, 6, 0, 7); c.fill(); } c.fillStyle = '#07090b'; R2(c, 24, 26, cw - 48, 96, 10); c.fill(); c.fillStyle = '#3a3e45'; for (let i = 0; i < 3; i++) { R2(c, 26 + i * 52, 384, 44, 26, 8); c.fill(); } c.fillStyle = acc; c.fillRect(24, 140, cw - 48, 8); txt(c, 'TX·7', cw / 2, 164, '700 20px Inter', '#aab2bd'); }, { rough: 0.7 })).at(0, h / 2, d / 2 + 0.0002).to(g);
+    const disp = keep(decal(0.036, 0.018, tm('walkieLcd|' + (o.display || 'CH 07'), 144, 72, (c, cw, ch) => { c.fillStyle = '#b8f25a'; c.fillRect(0, 0, cw, ch); txt(c, o.display || 'CH 07', cw / 2, ch / 2 + 2, '700 40px "Share Tech Mono", monospace', '#14210a'); }, { basic: true, own: true }))).at(0, h - 0.027, d / 2 + 0.0006).to(g);
+    cylB(0.0048, 0.0062, 0.092, 6, '#17191c', { rough: 0.8 }).at(-w / 2 + 0.012, h, 0).to(g); cylB(0.0068, 0.0068, 0.012, 6, '#34383f').at(-w / 2 + 0.012, h - 0.002, 0).to(g);                 // antenna
+    cylB(0.0075, 0.0075, 0.011, 8, '#3a3e45', { rough: 0.6 }).at(w / 2 - 0.013, h, 0).to(g); cylB(0.005, 0.005, 0.008, 6, '#3a3e45').at(0.002, h, 0.004).to(g);                                  // knobs
+    box(0.004, 0.034, 0.016, acc, { rough: 0.6 }).at(-w / 2 - 0.001, h * 0.62, 0).to(g);                                                                                                     // push-to-talk
+    box(0.022, 0.07, 0.006, '#1b1d21').at(0, h * 0.55, -d / 2 - 0.003).to(g);                                                                                                                // belt clip
+    const led = keep(ball(0.0032, glo(o.led || '#ff3b2f', 1.6), 0)).at(w / 2 - 0.028, h + 0.001, 0.006).to(g);
+    ud.led = led; ud.display = disp; ud.update = t => { led.material.color.set(o.led || '#ff3b2f').multiplyScalar(mod(t, 1.4) < 0.18 ? 2 : 0.35); };
+    return { grip: [0, h * 0.42, 0], hold: 'x z' };
+  });
+
+  def('radio', 'tech', (o, g, ud) => {
+    const w = 0.34, h = 0.2, d = 0.13, col = o.color || C.wood, on = o.on !== false;
+    plate(w, h, d, 0.034, col, { n: 3, vary: 0.05, rough: 0.7 }).at(0, h / 2 + 0.008, 0).to(g);
+    plate(w - 0.03, h - 0.03, 0.006, 0.024, shade(col, 0.62), { n: 3 }).at(0, h / 2 + 0.008, d / 2).to(g);                                              // recessed front panel
+    decal(w * 0.52, h - 0.062, tm('radioGrille|' + (o.grille || '#cdb98a'), 256, 200, (c, cw, ch) => { c.fillStyle = o.grille || '#cdb98a'; c.fillRect(0, 0, cw, ch); c.fillStyle = 'rgba(60,40,20,.28)'; for (let y = 0; y < ch; y += 6) c.fillRect(0, y, cw, 2); for (let x = 0; x < cw; x += 6) c.fillRect(x, 0, 1, ch); c.fillStyle = shade(col, 0.5); for (let i = 1; i < 5; i++) c.fillRect(0, i * ch / 5 - 5, cw, 10); }, { rough: 1 })).at(-w * 0.19, h / 2 + 0.008, d / 2 + 0.0034).to(g);
+    const dial = keep(decal(w * 0.3, 0.07, tm('radioDial', 240, 140, (c, cw, ch) => { const gr = c.createLinearGradient(0, 0, 0, ch); gr.addColorStop(0, '#ffe2a0'); gr.addColorStop(1, '#f2a94a'); c.fillStyle = gr; c.fillRect(0, 0, cw, ch); c.fillStyle = '#5a3210'; for (let i = 0; i <= 20; i++) c.fillRect(14 + i * 10.6, i % 5 ? 70 : 58, 2.2, i % 5 ? 14 : 26); ['55', '70', '90', '120', '160'].forEach((s, i) => txt(c, s, 18 + i * 52, 36, '700 22px Inter', '#5a3210')); txt(c, 'AM', 22, 116, '700 20px Inter', '#5a3210'); txt(c, 'kHz', cw - 28, 116, '700 20px Inter', '#5a3210'); }, { basic: true, own: true }))).at(w * 0.27, h / 2 + 0.046, d / 2 + 0.0036).to(g);
+    const needle = keep(box(0.0022, 0.062, 0.001, '#c8281e')).at(w * 0.27, h / 2 + 0.046, d / 2 + 0.0044).to(g);
+    for (const x of [w * 0.19, w * 0.35]) { cyl(0.019, 0.021, 0.016, 8, shade(col, 0.42), { rough: 0.5 }).rot(PI / 2, 0, 0).at(x, h / 2 - 0.036, d / 2 + 0.011).to(g); cyl(0.011, 0.011, 0.004, 8, C.brass, METAL).rot(PI / 2, 0, 0).at(x, h / 2 - 0.036, d / 2 + 0.021).to(g); }
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) cylB(0.012, 0.014, 0.008, 6, '#2a2520').at(sx * (w / 2 - 0.04), 0, sz * (d / 2 - 0.03)).to(g);
+    const hdl = arcTube(0.09, 0.006, PI, shade(C.leather, 0.9), { rs: 4, ts: 8, rough: 0.9 }).scl(1, 0.42, 1.8).at(0, h + 0.006, 0).to(g);
+    for (const sx of [-1, 1]) box(0.014, 0.008, 0.02, C.brass, METAL).at(sx * 0.09, h + 0.01, 0).to(g);
+    let ant = null; if (o.antenna !== false) { ant = part(cylB(0.0032, 0.0038, 0.2, 5, C.chrome, METAL), cylB(0.002, 0.0026, 0.2, 5, C.chrome, METAL).at(0, 0.2, 0), ball(0.0045, C.chrome, 0, METAL).at(0, 0.4, 0)).rot(0, 0, -0.42).at(w / 2 - 0.035, h + 0.004, -d / 2 + 0.02).to(g); }
+    const la = socket(w * 0.27, h / 2 + 0.046, d / 2 + 0.08).to(g);
+    Object.assign(ud, { dial, needle, antenna: ant, handle: hdl, lightAt: la, lightColor: '#ffb45a', lights: [], on: on ? 1 : 0 });
+    /** tune(k): move the needle across the dial, 0..1. */
+    ud.tune = k => { needle.position.x = w * 0.27 + (clamp(k) - 0.5) * w * 0.26; };
+    ud.setOn = k => { ud.on = clamp(k); dial.material.color.setScalar(0.12 + 0.88 * ud.on); ud.lights.forEach(l => { l.intensity = l.userData.base * ud.on; }); };
+    ud.tune(o.tune ?? 0.36); ud.setOn(on ? 1 : 0);
+    return { grip: [0, h + 0.044, 0], hold: 'z y', anchor: 'keep' };
+  });
+
+  def('camera', 'tech', (o, g, ud) => {
+    const col = o.color || '#23262b', acc = o.accent || '#c8382e', w = 0.128, h = 0.078, d = 0.05;
+    plate(w, h, d, 0.009, col, { bevel: 0.003, n: 2, rough: 0.75, vary: 0.03 }).at(0, h / 2, 0).to(g);
+    cylB(0.021, 0.021, h - 0.004, 8, shade(col, 0.82), { rough: 0.95 }).at(-w / 2 + 0.019, 0.002, d / 2 - 0.004).to(g);                                   // hand grip
+    ext([[-0.026, 0], [0.026, 0], [0.019, 0.02], [-0.019, 0.02]], 0.046, col, { center: true, rough: 0.75 }).at(0.006, h, 0).to(g);                      // prism hump
+    box(0.022, 0.004, 0.02, C.steel, METAL).at(0.006, h + 0.021, -0.004).to(g);                                                                          // hot shoe
+    const flash = keep(box(0.026, 0.009, 0.002, glo('#dfe6ee', 0.5))).at(0.006, h + 0.011, 0.0235).to(g);
+    cylB(0.008, 0.008, 0.006, 8, C.chrome, METAL).at(-w / 2 + 0.019, h, d / 2 - 0.004).to(g);                                                             // shutter button
+    cylB(0.012, 0.012, 0.008, 10, shade(col, 1.3), { rough: 0.6 }).at(w / 2 - 0.022, h, 0).to(g);                                                         // mode dial
+    const lz = grp().rot(PI / 2, 0, 0).at(0.006, h / 2 - 0.002, d / 2).to(g);                                                                             // lens, modelled along +Y
+    lathe([[0, 0], [0.036, 0], [0.036, 0.008], [0.032, 0.012], [0.032, 0.03], [0.034, 0.032], [0.034, 0.052], [0.031, 0.056], [0.031, 0.066], [0.027, 0.066], [0.025, 0.058], [0, 0.058]], 10, shade(col, 0.9), { rough: 0.6 }).to(lz);
+    cyl(0.0345, 0.0345, 0.004, 10, acc, GLOSS).at(0, 0.014, 0).to(lz); cyl(0.0348, 0.0348, 0.012, 10, shade(col, 0.6), { rough: 1 }).at(0, 0.042, 0).to(lz);
+    const glass = keep(disc(0.025, 10, mat('#1a1836', { rough: 0.08, metal: 0.5, emissive: '#2a2a6a', ei: 0.5, own: true }))).at(0, 0.0585, 0).to(lz);
+    disc(0.007, 6, glo('#cfe0ff', 0.9)).at(-0.008, 0.059, -0.008).to(lz);
+    const q = screenOf(0.066, 0.044, 3200, o.screen || 'photo', o, false); q.rotation.y = PI; q.position.set(-0.012, h / 2 - 0.004, -d / 2 - 0.0006); g.add(q);
+    box(0.074, 0.052, 0.001, '#0c0d10').at(-0.012, h / 2 - 0.004, -d / 2).to(g); box(0.024, 0.014, 0.008, '#0c0d10').at(0.006, h + 0.006, -d / 2 - 0.002).to(g);   // screen frame, eyepiece
+    for (const sx of [-1, 1]) torus(0.006, 0.0014, C.steel, { rs: 4, ts: 6, ...METAL }).at(sx * (w / 2 + 0.002), h - 0.008, 0).to(g);
+    if (o.strap) tube([[-w / 2 - 0.004, h - 0.008, 0], [-w / 2 - 0.05, 0.03, -0.06], [-0.05, 0.004, -0.15], [0.06, 0.004, -0.16], [w / 2 + 0.06, 0.03, -0.07], [w / 2 + 0.004, h - 0.008, 0]], 0.0045, o.strapColor || '#1b1d21', { rs: 4, seg: 22 }).scl(1, 1, 1).to(g);
+    const fl = fx(flare('#ffffff', 1.4, 0)).at(0.006, h + 0.011, 0.04).to(g), lensAt = socket(0, 0.066, 0).to(lz);
+    screenUD(ud, q, 0.066, 0.044, 3200); Object.assign(ud, { lens: glass, lensAt, flashLamp: flash, flashFlare: fl });
+    /** flash(k): 0..1 brightness of the built-in flash (drive it with S3.pulse for a pop). */
+    ud.flash = k => { k = clamp(k); flash.material.color.set('#dfe6ee').multiplyScalar(0.5 + 3 * k); fl.material.opacity = k; };
+    return { grip: [-w / 2 + 0.019, h * 0.45, 0.01], hold: 'x z', grips: { eyes: { at: [0.006, h + 0.004, -d / 2 - 0.02], hold: 'x y' } }, aim: [0, 0, 1], anchor: 'floor' };
+  });
+
+  def('headphones', 'tech', (o, g, ud) => {
+    const col = o.color || '#2b2e34', acc = o.accent || C.orange, R = 0.085, rc = 0.042;
+    // modelled lying flat: ear axis along X, headband towards -Z
+    const band = grp().rot(-PI / 2, 0, 0).at(0, rc, 0).to(g);
+    arcTube(R, 0.0065, PI, col, { rs: 4, ts: 10, rough: 0.6 }).scl(1, 1, 2.6).to(band);
+    arcTube(R - 0.007, 0.006, PI * 0.5, shade(col, 0.6), { rs: 4, ts: 6, rough: 1 }).rot(0, 0, PI * 0.25).scl(1, 1, 2.2).to(band);                        // head cushion
+    for (const sx of [-1, 1]) {
+      box(0.006, 0.05, 0.012, C.steel, METAL).at(sx * R, -0.02, 0).to(band);                                                                              // slider
+      cyl(rc, rc * 0.9, 0.026, 10, col, { rough: 0.55 }).rot(0, 0, PI / 2).at(sx * (R - 0.004), rc, 0.05).to(g);                                          // cup shell
+      cyl(rc + 0.003, rc + 0.003, 0.016, 10, shade(col, 0.55), { rough: 1 }).rot(0, 0, PI / 2).at(sx * (R - 0.024), rc, 0.05).to(g);                       // ear cushion
+      cyl(rc * 0.55, rc * 0.55, 0.003, 10, acc, GLOSS).rot(0, 0, PI / 2).at(sx * (R + 0.0095), rc, 0.05).to(g);                                            // accent disc
+      box(0.008, 0.012, 0.03, col).at(sx * (R - 0.002), rc, 0.012).to(g);                                                                                  // yoke
+    }
+    return { grip: [0, rc, -R + 0.0], hold: 'x z', grips: { wear: { at: [0, rc, 0.05], hold: 'x z' } }, poses: { worn: { rot: [PI / 2, 0, 0] } } };
+  });
+
+  def('gameController', 'tech', (o, g, ud) => {
+    const col = o.color || '#2b2e34', lc = o.light || '#3aa0ff', t = 0.03;
+    const out = [[-0.05, 0.036], [0.05, 0.036], [0.072, 0.03], [0.081, 0.006], [0.079, -0.034], [0.068, -0.062], [0.05, -0.064], [0.036, -0.026], [-0.036, -0.026], [-0.05, -0.064], [-0.068, -0.062], [-0.079, -0.034], [-0.081, 0.006], [-0.072, 0.03]];
+    ext(out, t, col, { up: true, bevel: 0.007, rough: 0.6 }).to(g);
+    box(0.03, 0.004, 0.01, shade(col, 0.6)).at(-0.046, t + 0.001, -0.004).to(g); box(0.01, 0.004, 0.03, shade(col, 0.6)).at(-0.046, t + 0.001, -0.004).to(g);            // d-pad
+    [['#e5484d', 0.012, 0], ['#3cc96a', 0, 0.012], ['#2f7bff', -0.012, 0], ['#ffcc33', 0, -0.012]].forEach(([c, x, z]) => cylB(0.0052, 0.0052, 0.004, 8, c, GLOSS).at(0.046 + x, t - 0.001, -0.004 + z).to(g));
+    for (const sx of [-1, 1]) { cylB(0.011, 0.012, 0.003, 10, shade(col, 0.6)).at(sx * 0.022, t - 0.0005, 0.022).to(g); cylB(0.005, 0.006, 0.008, 6, shade(col, 0.5)).at(sx * 0.022, t, 0.022).to(g); cylB(0.0088, 0.0075, 0.0035, 10, shade(col, 0.75), { rough: 1 }).at(sx * 0.022, t + 0.007, 0.022).to(g);
+      box(0.03, 0.012, 0.012, shade(col, 0.72)).at(sx * 0.052, t * 0.62, -0.038).to(g); cylB(0.0026, 0.0026, 0.002, 6, shade(col, 1.6)).at(sx * 0.014, t - 0.0005, -0.012).to(g); }
+    slab(0.03, 0.018, 0.002, 0.004, shade(col, 0.7), { n: 1 }).at(0, t - 0.0008, -0.01).to(g);
+    const bar = keep(box(0.036, 0.005, 0.002, glo(lc, 1.5))).at(0, t * 0.5, -0.0365).to(g); ud.lightBar = bar;
+    return { grip: [0, t / 2, 0], hold: '-x z', aim: [0, 0, -1] };
+  });
+
+  def('tvRemote', 'tech', (o, g, ud) => {
+    const col = o.color || '#24272c', w = 0.046, L = 0.185, t = 0.017;
+    slab(w, L, t, 0.012, col, { bevel: 0.004, n: 2, rough: 0.55 }).to(g);
+    decal(w - 0.008, L - 0.014, tm('remote', 128, 560, (c, cw, ch) => { c.fillStyle = '#1c1e22'; c.fillRect(0, 0, cw, ch); c.fillStyle = '#e5484d'; c.beginPath(); c.arc(26, 30, 12, 0, 7); c.fill(); c.fillStyle = '#4b515a'; c.beginPath(); c.arc(cw - 26, 30, 10, 0, 7); c.fill(); c.strokeStyle = '#5a616c'; c.lineWidth = 12; c.beginPath(); c.arc(cw / 2, 124, 36, 0, 7); c.stroke(); c.fillStyle = '#7a8290'; c.beginPath(); c.arc(cw / 2, 124, 15, 0, 7); c.fill();
+      c.fillStyle = '#4b515a'; R2(c, 14, 190, 28, 76, 12); c.fill(); R2(c, cw - 42, 190, 28, 76, 12); c.fill(); for (let j = 0; j < 4; j++) for (let i = 0; i < 3; i++) { R2(c, 14 + i * 36, 296 + j * 40, 28, 26, 8); c.fill(); } ['#e5484d', '#3cc96a', '#ffcc33', '#2f7bff'].forEach((k, i) => { c.fillStyle = k; R2(c, 12 + i * 27, 480, 21, 12, 5); c.fill(); }); txt(c, 'TV', cw / 2, 530, '700 22px Inter', '#6b7380'); }, { rough: 0.6 }), { up: true }).at(0, t + 0.0002, 0).to(g);
+    box(w * 0.5, t * 0.5, 0.003, '#3a0c10', GLOSS).at(0, t * 0.55, -L / 2 - 0.0005).to(g);
+    return { grip: [0, t / 2, 0.04], hold: '-x z', aim: [0, 0, -1] };
+  });
+
+  def('usbStick', 'tech', (o, g, ud) => {
+    const col = o.color || C.red, lc = o.led || '#3aa0ff';
+    ext(rrPts(0.04, 0.018, 0.004, 2), 0.0085, col, { up: true, bevel: 0.0012, ...GLOSS }).at(-0.008, 0, 0).to(g);
+    box(0.013, 0.0046, 0.0122, C.chrome, METAL).at(0.0185, 0.00425, 0).to(g); for (const z of [-0.003, 0.003]) box(0.004, 0.0048, 0.0026, '#2a2d33').at(0.019, 0.00425, z).to(g);
+    box(0.014, 0.0005, 0.01, shade(col, 1.5), GLOSS).at(-0.012, 0.0087, 0).to(g);                                                                           // label
+    torus(0.004, 0.0011, C.steel, { rs: 4, ts: 6, ...METAL }).rot(PI / 2, 0, 0).at(-0.0305, 0.00425, 0).to(g);
+    const led = keep(box(0.003, 0.0006, 0.003, glo(lc, 1.6))).at(0.002, 0.0088, 0).to(g); ud.led = led;
+    ud.update = t => { led.material.color.set(lc).multiplyScalar(mod(t, 0.5) < 0.25 ? 2 : 0.3); };
+    return { grip: [-0.014, 0.00425, 0], hold: '-y z', aim: [1, 0, 0] };
+  });
+
+  def('keyCard', 'tech', (o, g, ud) => {
+    const col = o.color || C.blue, w = 0.054, h = 0.0856, t = 0.0012;
+    slab(w, h, t, 0.0035, '#f3f4f6', { n: 2, rough: 0.4 }).to(g);
+    decal(w - 0.0006, h - 0.0006, tm('keycard|' + [col, o.title, o.name, o.level].join('|'), 216, 342, (c, cw, ch) => { c.fillStyle = '#f3f4f6'; c.fillRect(0, 0, cw, ch); c.fillStyle = col; c.fillRect(0, 0, cw, 92); c.fillStyle = shade(col, 0.7); c.fillRect(0, 84, cw, 8); c.fillStyle = '#f3f4f6'; R2(c, cw / 2 - 26, 12, 52, 10, 5); c.fill();
+      textBox(c, o.title || 'ACCESS', 10, 30, cw - 20, 46, '800 $px Inter', '#ffffff', 34); c.fillStyle = '#c9ced6'; R2(c, 22, 110, 76, 96, 8); c.fill(); c.fillStyle = '#7b8594'; c.beginPath(); c.arc(60, 146, 18, 0, 7); c.fill(); c.beginPath(); c.arc(60, 206, 30, PI, 0); c.fill();
+      textBox(c, o.level || 'LEVEL 5', 106, 112, 100, 40, '800 $px Inter', col, 26); greek(c, 110, 164, 92, 3, 13, '#8a93a0', 4); textBox(c, o.name || 'STAFF', 14, 220, cw - 28, 34, '700 $px Inter', '#1b2028', 24);
+      c.fillStyle = '#111'; const r = rng(8); for (let x = 22; x < cw - 22;) { const bw = 1 + flr(r() * 4); c.fillRect(x, 270, bw, 44); x += bw + 1 + flr(r() * 3); } }, { rough: 0.35 }), { up: true }).at(0, t + 0.0001, 0).to(g);
+    const back = decal(w - 0.0006, h - 0.0006, tm('keycardBack', 108, 171, (c, cw, ch) => { c.fillStyle = '#eceef1'; c.fillRect(0, 0, cw, ch); c.fillStyle = '#1b1d21'; c.fillRect(0, 22, cw, 26); greek(c, 12, 70, 84, 6, 11, '#a2a9b4', 6); }, { rough: 0.4 }), { up: true }); back.rotation.z = PI; back.position.y = -0.0001; g.add(back);
+    if (o.lanyard) { const lc = o.lanyardColor || col; box(0.012, 0.004, 0.016, C.steel, METAL).at(0, 0.002, -h / 2 - 0.006).to(g); tube([[0.004, 0.002, -h / 2 - 0.012], [0.05, 0.002, -0.2], [0.03, 0.002, -0.4], [-0.03, 0.002, -0.4], [-0.05, 0.002, -0.2], [-0.004, 0.002, -h / 2 - 0.012]], 0.006, lc, { rs: 4, seg: 24, rough: 0.9 }).scl(1, 0.25, 1).to(g); }
+    return { grip: [0, t / 2, 0.02], hold: 'x -y', aim: [0, 1, 0], top: [0, 0, -1] };
   });
 
   // ==== MORE BUILDERS ====

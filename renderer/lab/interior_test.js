@@ -52,17 +52,31 @@
   }
 
   // ---------------- catalogue ----------------
-  sheet('interior_cat1', { cols: 2, cell: [2.9, 4.4] }, [
+  sheet('interior_cat1', { cols: 2, cell: [3.0, 3.5], pitch: 0.6 }, [
     ['door', () => K.door({ open: 0.35 })], ['frontDoor', () => K.frontDoor({ number: '13', open: 0.15 })],
     ['doubleDoors', () => K.doubleDoors({ open: 0.3 })], ['slidingDoor', () => K.slidingDoor({ open: 0.4 })],
     ['cellarDoor', () => K.cellarDoor({ hatch: true, open: 0.2 })], ['slidingDoor barn', () => K.slidingDoor({ style: 'barn', open: 0.3 }), { dx: -0.4 }],
     ['liftDoors', () => K.liftDoors({ open: 0.6, floor: '3' })], ['1.75 m', figure()],
   ]);
-  sheet('interior_cat2', { cols: 2, cell: [3.4, 4.6] }, [
+  sheet('interior_cat2', { cols: 2, cell: [3.4, 3.9], pitch: 0.6 }, [
     ['stairs', () => K.stairs({ runner: '#7a2e2e' })], ['stairs open', () => K.stairs({ style: 'open', h: 2.4, w: 0.9, rail: 'right' })],
     ['window', () => K.window({ curtains: true, view: 'day', spill: true })], ['window blinds', () => K.window({ blinds: 1, view: 'night', panes: [1, 1] })],
     ['ladder', () => K.ladder()], ['bars', () => K.bars({ w: 2.6, open: 0.4 })],
     ['vaultDoor', () => K.vaultDoor({ open: 0.75 })], ['1.75 m', figure()],
+  ]);
+  sheet('interior_cat3', { cols: 2, cell: [2.9, 2.7], pitch: 0.55 }, [
+    ['sofa', () => K.sofa()], ['bookcase', () => K.bookcase()],
+    ['armchair', () => K.armchair()], ['tv', () => K.tv({ show: 'news' })],
+    ['coffeeTable', () => K.coffeeTable()], ['tv crt', () => K.tv({ style: 'crt', show: 'static' })],
+    ['floorLamp', () => K.floorLamp()], ['plant', () => K.plant()],
+    ['1.75 m', figure()], ['rug', () => K.rug()],
+  ]);
+  sheet('interior_cat4', { cols: 2, cell: [2.6, 3.4], pitch: 0.6 }, [
+    ['fireplace', () => K.fireplace({ breast: 2.6 }), { wall: 1 }], ['mirror', () => K.mirror(), { wall: 1 }],
+    ['picture', () => grp(K.picture({ style: 'landscape' }).at(-0.45, 0, 0), K.picture({ style: 'portrait', y: 1.6 }).at(0.4, 0, 0), K.picture({ style: 'family', w: 0.4, h: 0.3, y: 1.05 }).at(-0.4, 0, 0)), { wall: 1 }], ['picture cork', () => K.picture({ style: 'cork' }), { wall: 1 }],
+    ['wallClock', () => K.wallClock(), { wall: 1 }], ['mirror floor', () => K.mirror({ style: 'floor' })],
+    ['ceilingLamp', () => grp(K.ceilingLamp().at(-0.35, 0, 0), K.ceilingLamp({ style: 'bulb' }).at(0.35, 0, 0.3)), { ceil: 2.6 }], ['ceilingLamp tube / chandelier', () => grp(K.ceilingLamp({ style: 'tube' }).at(0, 0, -0.4), K.ceilingLamp({ style: 'chandelier' }).at(0, 0, 0.25)), { ceil: 2.6 }],
+    ['tableLamp + plant small', () => grp(boxB(0.5, 0.55, 0.4, '#8a6a4a'), K.tableLamp().at(-0.1, 0.55, 0), K.plant({ style: 'small' }).at(0.16, 0.55, 0.08))], ['plant palm / snake', () => grp(K.plant({ style: 'palm' }).at(-0.45, 0, 0), K.plant({ style: 'snake' }).at(0.45, 0, 0))],
   ]);
   S3.shot('interior_room0', {
     build(s) {

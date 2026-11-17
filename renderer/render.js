@@ -113,7 +113,7 @@ async function sheet(page, times, out, f, labels) {
   // ---- full render: one pass, two encoders (standard cut + Facebook/Instagram cut) ----
   const enc = out => spawn('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', String(tl.fps), '-c:v', 'mjpeg', '-i', '-', '-i', pos[1],
     '-vf', 'scale=in_color_matrix=bt601:out_color_matrix=bt709:in_range=pc:out_range=tv,format=yuv420p',
-    '-c:v', 'libx264', '-profile:v', 'high', '-level', '4.2', '-crf', '20', '-preset', 'medium', '-g', String(tl.fps * 2), '-bf', '2',
+    '-c:v', 'libx264', '-profile:v', 'high', '-level', '4.2', '-crf', '19', '-preset', 'veryfast', '-g', String(tl.fps * 2), '-bf', '2',
     '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709', '-color_range', 'tv',
     '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-shortest', '-movflags', '+faststart', out], { stdio: ['pipe', 'inherit', 'inherit'] });
   const std = enc(pos[2]), meta = f.meta ? enc(f.meta) : null;

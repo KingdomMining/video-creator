@@ -39,7 +39,7 @@
   function cat(name, items, o = {}) {
     S3.shot(name, {
       build(s) {
-        const cols = o.cols || 2, cw = o.cw || 4, cd = o.cd || 4, rows = Math.ceil(items.length / cols), lh = o.lh || cw * 0.06, objs = [];
+        const cols = o.cols || 2, cw = o.cw || 4, cd = o.cd || 4, rows = Math.ceil(items.length / cols), lh = o.lh || cw * 0.075, objs = [];
         studio(s, { area: Math.max(cw * cols, cd * rows) * 0.62 + 4, dark: o.dark });
         const bb = new T.Box3(new T.Vector3(-cols * cw / 2, 0, -rows * cd / 2), new T.Vector3(cols * cw / 2, 0.2, rows * cd / 2 + lh));
         items.forEach(([nm, make, q = {}], i) => {
@@ -52,7 +52,7 @@
           if (f !== false) s.add(figure(), { pos: [cx + (f ? f[0] : cw * 0.4), 0, cz + (f ? f[1] : cd * 0.3)], rot: [0, 0.3, 0] });
         });
         K.animate(s, objs); this.objs = objs;
-        this.cam = fitCam(bb, o.az ?? 0.32, o.el ?? 0.62, o.fov || 26, o.m);
+        this.cam = fitCam(bb, o.az ?? 0.2, o.el ?? 0.62, o.fov || 26, Object.assign({ b: -0.84, t: 0.6 }, o.m));
       },
       update(s, lt, d) { this.objs.forEach(ob => { if (ob.userData.open && o.swing) ob.userData.open(ramp(lt, 0.3, d - 0.3)); }); s.cam.set(this.cam); },
       post: POST,
@@ -60,11 +60,12 @@
   }
 
   cat('scifi_tmp', [
-    ['corridor', () => K.corridor()], ['junction', () => K.junction({ arms: [1, 1, 0, 1] })],
-    ['door', () => K.door({ sign: 'deck03' }), { open: 0.35 }], ['airlock', () => K.airlock(), { open: 0.7 }],
-    ['crate + canister', () => grp(K.crate().at(-0.6, 0, 0), K.canister().at(0.4, 0, 0.2), K.crate({ w: 0.6, h: 0.5, d: 0.5, color: '#8c6a3a', symbol: 'rad' }).at(-0.5, 0.8, 0))], ['crateStack', () => K.crateStack({ seed: 3 })],
-    ['pipes + cables', () => grp(K.pipes(), K.cables({ loose: true, y: 2.6 }))], ['vent / fan', () => grp(K.vent().at(-0.8, 0, 0), K.vent({ fan: true }).at(0.7, 0, 0))],
-  ], { cols: 2, cw: 5.2, cd: 5 });
+    ['console desk', () => K.console()], ['console wall + pedestal', () => grp(K.console({ style: 'wall' }).at(-0.7, 0, 0), K.console({ style: 'pedestal', light: '#ffb547' }).at(0.7, 0, 0.3))],
+    ['pilotSeat', () => K.pilotSeat()], ['cryoPod', () => K.cryoPod(), { open: 0.0 }],
+    ['cryoPod flat', () => K.cryoPod({ pose: 'flat' }), { open: 0.6 }], ['holoTable', () => K.holoTable()],
+    ['medBed', () => K.medBed()], ['crateStack', () => K.crateStack({ seed: 3 })],
+  ], { cols: 2, cw: 3.4, cd: 4.2 });
+  cat('scifi_tmp2', [['bridge', () => K.bridge(), { rot: 3.5 }], ['reactor', () => K.reactor()]], { cols: 1, cw: 7, cd: 7, el: 0.5 });
 
   // ---- inspect one builder: params {b: name, o: options, a: orbit angle, r: distance, h: camera height, look: [x,y,z], open: k, t0, dark, fig, ry, spin} ----
   S3.shot('scifi_one', {

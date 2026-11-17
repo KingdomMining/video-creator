@@ -107,7 +107,7 @@ const KitNature = (() => {
         const k2 = (k + 1) % n; this.quad(rings[i][k], rings[i][k2], rings[i + 1][k2], rings[i + 1][k], colAt(i, k));
         if (this.uv) { const u0 = k / n, u1 = (k + 1) / n, v0 = vv[i] / o.uv, v1 = vv[i + 1] / o.uv; this.uv.push(u0, v0, u1, v0, u1, v1, u0, v0, u1, v1, u0, v1); }
       }
-      const cap = (ring, c, rev) => { const k = colAt(rev ? 0 : N - 1, 0); for (let j = 0; j < n; j++) { const j2 = (j + 1) % n; rev ? this.tri(c, ring[j2], ring[j], k) : this.tri(c, ring[j], ring[j2], k); if (this.uv) this.uv.push(0.5, 0, 0.5, 0, 0.5, 0); } };
+      const cap = (ring, c, rev) => { const k = o.capColor ? this.sh(o.capColor, 0.06) : colAt(rev ? 0 : N - 1, 0); for (let j = 0; j < n; j++) { const j2 = (j + 1) % n; rev ? this.tri(c, ring[j2], ring[j], k) : this.tri(c, ring[j], ring[j2], k); if (this.uv) this.uv.push(0.5, 0, 0.5, 0, 0.5, 0); } };
       if (o.capA && r0 > 0.002) cap(rings[0], pts[0], true);
       if (o.capB !== false && rEnd > 0.002) cap(rings[N - 1], pts[N - 1], false);
       this.rings = rings; return this;
@@ -408,7 +408,7 @@ const KitNature = (() => {
   }
   function log(o = {}) {
     const seed = o.seed ?? 1, r = rng(seed * 227 + 3), L = o.length ?? 3.2, R = o.radius ?? 0.24, bark = o.color || '#5e4a3a', S = new Soup(seed), pts = logBody(S, L, R, r, bark);
-    const nS = o.stubs ?? 2; for (let j = 0; j < nS; j++) { const u = 0.25 + r() * 0.5, p = vlerp(pts[0], pts[6], u), a = (r() - 0.5) * 1.6, len = 0.25 + r() * 0.35; S.sweep([p, [p[0] + (r() - 0.5) * 0.2, p[1] + cos(a) * (R + len), p[2] + sin(a) * (R + len)]], [R * 0.3, R * 0.2], 5, bark, { vary: 0.12 }); }
+    const nS = o.stubs ?? 2; for (let j = 0; j < nS; j++) { const u = 0.25 + r() * 0.5, p = vlerp(pts[0], pts[6], u), a = (r() - 0.5) * 1.6, len = 0.12 + r() * 0.2; S.sweep([p, [p[0] + (r() - 0.5) * 0.15, p[1] + cos(a) * (R + len), p[2] + sin(a) * (R + len)]], [R * 0.36, R * 0.27], 6, bark, { vary: 0.12 }); }
     S.lit(0, R * 2, 0.7, 1.06, 0.12); if (o.moss ?? 0.7) S.top(o.mossColor || '#5d7a3a', o.moss ?? 0.7, 0.35, { patch: 1.6, seed }); if (o.snow) S.top('#f1f5fb', o.snow, 0.2);
     const g = group('log', S.mesh()); g.add(endDisc([pts[0][0] - 0.004, pts[0][1], pts[0][2]], [-1, 0, 0], R * 0.9, 7), endDisc([pts[6][0] + 0.004, pts[6][1], pts[6][2]], [1, 0, 0], R * 0.84 * 0.9, 7));
     g.userData.seatY = R * 1.9; g.userData.length = L; return g;
@@ -569,8 +569,8 @@ const KitNature = (() => {
     const rockC = C(o.color || d.color), baseC = C(o.base || d.base), snowC = C(o.snow || '#f3f6fb'), hazeC = C(o.haze || '#c9dbea'), hz = o.hazeAmount ?? d.haze, snowLine = o.snowLine ?? d.snowLine, sharp = o.sharp ?? d.sharp;
     const g = group(type);
     for (let L = 0; L < layers; L++) {
-      const r = rng(seed * 283 + L * 17 + 1), S = new Soup(seed + L * 5), RL = R * (1 + L * 0.42), HL = H * (1 + L * 0.55), p1 = r() * 9, p2 = r() * 9, p3 = r() * 9, f1 = 3 + flr(r() * 2), f2 = 7 + flr(r() * 3), hzL = clamp(hz + L * 0.22);
-      const hAt = t => { const pk = sharp * (0.6 * tri01(t * f1 + p1) + 0.4 * tri01(t * f2 + p2)) + (1 - sharp) * (0.5 + 0.5 * sin(t * TAU * f1 + p1) * 0.6 + 0.4 * 0.5 * sin(t * TAU * f2 + p2)); return HL * (0.28 + 0.72 * pk) * (0.82 + 0.36 * tri01(t * 2 + p3)); };
+      const r = rng(seed * 283 + L * 17 + 1), S = new Soup(seed + L * 5), RL = R * (1 + L * 0.42), HL = H * (1 + L * 0.55), p1 = r() * 9, p2 = r() * 9, p3 = r() * 9, f1 = d.peaks + flr(r() * 3), f2 = d.peaks * 2 + 3 + flr(r() * 4), hzL = clamp(hz + L * 0.22);
+      const hAt = t => { const pk = sharp * (0.62 * Math.pow(tri01(t * f1 + p1), 1.3) + 0.38 * tri01(t * f2 + p2)) + (1 - sharp) * (0.5 + 0.3 * sin(t * TAU * f1 + p1) + 0.2 * sin(t * TAU * f2 + p2)); return HL * (0.22 + 0.78 * pk) * (0.62 + 0.76 * tri01(t * 2 + p3)); };
       const rows = 3, ring = [];
       for (let i = 0; i <= N; i++) {
         const t = (full && i === N) ? 0 : i / N, a = arc[0] + (i / N) * (arc[1] - arc[0]), h = hAt(t) * (0.92 + r() * 0.16), wIn = h * 1.15 + R * 0.08, col = [];
@@ -580,15 +580,18 @@ const KitNature = (() => {
       if (full) ring[N] = ring[0];
       S.surf(N, rows, (u, v, i, j) => ring[i][j], rockC, { flip: true, vary: 0.07 });
       S.paint((ce, n) => { const hh = ce[1] / HL, k = sm((hh - 0.08) / 0.3), c = baseC.clone().lerp(rockC, k).multiplyScalar(0.9 + S.r() * 0.2); if (hh > snowLine + (S.r() - 0.5) * 0.12) c.lerp(snowC, 0.92); return c.lerp(hazeC, clamp(hzL * (1.15 - 0.4 * hh))); });
-      if (d.trees && o.trees !== false && L === 0) { const tc = C(o.treeColor || '#34553c').clone().lerp(hazeC, hzL * 0.9); for (let i = 0; i < (o.treeCount ?? 110); i++) { const ci = flr(r() * N), v = 0.25 + r() * 0.6, c0 = ring[ci], c1 = ring[ci + 1], q = r(), fj = v * rows, j = Math.min(rows - 1, flr(fj)), pa = vlerp(vlerp(c0[j], c0[j + 1], fj - j), vlerp(c1[j], c1[j + 1], fj - j), q), th = HL * (0.2 + r() * 0.16); S.geo(new T.ConeGeometry(th * 0.3, th, 4).translate(0, th * 0.4, 0), tc, { at: pa, vary: 0.12 }); } }
+      if (d.trees && o.trees !== false && L === 0) {          // patches of forest on the slopes
+        const tc = C(o.treeColor || '#2f5238').clone().lerp(hazeC, hzL * 0.55), nc = o.treeCount ?? 260; let ci = 0, v0 = 0.5;
+        for (let i = 0; i < nc; i++) { if (i % 14 === 0) { ci = flr(r() * N); v0 = 0.3 + r() * 0.5; } const cc = (ci + flr(r() * 3)) % N, v = clamp(v0 + (r() - 0.5) * 0.3, 0.1, 0.95), c0 = ring[cc], c1 = ring[cc + 1], fj = v * rows, j = Math.min(rows - 1, flr(fj)), pa = vlerp(vlerp(c0[j], c0[j + 1], fj - j), vlerp(c1[j], c1[j + 1], fj - j), r()), th = 5 + r() * 4.5; S.geo(new T.ConeGeometry(th * 0.3, th, 4).translate(0, th * 0.45, 0), tc, { at: pa, rot: [0, r() * 3, 0], vary: 0.14 }); }
+      }
       const m = S.mesh(MATFAR()); m.castShadow = m.receiveShadow = false; m.frustumCulled = false; g.add(m);
     }
     Object.assign(g.userData, { radius: R, height: H }); return g;
   }
   /** Ring of distant peaks around the set (not fogged; hazed by its own colours). o: {radius, height, segments, layers, color, base, snow, snowLine (0..1 of height, >1 = none), haze, hazeAmount, arc:[from, to], seed}. */
-  const mountains = (o = {}) => ridgeRing('mountains', o, { radius: 330, height: 95, segments: 84, layers: 2, color: '#5d6876', base: '#4a5d55', snowLine: 0.58, haze: 0.38, sharp: 1 });
+  const mountains = (o = {}) => ridgeRing('mountains', o, { radius: 330, height: 100, segments: 132, layers: 2, color: '#56616f', base: '#465a52', snowLine: 0.66, haze: 0.3, sharp: 1, peaks: 7 });
   /** Ring of rounded wooded hills. Same options as mountains() plus trees:false, treeCount, treeColor. */
-  const hills = (o = {}) => ridgeRing('hills', o, { radius: 170, height: 26, segments: 60, layers: 1, color: '#5d8348', base: '#4d7340', snowLine: 9, haze: 0.22, sharp: 0, trees: true });
+  const hills = (o = {}) => ridgeRing('hills', o, { radius: 170, height: 26, segments: 60, layers: 1, color: '#5d8348', base: '#4d7340', snowLine: 9, haze: 0.22, sharp: 0, trees: true, peaks: 3 });
 
   function cloudSoup(seed, W, o = {}) {
     const S = new Soup(seed), r = S.r, n = 5 + flr(r() * 3), white = C(o.color || '#ffffff'), shade = C(o.shade || '#a9b9cf'); let top = 0;
@@ -600,7 +603,7 @@ const KitNature = (() => {
   function cloud(o = {}) { const m = cloudSoup(o.seed ?? 1, o.size ?? 30, o).mesh(MATFAR()); m.castShadow = m.receiveShadow = false; return group('cloud', m); }
   /** A sky full of drifting clouds. o: {count, area (half-extent m), height:[lo, hi], size:[min, max], speed (m/s), dir (radians, 0 = toward +Z), color, shade, seed}. userData.drift(lt). */
   function clouds(o = {}) {
-    const seed = o.seed ?? 1, r = rng(seed * 293 + 1), n = o.count ?? 9, A = o.area ?? 420, hh = o.height || [85, 140], ss = o.size || [34, 70], spd = o.speed ?? 2.5, dir = o.dir ?? PI / 2, g = group('clouds');
+    const seed = o.seed ?? 1, r = rng(seed * 293 + 1), n = o.count ?? 12, A = o.area ?? 420, hh = o.height || [85, 140], ss = o.size || [45, 95], spd = o.speed ?? 2.5, dir = o.dir ?? PI / 2, g = group('clouds');
     const geos = [0, 1, 2, 3].map(i => cloudSoup(seed * 5 + i, 1, o).geometry()), items = [];
     for (let i = 0; i < n; i++) { const m = new T.Mesh(geos[i % 4], MATFAR()), sc = lerp(ss[0], ss[1], r()); m.scale.set(sc, sc * (0.8 + r() * 0.4), sc); m.rotation.y = (r() < 0.5 ? PI : 0) + (r() - 0.5) * 0.5; m.frustumCulled = false; g.add(m); items.push({ m, x: (r() - 0.5) * 2 * A, z: (r() - 0.5) * 2 * A, y: lerp(hh[0], hh[1], r()), v: 0.7 + r() * 0.6 }); }
     g.userData.items = items;
@@ -728,7 +731,7 @@ const KitNature = (() => {
     const sw = sea({ level: lvl, amp: 0.1, len: 7, dir: 0.15, color: '#2a86a0', shallow: '#6cc7c2', depth: 4, crest: 0.35, opacity: 0.8, ...o, seed }); sw.position.z = -30;
     // foam: two ragged white bands that ride the swash up and down the sand
     const nf = 60, fpos = new Float32Array(nf * 2 * 18), fg = new T.BufferGeometry(); fg.setAttribute('position', new T.BufferAttribute(fpos, 3));
-    const foam = new T.Mesh(fg, new T.MeshBasicMaterial({ color: o.foam || '#f6fcfb', transparent: true, opacity: 0.9, depthWrite: false, toneMapped: false })); foam.renderOrder = 4; foam.frustumCulled = false;
+    const foam = new T.Mesh(fg, new T.MeshBasicMaterial({ color: o.foam || '#f6fcfb', transparent: true, opacity: 0.9, depthWrite: false, toneMapped: false, side: T.DoubleSide })); foam.renderOrder = 4; foam.frustumCulled = false;
     const fx = i => (i / nf - 0.5) * Math.min(L, 130), slope = 0.62 * 1.15 / slopeW * Math.pow(-lvl / 0.62, 0.15 / 1.15), wave = sw.userData.water.userData.heightAt;
     const g = group('beach', sand, sw, foam);
     const animate = lt => {

@@ -431,24 +431,24 @@ const KitInterior = (() => {
     for (let i = 1; i < nc; i++) g.add(boxB(0.028, ih, 0.035, fc).at(-iw / 2 + i * iw / nc, y0 + ft, 0)); for (let j = 1; j < nr; j++) g.add(box(iw, 0.028, 0.031, fc).at(0, y0 + ft + j * ih / nr, 0));
     const glassM = o.glow ? glow(o.glow, o.glowK ?? 1) : mat(o.glass || C.glass, { opacity: o.glassA ?? 0.24, rough: 0.08, own: true }), gl = keep(mesh(new T.PlaneGeometry(iw, ih), glassM)); gl.material.side = T.DoubleSide; gl.castShadow = false; gl.position.set(0, y0 + h / 2, 0); g.add(gl); U.glass = gl;
     if (o.view) { const v = mesh(new T.PlaneGeometry(iw, ih), viewMat(o.view, o.seed || 1)); v.position.set(0, y0 + h / 2, -zi + 0.012); g.add(v); }
-    g.add(box(w + 0.16, 0.03, 0.11, fc).at(0, y0 - 0.015, zi + 0.045), box(w + 0.06, 0.07, 0.016, fc).at(0, y0 - 0.065, zi + 0.008), box(w + 0.1, 0.035, 0.09, shade(fc, 0.9)).at(0, y0 - 0.0175, -zi - 0.035));   // sill board, apron, outer sill
+    g.add(box(w + 0.16, 0.03, 0.075, fc).at(0, y0 - 0.015, zi + 0.0275), box(w + 0.06, 0.07, 0.016, fc).at(0, y0 - 0.065, zi + 0.008), box(w + 0.1, 0.035, 0.09, shade(fc, 0.9)).at(0, y0 - 0.0175, -zi - 0.035));   // sill board, apron, outer sill
     g.add(boxB(0.06, h + 0.05, 0.016, fc).at(-w / 2 - 0.018, y0, zi + 0.008), boxB(0.06, h + 0.05, 0.016, fc).at(w / 2 + 0.018, y0, zi + 0.008), box(w + 0.16, 0.07, 0.02, fc).at(0, y0 + h + 0.035, zi + 0.01));   // casing
     if (o.bars) for (let i = 0, n = Math.max(2, Math.round(iw / 0.14)); i < n; i++) g.add(rod(0.011, ih + 0.06, C.iron, IRON).at(-iw / 2 + (i + 0.5) * iw / n, y0 + h / 2, -zi + 0.004));
     if (o.blinds) { const k = o.blinds === true ? 1 : o.blinds, bc = o.blindColor || '#e6e2d6', bl = keep(grp()), n = Math.max(1, Math.round(k * ih / 0.055)); bl.add(box(iw - 0.01, 0.04, 0.05, shade(bc, 0.9)).at(0, y0 + h - ft - 0.02, 0));
       for (let i = 0; i < n; i++) bl.add(box(iw - 0.02, 0.004, 0.042, bc).rot(o.blindTilt ?? 0.55, 0, 0).at(0, y0 + h - ft - 0.06 - i * 0.055, 0)); bl.add(box(iw - 0.02, 0.02, 0.03, shade(bc, 0.9)).at(0, y0 + h - ft - 0.06 - n * 0.055, 0), rod(0.003, n * 0.055 + 0.3, shade(bc, 0.8)).at(iw / 2 - 0.05, y0 + h - ft - 0.06 - (n * 0.055 + 0.3) / 2 + 0.03, 0.03));
       bl.position.z = zi - 0.035; g.add(bl); U.blinds = bl; }
-    if (o.curtains) { const cc = o.curtains === true ? '#a0483f' : o.curtains, ry = y0 + h + 0.13, rz = zi + 0.09, half = w / 2 + 0.22, yb = o.curtainTo === 'sill' ? y0 - 0.25 : 0.03, ch = ry - yb - 0.012, dr = [];
+    if (o.curtains) { const cc = o.curtains === true ? '#a0483f' : o.curtains, ry = y0 + h + 0.13, rz = zi + 0.115, half = w / 2 + 0.22, yb = o.curtainTo === 'sill' ? y0 - 0.25 : 0.03, ch = ry - yb - 0.012, dr = [];
       g.add(rodAB([-half - 0.08, ry, rz], [half + 0.08, ry, rz], 0.013, o.rodColor || C.woodDark, null, 6), ball(0.028, o.rodColor || C.woodDark, 0).at(-half - 0.09, ry, rz), ball(0.028, o.rodColor || C.woodDark, 0).at(half + 0.09, ry, rz), box(0.02, 0.02, rz - zi, C.woodDark).at(-half + 0.05, ry, (rz + zi) / 2), box(0.02, 0.02, rz - zi, C.woodDark).at(half - 0.05, ry, (rz + zi) / 2));
       for (const s of [-1, 1]) { const d = keep(drape(ch, 7, 0.028, cc, { seed: (o.seed || 1) + (s > 0 ? 7 : 0) })); d.position.set(s * half, yb, rz + (s > 0 ? 0.004 : 0)); d.userData.s = s; g.add(d); dr.push(d); }
       U.drapes = dr; U.curtain = k => { const cw = lerp(0.2, half + 0.012, clamp(k)); dr.forEach(d => d.scale.x = -d.userData.s * cw); return g; }; U.curtain(o.curtainOpen ?? 0.25); }
     const el = (o.spillAngle ?? 40) * PI / 180, az = o.spillYaw ?? 0.3, P = (x, y, lift = 0.02) => { const tt = y / Math.tan(el); return [x + tt * Math.sin(az), lift, zi + tt * Math.cos(az)]; };
-    if (o.spill) { const sc = o.spill === true ? '#ffe2b0' : o.spill, k = o.spillK ?? 0.55, sp = keep(grp()), a = [-iw / 2, y0 + ft], b = [iw / 2, y0 + h - ft];
+    if (o.spill) { const sc = o.spill === true ? '#ffdca0' : o.spill, k = o.spillK ?? 0.7, sp = keep(grp()), a = [-iw / 2, y0 + ft], b = [iw / 2, y0 + h - ft];
       const pm = new T.MeshBasicMaterial({ map: spillTex(nc, nr), color: sc, blending: T.AdditiveBlending, transparent: true, opacity: k, depthWrite: false, toneMapped: false, side: T.DoubleSide });
       const patch = quad4(P(a[0], a[1]), P(b[0], a[1]), P(b[0], b[1]), P(a[0], b[1]), pm); patch.castShadow = patch.receiveShadow = false; patch.renderOrder = 2; sp.add(patch);
-      if (o.shaft !== false) { const sm = new T.MeshBasicMaterial({ map: shaftTex(), color: sc, blending: T.AdditiveBlending, transparent: true, opacity: k * 0.16, depthWrite: false, toneMapped: false, side: T.DoubleSide, fog: false });
-        for (const f of [0.02, 0.5, 0.98]) { const x = lerp(a[0], b[0], f), q = quad4(P(x, a[1]), P(x, b[1]), [x, b[1], zi], [x, a[1], zi], sm); q.castShadow = q.receiveShadow = false; q.renderOrder = 3; sp.add(q); }
-        for (const y of [a[1], b[1]]) { const q = quad4(P(a[0], y), P(b[0], y), [b[0], y, zi], [a[0], y, zi], sm); q.castShadow = q.receiveShadow = false; q.renderOrder = 3; sp.add(q); } U.shaftMat = sm; }
-      sp.children.forEach(keep); g.add(sp); U.spill = sp; U.spillMat = pm; U.setSpill = v => { pm.opacity = k * v; if (U.shaftMat) U.shaftMat.opacity = k * 0.16 * v; return g; }; }
+      if (o.shaft !== false) { const sm = new T.MeshBasicMaterial({ map: shaftTex(), color: sc, blending: T.AdditiveBlending, transparent: true, opacity: k * 0.07, depthWrite: false, toneMapped: false, side: T.DoubleSide, fog: false });
+        for (let i = 0; i < 9; i++) { const x = lerp(a[0], b[0], (i + 0.5) / 9), q = quad4(P(x, a[1]), P(x, b[1]), [x, b[1], zi], [x, a[1], zi], sm); q.castShadow = q.receiveShadow = false; q.renderOrder = 3; sp.add(q); }
+        for (let i = 0; i < 5; i++) { const y = lerp(a[1], b[1], (i + 0.5) / 5), q = quad4(P(a[0], y), P(b[0], y), [b[0], y, zi], [a[0], y, zi], sm); q.castShadow = q.receiveShadow = false; q.renderOrder = 3; sp.add(q); } U.shaftMat = sm; }
+      sp.children.forEach(keep); g.add(sp); U.spill = sp; U.spillMat = pm; U.setSpill = v => { pm.opacity = k * v; if (U.shaftMat) U.shaftMat.opacity = k * 0.07 * v; return g; }; }
     const c0 = P(0, y0 + h / 2, 0); U.spot = { pos: [-Math.sin(az) * 2.2 * Math.cos(el), y0 + h / 2 + 2.2 * Math.sin(el), -zi - 2.2 * Math.cos(az) * Math.cos(el)], target: [c0[0], 0, c0[2]] };
     U.anchors = { in: { pos: [0, 0, 0.55], rot: PI, kind: 'stand' }, out: { pos: [0, 0, -0.6], rot: 0, kind: 'stand' } };
     return done(g, 'window', [w + 0.16, sill + h + 0.1, wt + 0.2], o);
@@ -584,6 +584,278 @@ const KitInterior = (() => {
   /** A real spot light shining in through a window made by window() (after the window or its room has been placed). o: {color, intensity 1.2, range 12, angle 50, shadow true} */
   function windowLight(s, win, o = {}) { const sp = win.userData.spot; if (!sp) return null; return s.spot(world(win, sp.pos), world(win, sp.target), o.color || '#ffe6bd', o.intensity ?? 1.2, o.range ?? 12, o.angle ?? 50, { shadow: o.shadow !== false, penumbra: 0.35 }); }
 
+  // =====================================================================================================
+  // shared furniture parts
+  // =====================================================================================================
+  const WHITE = '#ffffff';
+  /** Give a white part its colour at fuse time (no material per shade). */
+  const tint = (m, col) => { m.userData.tint = col; return m; };
+  const legs4 = (g, w, d, h, t, col, o = {}) => { const ix = w / 2 - (o.inset ?? t / 2), iz = d / 2 - (o.inset ?? t / 2); for (const sx of [-1, 1]) for (const sz of [-1, 1]) g.add((o.taper ? tbox(t * o.taper, h, t * o.taper, t, t, col, o.m) : boxB(t, h, t, col, o.m)).at(sx * ix, o.y || 0, sz * iz)); return g; };
+  /** Board made of n planks with slightly different tones. along 'x': planks run along X. Stands on its origin. */
+  function planks(w, t, d, n, col, r, along = 'x', gap = 0.003) { const g = grp(); for (let i = 0; i < n; i++) { const c = shade(col, 0.9 + r() * 0.2); g.add(tint(along === 'x' ? boxB(w, t, d / n - gap, WHITE) : boxB(w / n - gap, t, d, WHITE), c).at(along === 'x' ? 0 : -w / 2 + w / n * (i + 0.5), 0, along === 'x' ? -d / 2 + d / n * (i + 0.5) : 0)); } return g; }
+  /** Cupboard / drawer front with a shadow gap: a slab slightly proud of the carcass. */
+  const front = (w, h, col, th = 0.018) => box(w - 0.006, h - 0.006, th, col);
+  /** Folded leaf (two triangles) from the origin along +Z, len long, wd wide, drooping. */
+  function leafGeo(len, wd, droop = 0.15, curl = 0.12) { const g = new T.BufferGeometry(), a = [0, 0, 0], t = [0, -droop * len, len], l = [-wd / 2, curl * len - droop * len * 0.3, len * 0.5], r = [wd / 2, curl * len - droop * len * 0.3, len * 0.5], m = [0, curl * len * 0.25, len * 0.5]; g.setAttribute('position', new T.BufferAttribute(new Float32Array([...a, ...m, ...l, ...l, ...m, ...t, ...a, ...r, ...m, ...m, ...r, ...t]), 3)); g.computeVertexNormals(); return g; }
+  const leaf = (len, wd, col, droop, curl) => { const m = mesh(leafGeo(len, wd, droop, curl), col, { side: 'double', rough: 0.8 }); m.userData.v = 0.14; return m; };
+
+  // ---- what is on a screen: shared by tv(), monitors and the CCTV wall. All pure functions of t. ----
+  function paintShow(c, t, W, Hh, show, o = {}) {
+    const f = Math.floor(t * 24);
+    if (show === 'static') { const r = rng(f * 7 + 3), s = 8; for (let y = 0; y < Hh; y += s) for (let x = 0; x < W; x += s) { const v = Math.floor(40 + r() * 190); c.fillStyle = `rgb(${v},${v},${v + 8})`; c.fillRect(x, y, s, s); } c.fillStyle = 'rgba(255,255,255,0.18)'; c.fillRect(0, (t * 90) % Hh, W, 10); return; }
+    if (show === 'test') { const cols = ['#c8c8c8', '#c8c814', '#14c8c8', '#14c814', '#c814c8', '#c81414', '#1414c8']; cols.forEach((k, i) => { c.fillStyle = k; c.fillRect(i * W / 7, 0, W / 7 + 1, Hh * 0.72); }); c.fillStyle = '#101014'; c.fillRect(0, Hh * 0.72, W, Hh * 0.28); c.fillStyle = '#e8e8e8'; c.fillRect(W * 0.14, Hh * 0.78, W * 0.14, Hh * 0.16); return; }
+    if (show === 'nosignal') { c.fillStyle = '#10255f'; c.fillRect(0, 0, W, Hh); c.fillStyle = '#e9eeff'; c.font = `bold ${Math.round(Hh * 0.13)}px "DejaVu Sans Mono", monospace`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('NO SIGNAL', W / 2, Hh / 2); return; }
+    if (show === 'emergency') { const on = Math.floor(t * 2) % 2 === 0; c.fillStyle = on ? '#b3121a' : '#7a0c12'; c.fillRect(0, 0, W, Hh); c.fillStyle = '#0a0a0c'; c.fillRect(0, Hh * 0.32, W, Hh * 0.36); c.fillStyle = '#ffffff'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.font = `800 ${Math.round(Hh * 0.15)}px Inter, sans-serif`; c.fillText(o.headline || 'EMERGENCY ALERT', W / 2, Hh * 0.5, W * 0.94);
+      c.fillStyle = '#ffe14a'; c.font = `800 ${Math.round(Hh * 0.09)}px Inter, sans-serif`; c.fillText('STAY INDOORS', W / 2, Hh * 0.18); c.textAlign = 'left'; const tk = o.ticker || 'THIS IS NOT A TEST   ·   AWAIT FURTHER INSTRUCTIONS   ·   ', tw = c.measureText(tk).width, x0 = -((t * W * 0.22) % tw); for (let x = x0; x < W; x += tw) c.fillText(tk, x, Hh * 0.84); return; }
+    if (show === 'news') { const g = c.createLinearGradient(0, 0, 0, Hh); g.addColorStop(0, '#1d3f78'); g.addColorStop(1, '#0c1c3c'); c.fillStyle = g; c.fillRect(0, 0, W, Hh);
+      c.fillStyle = 'rgba(255,255,255,0.08)'; for (let i = 0; i < 5; i++) c.fillRect(W * 0.5 + i * W * 0.11 + Math.sin(t * 0.4 + i) * 4, 0, W * 0.04, Hh * 0.7);
+      c.fillStyle = '#2a2f3a'; c.beginPath(); c.ellipse(W * 0.28, Hh * 0.78, W * 0.17, Hh * 0.3, 0, 0, 7); c.fill(); c.fillStyle = '#d9a98c'; c.beginPath(); c.ellipse(W * 0.28, Hh * 0.36 + Math.sin(t * 2.2) * 1.2, W * 0.07, Hh * 0.15, 0, 0, 7); c.fill(); c.fillStyle = '#4a3324'; c.beginPath(); c.ellipse(W * 0.28, Hh * 0.27 + Math.sin(t * 2.2) * 1.2, W * 0.075, Hh * 0.09, 0, PI, TAU); c.fill();
+      c.fillStyle = '#e9edf5'; c.fillRect(W * 0.56, Hh * 0.12, W * 0.36, Hh * 0.4); c.fillStyle = '#7b93b8'; c.fillRect(W * 0.58, Hh * 0.15, W * 0.32, Hh * 0.34); c.fillStyle = '#c2462f'; c.beginPath(); c.arc(W * 0.74, Hh * 0.32, Hh * 0.07 * (1 + 0.15 * Math.sin(t * 5)), 0, 7); c.fill();
+      c.fillStyle = '#c2121c'; c.fillRect(0, Hh * 0.68, W, Hh * 0.15); c.fillStyle = '#ffffff'; c.textAlign = 'left'; c.textBaseline = 'middle'; c.font = `800 ${Math.round(Hh * 0.105)}px Inter, sans-serif`; c.fillText(o.headline || 'BREAKING NEWS', W * 0.04, Hh * 0.76, W * 0.92);
+      c.fillStyle = '#0a0f1c'; c.fillRect(0, Hh * 0.83, W, Hh * 0.17); c.fillStyle = '#ffe14a'; c.font = `700 ${Math.round(Hh * 0.085)}px Inter, sans-serif`; const tk = o.ticker || 'AUTHORITIES URGE CALM   ·   MORE FOLLOWS   ·   STAY TUNED   ·   ', tw = c.measureText(tk).width, x0 = -((t * W * 0.2) % tw); for (let x = x0; x < W; x += tw) c.fillText(tk, x, Hh * 0.92);
+      if (Math.floor(t * 1.5) % 2 === 0) { c.fillStyle = '#ff2a2a'; c.fillRect(W * 0.84, Hh * 0.04, W * 0.12, Hh * 0.1); c.fillStyle = '#fff'; c.font = `800 ${Math.round(Hh * 0.07)}px Inter, sans-serif`; c.fillText('LIVE', W * 0.855, Hh * 0.095); } return; }
+    if (show === 'desktop') { c.fillStyle = '#20406e'; c.fillRect(0, 0, W, Hh); c.fillStyle = '#e9ecf1'; c.fillRect(W * 0.08, Hh * 0.1, W * 0.56, Hh * 0.68); c.fillStyle = '#3a6fb8'; c.fillRect(W * 0.08, Hh * 0.1, W * 0.56, Hh * 0.08); c.fillStyle = '#9aa3b0'; for (let i = 0; i < 6; i++) c.fillRect(W * 0.11, Hh * (0.25 + i * 0.08), W * (0.2 + ((i * 37) % 30) / 100), Hh * 0.03);
+      c.fillStyle = '#f4f1e6'; c.fillRect(W * 0.6, Hh * 0.34, W * 0.32, Hh * 0.46); c.fillStyle = '#5fae6a'; c.fillRect(W * 0.63, Hh * 0.6, W * 0.05, Hh * 0.15); c.fillStyle = '#d9843a'; c.fillRect(W * 0.7, Hh * 0.5, W * 0.05, Hh * 0.25); c.fillStyle = '#c2462f'; c.fillRect(W * 0.77, Hh * 0.42, W * 0.05, Hh * 0.33); c.fillStyle = '#141a26'; c.fillRect(0, Hh * 0.9, W, Hh * 0.1); if (Math.floor(t * 2) % 2) { c.fillStyle = '#20242c'; c.fillRect(W * 0.11 + W * 0.3, Hh * 0.65, 2, Hh * 0.04); } return; }
+    if (show === 'code') { c.fillStyle = '#07110b'; c.fillRect(0, 0, W, Hh); c.fillStyle = '#4dff8a'; const lh = Hh / 12, n = Math.floor(t * 5), r = rng(11); for (let i = 0; i < 11; i++) { const k = (i + n) % 23, wd = 0.15 + ((k * 53) % 60) / 100; c.globalAlpha = 0.55 + 0.45 * (i / 11); c.fillRect(W * 0.05 + ((k * 7) % 3) * W * 0.05, lh * (i + 0.6), W * wd, lh * 0.34); } c.globalAlpha = 1; if (Math.floor(t * 3) % 2) c.fillRect(W * 0.05, lh * 11.3, W * 0.03, lh * 0.4); return; }
+    const g = c.createLinearGradient(0, 0, W, Hh); g.addColorStop(0, '#0d0f13'); g.addColorStop(0.48, '#14171d'); g.addColorStop(0.5, '#1d2129'); g.addColorStop(0.62, '#12151a'); g.addColorStop(1, '#0a0b0e'); c.fillStyle = g; c.fillRect(0, 0, W, Hh);   // off: dark glass with a faint reflection
+  }
+  /** Fit any quad (for example one made by s.screen) over a builder's screen. */
+  const screenApi = (g, sq, w, h) => { const U = g.userData; U.screen = sq.mesh; U.screenSize = [w, h]; U.setScreen = m => { const p = m.geometry.parameters || { width: w, height: h }; m.scale.set(w / p.width, h / p.height, 1); m.position.copy(sq.mesh.position); m.position.z += 0.002; m.quaternion.copy(sq.mesh.quaternion); sq.mesh.parent.add(m); m.userData.live = true; sq.mesh.visible = false; return g; }; };
+  /** Glowing parts of a lamp: setLit(k) dims shade, bulb and halo together. parts: [{m: material, kind:'emissive'|'glow'|'flare', base}] */
+  function lampApi(g, parts, pos, color, power, on) { const U = g.userData, cols = parts.map(p => p.kind === 'glow' ? p.m.color.clone() : null); U.lightPos = pos; U.lightColor = color; U.lightPower = power;
+    U.setLit = k => { parts.forEach((p, i) => { if (p.kind === 'emissive') p.m.emissiveIntensity = p.base * k; else if (p.kind === 'glow') p.m.color.copy(cols[i]).multiplyScalar(Math.max(0.06, k)); else p.m.opacity = p.base * k; }); U.lit = k > 0.02; return g; }; U.setLit(on === false ? 0 : 1); return g; }
+
+  // =====================================================================================================
+  // living room
+  // =====================================================================================================
+  /** Sofa. o: {seats 3, w, d 0.92, color, legs, pillows: [colours] | false, seed}. anchors seat1..n (top of the seat cushion, facing +Z) */
+  function sofa(o = {}) {
+    const seats = o.seats ?? 3, aw = o.arm ?? 0.17, cw = o.seatW ?? 0.6, w = o.w ?? seats * cw + aw * 2 + 0.02, d = o.d ?? 0.92, col = o.color || C.fabric, lg = o.legs || C.woodDark, g = grp(), r = rng((o.seed || 1) * 41 + 3);
+    const lh = 0.09, bh = o.backH ?? 0.84, ah = o.armH ?? 0.61, sy = 0.29, st = 0.15, iw = w - aw * 2, sw = iw / seats, dk = shade(col, 0.86), lt = shade(col, 1.06);
+    legs4(g, w - 0.08, d - 0.1, lh, 0.055, lg, { taper: 0.6 });
+    g.add(boxB(w - 0.03, sy - lh, d - 0.05, dk).at(0, lh, 0));
+    g.add(boxB(iw + 0.02, bh - sy - 0.05, 0.17, dk).rot(-0.1, 0, 0).at(0, sy - 0.01, -d / 2 + 0.12));
+    for (let i = 0; i < seats; i++) { const x = -iw / 2 + sw * (i + 0.5); g.add(cbox(sw - 0.012, st, d - 0.3, 0.035, col).at(x, sy, 0.13)); g.add(cbox(sw - 0.016, 0.44, 0.16, 0.04, lt).rot(-0.2, 0, 0).at(x, sy + st - 0.03, -d / 2 + 0.3)); }
+    for (const s of [-1, 1]) g.add(cbox(aw, ah - lh, d - 0.02, 0.045, col).at(s * (w / 2 - aw / 2), lh, 0));
+    const pl = o.pillows === undefined ? ['#d2a23d', '#b9563f'] : o.pillows;
+    if (pl && seats > 1) pl.slice(0, 2).forEach((pc, i) => { const s = i ? 1 : -1; g.add(pbox(0.4, 0.4, 0.12, 0.05, pc).rot(-0.32, s * -0.35, s * (0.12 + r() * 0.1)).at(s * (iw / 2 - 0.2), sy + st - 0.02, -d / 2 + 0.44)); });
+    else if (pl && pl[0]) g.add(pbox(0.36, 0.36, 0.11, 0.05, pl[0]).rot(-0.3, 0.1, 0.06).at(0, sy + st - 0.02, -d / 2 + 0.42));
+    const A = g.userData.anchors = {}; for (let i = 0; i < seats; i++) A['seat' + (i + 1)] = { pos: [-iw / 2 + sw * (i + 0.5), sy + st, 0.14], rot: 0, kind: 'sit' }; if (seats === 1) A.seat = A.seat1;
+    return done(g, seats === 1 ? 'armchair' : 'sofa', [w, bh, d], o);
+  }
+  /** Armchair (a one-seat sofa with a higher back). o: as sofa. anchors seat */
+  const armchair = (o = {}) => sofa({ seats: 1, seatW: 0.58, backH: 0.9, color: '#8c5a3c', pillows: ['#d8c9a8'], ...o });
+
+  /** Coffee table. o: {w 1.1, d 0.6, h 0.42, wood, clutter true, seed} */
+  function coffeeTable(o = {}) {
+    const w = o.w ?? 1.1, d = o.d ?? 0.6, h = o.h ?? 0.42, wood = o.wood || C.wood, g = grp(), r = rng((o.seed || 1) * 23 + 5), tt = 0.035;
+    g.add(planks(w, tt, d, 3, wood, r).at(0, h - tt, 0)); legs4(g, w - 0.08, d - 0.08, h - tt, 0.05, shade(wood, 0.82), { taper: 0.65 });
+    g.add(boxB(w - 0.16, 0.06, 0.02, shade(wood, 0.85)).at(0, h - tt - 0.06, d / 2 - 0.06), boxB(w - 0.16, 0.06, 0.02, shade(wood, 0.85)).at(0, h - tt - 0.06, -d / 2 + 0.06), boxB(w - 0.14, 0.018, d - 0.14, shade(wood, 0.92)).at(0, 0.13, 0));
+    if (o.clutter !== false) { const bc = ['#7b3b34', '#34506b', '#c9b68a']; bc.forEach((c, i) => g.add(boxB(0.24 - i * 0.02, 0.028, 0.17 - i * 0.012, c).rot(0, 0.2 + i * 0.25, 0).at(-w * 0.25, h + i * 0.028, 0.03)));
+      g.add(cylB(0.04, 0.034, 0.085, 7, '#e3ddd0').at(w * 0.22, h, -0.08), box(0.012, 0.045, 0.03, '#e3ddd0').at(w * 0.22 + 0.048, h + 0.045, -0.08), cylB(0.031, 0.031, 0.004, 7, '#4a2c1c').at(w * 0.22, h + 0.082, -0.08), boxB(0.05, 0.018, 0.16, '#24262b').rot(0, -0.5, 0).at(w * 0.08, h, 0.12), boxB(0.3, 0.01, 0.22, '#d9d4c8').rot(0, 0.12, 0).at(0.02, 0.148, 0)); }
+    return done(g, 'coffeeTable', [w, h, d], o);
+  }
+
+  /**
+   * TV on a media unit (or wall-hung / free). o: {size 50 (inches), style 'flat'|'crt', stand true, show 'off'|'news'|'static'|'emergency'|'test'|'nosignal'|'desktop'|'code', headline, ticker, wood, color}
+   * userData: screen (mesh), screenSize [w, h], setScreen(quad) (put your own s.screen quad on it), show (change it, then update), update(t), lightPos / lightColor / lit
+   */
+  function tv(o = {}) {
+    const crt = o.style === 'crt', g = grp(), U = g.userData, wood = o.wood || C.woodDark, r = rng((o.seed || 1) * 67 + 1); let sw, sh, sy, sz, uw, uh, ud;
+    U.show = o.show || 'off'; U.headline = o.headline; U.ticker = o.ticker;
+    const paint = (c, t, W, Hh) => paintShow(c, t, W, Hh, U.show, U);
+    if (crt) { uw = 0.74; uh = 0.52; ud = 0.46; const bw = 0.62, bh = 0.5, bd = 0.48, bc = o.color || '#4a3f36'; sw = 0.44; sh = 0.33; sy = uh + 0.03 + bh * 0.5 + 0.01; sz = bd / 2 - 0.03;
+      if (o.stand !== false) { g.add(boxB(uw, uh - 0.1, ud, wood).at(0, 0.1, 0), front(uw - 0.04, uh - 0.16, shade(wood, 1.12)).at(0, 0.1 + (uh - 0.1) / 2, ud / 2 + 0.006), knob(C.brass, 0.014).at(0.06, 0.33, ud / 2 + 0.015), knob(C.brass, 0.014).at(-0.06, 0.33, ud / 2 + 0.015), box(0.006, uh - 0.18, 0.004, shade(wood, 0.6)).at(0, 0.1 + (uh - 0.1) / 2, ud / 2 + 0.016)); legs4(g, uw - 0.06, ud - 0.06, 0.1, 0.045, shade(wood, 0.8), { taper: 0.6 }); }
+      const y0 = o.stand !== false ? uh : 0; sy = y0 + 0.03 + bh / 2 + 0.01;
+      g.add(boxB(bw, bh, 0.16, bc).at(0, y0 + 0.03, bd / 2 - 0.11), tbox(bw - 0.02, bd - 0.16, bh - 0.04, bw * 0.62, bh * 0.6, shade(bc, 0.85)).rot(-HP, 0, 0).at(0, y0 + 0.03 + bh / 2, bd / 2 - 0.19), boxB(bw * 0.7, 0.03, bd * 0.6, shade(bc, 0.7)).at(0, y0, 0));
+      g.add(box(sw + 0.05, sh + 0.05, 0.02, shade(bc, 0.55)).at(-0.06, sy, sz + 0.002), box(0.09, sh + 0.05, 0.012, shade(bc, 0.75)).at(bw / 2 - 0.065, sy, sz + 0.012), knob('#b9b3a6', 0.02).at(bw / 2 - 0.065, sy + 0.1, sz + 0.016), knob('#b9b3a6', 0.02).at(bw / 2 - 0.065, sy + 0.03, sz + 0.016));
+      for (let i = 0; i < 5; i++) g.add(box(0.06, 0.006, 0.004, C.black).at(bw / 2 - 0.065, sy - 0.06 - i * 0.018, sz + 0.02));
+      g.add(rodAB([0.05, y0 + bh + 0.03, 0], [0.26, y0 + bh + 0.5, -0.04], 0.005, C.chrome, CHR, 4), rodAB([-0.05, y0 + bh + 0.03, 0], [-0.24, y0 + bh + 0.46, -0.04], 0.005, C.chrome, CHR, 4), cylB(0.05, 0.06, 0.03, 6, C.black).at(0, y0 + bh + 0.03, 0));
+      const sq = screenQuad(sw, sh, 160, 120, paint); sq.mesh.position.set(-0.06, sy, sz + 0.0135); g.add(sq.mesh); screenApi(g, sq, sw, sh); U.update = t => sq.draw(t);
+      U.size = [uw, y0 + bh + 0.5, ud];
+    } else { const diag = (o.size ?? 50) * 0.0254; sw = diag * 0.8716; sh = diag * 0.4903; uw = Math.max(1.4, sw + 0.4); uh = 0.46; ud = 0.42; const bc = o.color || '#17181c', y0 = o.stand !== false ? uh : 0;
+      if (o.stand !== false) { const dw = uw * 0.3, bw2 = dw + 0.02, nw = uw - bw2 * 2, yc = 0.1 + (uh - 0.125) / 2;
+        g.add(boxB(uw + 0.03, 0.025, ud + 0.02, shade(wood, 1.1)).at(0, uh - 0.025, 0), boxB(nw, 0.025, ud, wood).at(0, 0.1, 0), box(nw, uh - 0.15, 0.016, shade(wood, 0.5)).at(0, yc + 0.012, -ud / 2 + 0.012), boxB(nw, 0.016, ud - 0.05, shade(wood, 0.9)).at(0, 0.27, -0.01));
+        for (const s of [-1, 1]) g.add(boxB(bw2, uh - 0.125, ud, wood).at(s * (uw / 2 - bw2 / 2), 0.1, 0), front(dw, uh - 0.15, shade(wood, 1.15)).at(s * (uw / 2 - bw2 / 2), yc, ud / 2 + 0.006), pull(0.1, C.brass, true).at(s * (uw / 2 - bw2 + 0.05), yc, ud / 2 + 0.015));
+        legs4(g, uw - 0.1, ud - 0.08, 0.1, 0.045, shade(wood, 0.75), { taper: 0.6 });
+        g.add(boxB(0.3, 0.05, 0.22, '#22242a').at(0, 0.286, ud / 2 - 0.15), box(0.012, 0.008, 0.004, glow('#4dff8a', 1.5)).at(0.11, 0.31, ud / 2 - 0.038), boxB(0.22, 0.04, 0.2, '#383b42').at(-0.03, 0.125, ud / 2 - 0.14), boxB(0.18, 0.03, 0.14, '#7b3b34').at(0.14, 0.165, ud / 2 - 0.16).rot(0, 0.2, 0)); }
+      sy = y0 + 0.075 + sh / 2 + 0.012; sz = (o.stand !== false ? -0.04 : 0);
+      g.add(box(sw + 0.024, sh + 0.024, 0.03, bc, SATIN).at(0, sy, sz - 0.015), box(sw * 0.5, sh * 0.5, 0.03, shade(bc, 1.6), SATIN).at(0, sy - 0.02, sz - 0.04), boxB(0.07, 0.085, 0.03, shade(bc, 1.5), SATIN).at(0, y0, sz - 0.03), boxB(sw * 0.42, 0.012, 0.2, shade(bc, 1.5), SATIN).at(0, y0, sz - 0.01), box(0.012, 0.006, 0.004, glow(U.show === 'off' ? '#ff3b30' : '#ffffff', 1.2)).at(sw / 2 - 0.03, sy - sh / 2 - 0.006, sz + 0.001));
+      const sq = screenQuad(sw, sh, 256, 144, paint); sq.mesh.position.set(0, sy, sz + 0.0012); g.add(sq.mesh); screenApi(g, sq, sw, sh); U.update = t => sq.draw(t);
+      U.size = [uw, y0 + sh + 0.1, ud]; }
+    U.update(0); U.lightPos = [crt ? -0.06 : 0, sy, sz + 0.45]; U.lightColor = '#a9c8ff'; U.lightPower = 0.45; U.lightRange = 5; U.lit = U.show !== 'off';
+    U.anchors = { watch: { pos: [0, 0, 2.2], rot: PI, kind: 'stand' } };
+    return done(g, 'tv', U.size, o);
+  }
+
+  /** Bookcase full of books. o: {w 0.9, h 2.0, d 0.32, shelves 5, wood, fill 0.85, seed} */
+  function bookcase(o = {}) {
+    const w = o.w ?? 0.9, h = o.h ?? 2.0, d = o.d ?? 0.32, n = o.shelves ?? 5, wood = o.wood || C.wood, fill = o.fill ?? 0.85, g = grp(), r = rng((o.seed || 1) * 89 + 7), st = 0.024, pl = 0.08, ch = (h - pl - st) / n;
+    g.add(boxB(st, h, d, wood).at(-w / 2 + st / 2, 0, 0), boxB(st, h, d, wood).at(w / 2 - st / 2, 0, 0), boxB(w - st * 2, pl, d - 0.03, shade(wood, 0.8)).at(0, 0, -0.01), box(w + 0.03, st, d + 0.02, shade(wood, 1.08)).at(0, h - st / 2, 0.005), box(w - st * 2, h - pl, 0.012, shade(wood, 0.62)).at(0, pl + (h - pl) / 2, -d / 2 + 0.008));
+    const cols = ['#7b3b34', '#34506b', '#2f5d50', '#c9b68a', '#8a6a3a', '#5a3d5c', '#b4563c', '#3d4350', '#d6cfc0', '#6f7f45'], iw = w - st * 2;
+    for (let i = 0; i < n; i++) { const y = pl + i * ch; g.add(boxB(iw, st, d - 0.02, wood).at(0, y, 0.0)); if (fill <= 0) continue; let x = -iw / 2 + 0.01; const yb = y + st, maxH = ch - st - 0.03;
+      while (x < iw / 2 - 0.06) { const q = r();
+        if (q > fill) { x += 0.05 + r() * 0.12; if (r() < 0.3) g.add(cylB(0.035, 0.05, 0.12 + r() * 0.08, 6, pick(r, ['#c7a94f', '#7fa3a0', '#d9d2c2', '#9c4f3f'])).at(Math.min(x, iw / 2 - 0.06), yb, 0)); x += 0.06; continue; }
+        if (q < 0.07 && x < iw / 2 - 0.3) { const m = 2 + Math.floor(r() * 2); for (let k = 0; k < m; k++) g.add(tint(boxB(0.2 + r() * 0.04, 0.03, 0.15, WHITE), pick(r, cols)).rot(0, (r() - 0.5) * 0.3, 0).at(x + 0.12, yb + k * 0.03, 0.01)); x += 0.27; continue; }
+        const bw = 0.022 + r() * 0.03, bh = Math.min(maxH, 0.19 + r() * 0.1), bd = 0.15 + r() * 0.06, bk = tint(boxB(bw, bh, bd, WHITE), shade(pick(r, cols), 0.85 + r() * 0.3));
+        if (r() < 0.06 && x < iw / 2 - 0.2) { bk.rotation.z = -0.3; bk.position.set(x + bw / 2 + bh * 0.16, yb + 0.002, d / 2 - 0.05 - bd / 2); x += bw + bh * 0.3; } else { bk.position.set(x + bw / 2, yb, d / 2 - 0.04 - bd / 2 - r() * 0.02); x += bw + 0.002; }
+        g.add(bk); } }
+    return done(g, 'bookcase', [w + 0.03, h, d], o);
+  }
+
+  /** Floor lamp. o: {h 1.6, shade (colour), metal, light (colour), on true}. userData: setLit(k), lightPos, shade */
+  function floorLamp(o = {}) {
+    const h = o.h ?? 1.6, sc = o.shade || '#e9dcc0', mc = o.metal || C.iron, lc = o.light || C.warm, g = grp(), sh = 0.28, rt = 0.15, rb = 0.22;
+    g.add(cylB(0.14, 0.16, 0.025, 10, mc, IRON), cylB(0.03, 0.05, 0.05, 6, mc, IRON).at(0, 0.025, 0), rod(0.011, h - sh - 0.06, mc, IRON, 6).at(0, 0.07 + (h - sh - 0.06) / 2, 0), cylB(0.02, 0.02, 0.05, 6, C.brass, MET).at(0, h - sh - 0.02, 0));
+    const sm = mat(sc, { emissive: lc, ei: 0.85, side: 'double', own: true, rough: 1 }), shd = keep(mesh(new T.CylinderGeometry(rt, rb, sh, 10, 1, true), sm)); shd.position.y = h - sh / 2; shd.castShadow = false; g.add(shd);
+    const bm = glow(lc, 1.7), bulb = keep(ball(0.045, bm, 0)); bulb.position.y = h - sh * 0.55; g.add(bulb); const fl = keep(flare(lc, 1.3, 0.3)); fl.position.y = h - sh * 0.5; g.add(fl);
+    g.userData.shade = shd; lampApi(g, [{ m: sm, kind: 'emissive', base: 0.85 }, { m: bm, kind: 'glow' }, { m: fl.material, kind: 'flare', base: 0.3 }], [0, h - sh * 0.5, 0], lc, 0.6, o.on);
+    return done(g, 'floorLamp', [rb * 2, h, rb * 2], o);
+  }
+  /** Table lamp. o: {h 0.52, color (base), shade, light, on true}. userData: setLit(k), lightPos */
+  function tableLamp(o = {}) {
+    const h = o.h ?? 0.52, col = o.color || '#3f6f73', sc = o.shade || '#efe3c8', lc = o.light || C.warm, g = grp(), bh = h * 0.5, sh = h * 0.4, rt = 0.09, rb = 0.15;
+    g.add(lathe([[0.001, 0], [0.075, 0], [0.085, 0.02], [0.05, bh * 0.25], [0.085, bh * 0.6], [0.06, bh * 0.92], [0.025, bh]], 8, col, GLOSS), cylB(0.014, 0.014, h - bh - sh * 0.5, 5, C.brass, MET).at(0, bh, 0));
+    const sm = mat(sc, { emissive: lc, ei: 0.85, side: 'double', own: true, rough: 1 }), shd = keep(mesh(new T.CylinderGeometry(rt, rb, sh, 10, 1, true), sm)); shd.position.y = h - sh / 2; shd.castShadow = false; g.add(shd);
+    const bm = glow(lc, 1.7), bulb = keep(ball(0.032, bm, 0)); bulb.position.y = h - sh * 0.55; g.add(bulb); const fl = keep(flare(lc, 0.9, 0.28)); fl.position.y = h - sh * 0.5; g.add(fl);
+    g.userData.shade = shd; lampApi(g, [{ m: sm, kind: 'emissive', base: 0.85 }, { m: bm, kind: 'glow' }, { m: fl.material, kind: 'flare', base: 0.28 }], [0, h - sh * 0.5, 0], lc, 0.45, o.on);
+    return done(g, 'tableLamp', [rb * 2, h, rb * 2], o);
+  }
+  /**
+   * Ceiling light. The group stands on the floor like everything else; the fitting hangs from y = ceiling.
+   * o: {style 'pendant'|'bulb'|'tube'|'panel'|'dome'|'chandelier', ceiling 2.6, drop 0.7, color (shade / housing), light (colour), on true, swing 0 (radians, for update(t)), len 1.2 (tube)}
+   * userData: setLit(k), lightPos (follows the swing), pivot (hanging part), update(t) when swing > 0
+   */
+  function ceilingLamp(o = {}) {
+    const st = o.style || 'pendant', H = o.ceiling ?? 2.6, lc = o.light || (st === 'tube' || st === 'panel' ? '#eef4ff' : C.warm), g = grp(), U = g.userData, parts = []; let pos, power = 0.7, size;
+    const piv = keep(grp()); piv.position.y = H; g.add(piv); U.pivot = piv;
+    if (st === 'tube') { const L = o.len ?? 1.2, hc = o.color || '#e6e6e2'; g.add(box(L + 0.06, 0.045, 0.13, hc).at(0, H - 0.0225, 0), box(0.03, 0.05, 0.1, shade(hc, 0.8)).at(-L / 2, H - 0.06, 0), box(0.03, 0.05, 0.1, shade(hc, 0.8)).at(L / 2, H - 0.06, 0));
+      const tm = glow(lc, 1.5); for (const z of [-0.03, 0.03]) { const tb = keep(mesh(new T.CylinderGeometry(0.014, 0.014, L - 0.04, 6, 1, true), tm)); tb.rotation.z = HP; tb.position.set(0, H - 0.07, z); g.add(tb); } parts.push({ m: tm, kind: 'glow' }); pos = [0, H - 0.25, 0]; power = 0.75; size = [L + 0.06, H, 0.13]; }
+    else if (st === 'panel') { const s = o.size ?? 0.6, pm = glow(lc, 1.35), p = keep(box(s - 0.05, 0.006, s - 0.05, pm)); p.position.y = H - 0.012; g.add(p, box(s, 0.02, s, o.color || '#dcdcd8').at(0, H - 0.01, 0)); parts.push({ m: pm, kind: 'glow' }); pos = [0, H - 0.25, 0]; power = 0.75; size = [s, H, s]; }
+    else if (st === 'dome') { const dm = mat('#f3ead8', { emissive: lc, ei: 0.9, own: true }), dome = keep(mesh(new T.SphereGeometry(0.17, 8, 3, 0, TAU, HP, HP), dm)); dome.scale.y = 0.55; dome.position.y = H - 0.012; dome.castShadow = false; g.add(dome, cylB(0.19, 0.19, 0.014, 10, o.color || C.brass, MET).at(0, H - 0.014, 0)); parts.push({ m: dm, kind: 'emissive', base: 0.9 }); pos = [0, H - 0.3, 0]; power = 0.65; size = [0.38, H, 0.38]; }
+    else if (st === 'chandelier') { const mc = o.color || C.brass, drop = o.drop ?? 0.75, bm = glow(lc, 1.8); g.add(cylB(0.07, 0.05, 0.03, 8, mc, MET).at(0, H - 0.03, 0));
+      piv.add(rod(0.008, drop - 0.25, mc, MET).at(0, -(drop - 0.25) / 2 - 0.02, 0), lathe([[0.001, -drop], [0.035, -drop + 0.03], [0.02, -drop + 0.1], [0.055, -drop + 0.18], [0.02, -drop + 0.27], [0.012, -drop + 0.3]], 6, mc, MET), ball(0.03, mc, 0, MET).at(0, -drop - 0.02, 0));
+      for (let i = 0; i < 6; i++) { const a = i / 6 * TAU, cx = Math.cos(a), cz = Math.sin(a), R = 0.3; piv.add(tube([[cx * 0.03, -drop + 0.12, cz * 0.03], [cx * R * 0.55, -drop + 0.02, cz * R * 0.55], [cx * R, -drop + 0.1, cz * R]], 0.009, mc, { ...MET, seg: 6, rs: 4 }), cylB(0.03, 0.012, 0.015, 6, mc, MET).at(cx * R, -drop + 0.1, cz * R), cylB(0.011, 0.011, 0.07, 5, '#efe9d9').at(cx * R, -drop + 0.115, cz * R));
+        const fb = keep(mesh(new T.ConeGeometry(0.014, 0.045, 5), bm)); fb.position.set(cx * R, -drop + 0.21, cz * R); piv.add(fb); }
+      const fl = keep(flare(lc, 1.6, 0.3)); fl.position.y = -drop + 0.2; piv.add(fl); parts.push({ m: bm, kind: 'glow' }, { m: fl.material, kind: 'flare', base: 0.3 }); pos = [0, H - drop + 0.1, 0]; power = 0.8; size = [0.68, H, 0.68]; }
+    else { const drop = o.drop ?? (st === 'bulb' ? 0.55 : 0.75), bm = glow(lc, 1.8), bulb = keep(ball(st === 'bulb' ? 0.04 : 0.045, bm, 0)); g.add(cylB(0.05, 0.04, 0.025, 8, '#d9d6cc').at(0, H - 0.025, 0)); piv.add(rod(0.004, drop - 0.1, C.black, undefined, 4).at(0, -(drop - 0.1) / 2, 0));
+      if (st === 'bulb') { piv.add(cylB(0.02, 0.022, 0.06, 6, '#2a2b2f').at(0, -drop + 0.03, 0)); bulb.position.y = -drop; bulb.scale.set(1, 1.25, 1); }
+      else { const sc = o.color || '#2f3b45', sm = mat(sc, { side: 'double', rough: 0.5, metal: 0.2 }), shd = mesh(new T.CylinderGeometry(0.05, 0.23, 0.2, 10, 1, true), sm), im = mat('#fff3d8', { emissive: lc, ei: 0.9, side: 'back', own: true }), inner = keep(mesh(new T.CylinderGeometry(0.048, 0.225, 0.196, 10, 1, true), im)); shd.position.y = -drop + 0.1; inner.position.y = -drop + 0.1; inner.castShadow = false; piv.add(shd, inner, cylB(0.05, 0.05, 0.03, 8, sc, { rough: 0.5, metal: 0.2 }).at(0, -drop + 0.2, 0)); bulb.position.y = -drop + 0.06; parts.push({ m: im, kind: 'emissive', base: 0.9 }); }
+      const fl = keep(flare(lc, st === 'bulb' ? 1.2 : 1.0, 0.3)); fl.position.y = bulb.position.y; piv.add(bulb, fl); parts.push({ m: bm, kind: 'glow' }, { m: fl.material, kind: 'flare', base: 0.3 }); pos = [0, H - drop - (st === 'bulb' ? 0 : 0.02), 0]; power = st === 'bulb' ? 0.55 : 0.7; size = [0.46, H, 0.46];
+      const amp = o.swing || 0, L = drop, sp = o.swingSpeed ?? 2.2; U.swing = a => { piv.rotation.z = a; U.lightPos[0] = Math.sin(a) * L; U.lightPos[1] = H - Math.cos(a) * L; return g; }; if (amp) U.update = t => U.swing(amp * Math.sin(t * sp)); }
+    lampApi(g, parts, pos, lc, power, o.on); U.ceiling = H;
+    return done(g, 'ceilingLamp', size, o);
+  }
+
+  const rugMat = (st, col, col2, seed) => tmat(['rug', st, col, col2, seed].join('|'), 256, 256, (c, W) => { const r = rng(seed * 59 + 3), cr = '#e3d5b4', gd = '#c49a4a';
+    c.fillStyle = col; c.fillRect(0, 0, W, W);
+    if (st === 'persian') { c.fillStyle = col2; c.fillRect(14, 14, W - 28, W - 28); c.fillStyle = cr; c.fillRect(22, 22, W - 44, W - 44); c.fillStyle = col; c.fillRect(27, 27, W - 54, W - 54); c.fillStyle = gd; for (let i = 0; i < 12; i++) { const p = 20 + i * (W - 40) / 11; for (const q of [18, W - 18]) { c.fillRect(p - 3, q - 3, 6, 6); c.fillRect(q - 3, p - 3, 6, 6); } }
+      const dia = (x, y, s, k) => { c.fillStyle = k; c.beginPath(); c.moveTo(x, y - s); c.lineTo(x + s, y); c.lineTo(x, y + s); c.lineTo(x - s, y); c.closePath(); c.fill(); }; dia(W / 2, W / 2, 78, col2); dia(W / 2, W / 2, 64, cr); dia(W / 2, W / 2, 54, col); dia(W / 2, W / 2, 30, gd); dia(W / 2, W / 2, 18, col2);
+      for (const [x, y] of [[52, 52], [W - 52, 52], [52, W - 52], [W - 52, W - 52]]) { dia(x, y, 20, col2); dia(x, y, 11, gd); } for (let i = 0; i < 14; i++) dia(40 + r() * (W - 80), 40 + r() * (W - 80), 4, r() < 0.5 ? cr : gd); }
+    else if (st === 'stripe') { const n = 9; for (let i = 0; i < n; i++) { c.fillStyle = i % 2 ? col2 : col; c.fillRect(0, i * W / n, W, W / n + 1); if (i % 2) { c.fillStyle = cr; c.fillRect(0, i * W / n + 3, W, 3); } } }
+    else if (st === 'shag') { for (let i = 0; i < 2600; i++) { c.fillStyle = r() < 0.5 ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'; c.fillRect(r() * W, r() * W, 3 + r() * 4, 3 + r() * 4); } }
+    else { c.strokeStyle = col2; c.lineWidth = 8; c.strokeRect(16, 16, W - 32, W - 32); c.strokeStyle = cr; c.lineWidth = 2; c.strokeRect(26, 26, W - 52, W - 52); }
+    if (st !== 'shag') { c.fillStyle = cr; for (let i = 0; i < 40; i++) for (const x of [0, W - 7]) c.fillRect(x, i * W / 40 + 1, 7, W / 40 - 3); }
+  }, { rough: 1 });
+  /** Rug. o: {w 2.2, d 1.5, style 'persian'|'stripe'|'plain'|'shag', color, color2, round false, seed} */
+  function rug(o = {}) {
+    const w = o.w ?? 2.2, d = o.d ?? 1.5, st = o.style || 'persian', col = o.color || (st === 'shag' ? '#d8cfbc' : '#8a302b'), col2 = o.color2 || '#27324a', m = rugMat(st, col, col2, o.seed || 1), g = grp();
+    const geo = o.round ? new T.CylinderGeometry(w / 2, w / 2, 0.014, 20).translate(0, 0.007, 0) : new T.BoxGeometry(w, 0.014, d).translate(0, 0.007, 0), rm = mesh(geo, m); rm.castShadow = false; rm.position.y = 0.004; g.add(rm);
+    return done(g, 'rug', [w, 0.02, o.round ? w : d], o);
+  }
+
+  const artMat = (st, seed) => tmat(['art', st, seed].join('|'), 256, 256, (c, W) => { const r = rng(seed * 83 + 11), G = (a, b) => { const g = c.createLinearGradient(0, 0, 0, W); g.addColorStop(0, a); g.addColorStop(1, b); c.fillStyle = g; c.fillRect(0, 0, W, W); };
+    const ppl = (x, y, s, shirt, skin, hair) => { c.fillStyle = shirt; c.beginPath(); c.ellipse(x, y + s * 2.1, s * 1.25, s * 1.5, 0, 0, 7); c.fill(); c.fillStyle = skin; c.beginPath(); c.ellipse(x, y, s * 0.72, s * 0.9, 0, 0, 7); c.fill(); c.fillStyle = hair; c.beginPath(); c.ellipse(x, y - s * 0.35, s * 0.78, s * 0.7, 0, PI, TAU); c.fill(); };
+    if (st === 'portrait') { G('#2b241d', '#15110d'); ppl(W / 2, W * 0.4, 46, pick(r, ['#3a2a25', '#28303d', '#4a1f1f']), '#d7b08f', pick(r, ['#2a1c14', '#6b5a48', '#a39a8e'])); c.fillStyle = '#e9e2d2'; c.beginPath(); c.moveTo(W / 2 - 22, W * 0.56); c.lineTo(W / 2, W * 0.66); c.lineTo(W / 2 + 22, W * 0.56); c.fill(); }
+    else if (st === 'family') { G('#c7d6de', '#9db3bf'); const sk = ['#e0b48f', '#c98f68', '#edc7a6'], sh = ['#b9563f', '#34506b', '#d2a23d', '#5d8a6a'], hr = ['#3a2718', '#1e1a18', '#8a5a2c', '#b9a27a']; ppl(W * 0.3, W * 0.36, 30, pick(r, sh), pick(r, sk), pick(r, hr)); ppl(W * 0.68, W * 0.34, 31, pick(r, sh), pick(r, sk), pick(r, hr)); ppl(W * 0.47, W * 0.58, 22, pick(r, sh), pick(r, sk), pick(r, hr)); if (r() < 0.6) ppl(W * 0.82, W * 0.62, 19, pick(r, sh), pick(r, sk), pick(r, hr)); }
+    else if (st === 'abstract') { c.fillStyle = '#ece5d3'; c.fillRect(0, 0, W, W); const pal = ['#c2462f', '#27456e', '#e0b23a', '#1f2428', '#5d8a6a']; for (let i = 0; i < 7; i++) { c.fillStyle = pick(r, pal); if (r() < 0.35) { c.beginPath(); c.arc(r() * W, r() * W, 18 + r() * 44, 0, 7); c.fill(); } else c.fillRect(r() * W * 0.8, r() * W * 0.8, 30 + r() * 110, 30 + r() * 110); } c.strokeStyle = '#1f2428'; c.lineWidth = 5; for (let i = 0; i < 3; i++) { c.beginPath(); c.moveTo(r() * W, 0); c.lineTo(r() * W, W); c.stroke(); } }
+    else if (st === 'whiteboard') { c.fillStyle = '#f2f3f1'; c.fillRect(0, 0, W, W); const ink = ['#1f3f8a', '#b3261e', '#1e6b3a', '#222']; c.lineWidth = 3; for (let i = 0; i < 5; i++) { c.strokeStyle = pick(r, ink); c.beginPath(); let x = 20 + r() * 60, y = 30 + i * 36; c.moveTo(x, y); for (let k = 0; k < 9; k++) { x += 10 + r() * 14; c.lineTo(x, y + (r() - 0.5) * 9); } c.stroke(); } c.strokeStyle = '#b3261e'; c.strokeRect(150, 120, 80, 56); c.beginPath(); c.arc(70, 200, 26, 0, 7); c.stroke(); c.strokeStyle = '#1f3f8a'; c.beginPath(); c.moveTo(96, 200); c.lineTo(150, 150); c.stroke(); }
+    else if (st === 'cork') { c.fillStyle = '#b08a5a'; c.fillRect(0, 0, W, W); for (let i = 0; i < 900; i++) { c.fillStyle = r() < 0.5 ? 'rgba(60,35,10,0.18)' : 'rgba(255,230,180,0.14)'; c.fillRect(r() * W, r() * W, 3, 3); } const pins = []; for (let i = 0; i < 8; i++) { const x = 22 + r() * (W - 80), y = 20 + r() * (W - 80), ww = 34 + r() * 30, hh = 30 + r() * 30; c.save(); c.translate(x + ww / 2, y + hh / 2); c.rotate((r() - 0.5) * 0.4); c.fillStyle = pick(r, ['#f2efe4', '#f3e58a', '#e9e2d2', '#cfd8dc', '#3b3f46']); c.fillRect(-ww / 2, -hh / 2, ww, hh); c.fillStyle = 'rgba(0,0,0,0.3)'; for (let k = 0; k < 3; k++) c.fillRect(-ww / 2 + 5, -hh / 2 + 8 + k * 8, ww - 10 - r() * 12, 2.5); c.restore(); pins.push([x + ww / 2, y + 5]); }
+      c.strokeStyle = '#b3141c'; c.lineWidth = 2.2; c.beginPath(); pins.forEach((p, i) => i ? c.lineTo(p[0], p[1]) : c.moveTo(p[0], p[1])); c.stroke(); c.fillStyle = '#d2222a'; pins.forEach(p => { c.beginPath(); c.arc(p[0], p[1], 4.5, 0, 7); c.fill(); }); }
+    else if (st === 'map') { c.fillStyle = '#d9c9a3'; c.fillRect(0, 0, W, W); c.fillStyle = '#9a8a5c'; for (let i = 0; i < 6; i++) { c.beginPath(); let a0 = r() * 7; const cx = 30 + r() * (W - 60), cy = 40 + r() * (W - 80), rr = 22 + r() * 34; for (let k = 0; k <= 9; k++) { const a = a0 + k / 9 * TAU, q = rr * (0.6 + r() * 0.6); c.lineTo(cx + Math.cos(a) * q * 1.3, cy + Math.sin(a) * q); } c.fill(); } c.strokeStyle = 'rgba(60,40,20,0.3)'; c.lineWidth = 1; for (let i = 1; i < 6; i++) { c.beginPath(); c.moveTo(i * W / 6, 0); c.lineTo(i * W / 6, W); c.moveTo(0, i * W / 6); c.lineTo(W, i * W / 6); c.stroke(); } }
+    else { const dusk = st === 'seascape' ? r() < 0.5 : r() < 0.3; G(dusk ? '#e8a25d' : '#8fc0e6', dusk ? '#f3d9a4' : '#dcefF7'.toLowerCase()); c.fillStyle = dusk ? '#fff0c9' : '#fffbe6'; c.beginPath(); c.arc(W * (0.25 + r() * 0.5), W * 0.3, 16, 0, 7); c.fill();
+      if (st === 'seascape') { c.fillStyle = '#2f5f7e'; c.fillRect(0, W * 0.55, W, W * 0.45); c.fillStyle = 'rgba(255,255,255,0.25)'; for (let i = 0; i < 9; i++) c.fillRect(r() * W, W * (0.6 + r() * 0.35), 20 + r() * 40, 2); c.fillStyle = '#f2ede0'; c.beginPath(); c.moveTo(W * 0.62, W * 0.34); c.lineTo(W * 0.62, W * 0.55); c.lineTo(W * 0.74, W * 0.55); c.fill(); c.fillStyle = '#5a3a26'; c.fillRect(W * 0.55, W * 0.55, W * 0.22, 7); }
+      else { const hills = ['#7fa37a', '#5f8a62', '#3f6b4c']; hills.forEach((k, i) => { c.fillStyle = k; c.beginPath(); c.moveTo(0, W); let y = W * (0.5 + i * 0.13); c.lineTo(0, y); for (let x = 0; x <= W; x += 32) { y += (r() - 0.5) * 34; c.lineTo(x, y); } c.lineTo(W, W); c.fill(); }); c.fillStyle = '#2f5540'; for (let i = 0; i < 6; i++) { const x = r() * W, y = W * (0.78 + r() * 0.15); c.beginPath(); c.moveTo(x, y - 30); c.lineTo(x + 10, y); c.lineTo(x - 10, y); c.fill(); } } }
+  }, { rough: 0.7 });
+  /** Framed picture / board on a wall (BACK on z = 0, origin on the floor below). o: {w 0.7, h 0.5, y 1.55 (centre height), style 'landscape'|'seascape'|'portrait'|'family'|'abstract'|'map'|'whiteboard'|'cork', frame (colour), mount true, seed}. userData: art (mesh) */
+  function picture(o = {}) {
+    const st = o.style || 'landscape', board = st === 'whiteboard' || st === 'cork', w = o.w ?? (board ? 1.4 : st === 'portrait' ? 0.5 : 0.7), h = o.h ?? (board ? 0.9 : st === 'portrait' ? 0.65 : 0.5), y = o.y ?? 1.55, fc = o.frame || (board ? '#b9bcc0' : st === 'portrait' ? '#b08d3c' : C.woodDark), fw = board ? 0.025 : 0.04, fd = 0.03, g = grp();
+    const fm = board ? MET : undefined; g.add(box(w, fw, fd, fc, fm).at(0, y + h / 2 - fw / 2, fd / 2), box(w, fw, fd, fc, fm).at(0, y - h / 2 + fw / 2, fd / 2), box(fw, h - fw * 2, fd, fc, fm).at(-w / 2 + fw / 2, y, fd / 2), box(fw, h - fw * 2, fd, fc, fm).at(w / 2 - fw / 2, y, fd / 2));
+    const mt = !board && o.mount !== false ? Math.min(w, h) * 0.09 : 0; if (mt) g.add(box(w - fw * 2, h - fw * 2, 0.008, '#ebe5d6').at(0, y, 0.012));
+    const art = keep(mesh(new T.PlaneGeometry(w - fw * 2 - mt * 2, h - fw * 2 - mt * 2), artMat(st, o.seed || 1))); art.position.set(0, y, 0.0175); art.castShadow = false; g.add(art); g.userData.art = art;
+    if (st === 'whiteboard') g.add(box(w * 0.5, 0.02, 0.06, fc, MET).at(0, y - h / 2 - 0.005, 0.04), box(0.1, 0.03, 0.035, '#2b2d33').at(-0.15, y - h / 2 + 0.02, 0.045), box(0.08, 0.016, 0.016, '#b3261e').at(0.1, y - h / 2 + 0.014, 0.05));
+    return done(g, 'picture', [w, y + h / 2, fd], o);
+  }
+
+  /** Plant in a pot. o: {h 1.1, style 'leafy'|'palm'|'snake'|'small', color (leaves), pot (colour), seed} */
+  function plant(o = {}) {
+    const st = o.style || 'leafy', small = st === 'small', h = o.h ?? (small ? 0.3 : st === 'snake' ? 0.8 : 1.15), lc = o.color || (st === 'snake' ? '#4f7a4a' : '#3f7d4d'), pc = o.pot || (small ? '#d9d2c2' : '#b0603f'), g = grp(), r = rng((o.seed || 1) * 101 + 13);
+    const pr = small ? 0.06 : 0.17, ph = small ? 0.09 : 0.3; g.add(cylB(pr, pr * 0.72, ph, 8, pc).at(0, 0, 0), cylB(pr * 1.08, pr * 1.08, ph * 0.14, 8, shade(pc, 1.08)).at(0, ph * 0.86, 0), cylB(pr * 0.9, pr * 0.9, 0.01, 8, '#3a2a1e').at(0, ph * 0.94, 0));
+    const add = (m, x, y, z, ry, rx) => { m.rotation.order = 'YXZ'; m.rotation.y = ry; m.rotation.x = rx; m.position.set(x, y, z); g.add(m); };
+    if (st === 'snake') { for (let i = 0; i < 9; i++) { const a = r() * TAU, lh = h * (0.55 + r() * 0.45) - ph, m = tbox(0.07, lh, 0.012, 0.012, 0.008, i % 3 ? lc : shade(lc, 1.25)); m.userData.v = 0.12; add(m, Math.cos(a) * pr * 0.45, ph * 0.9, Math.sin(a) * pr * 0.45, a, 0.08 + r() * 0.22); } }
+    else if (st === 'palm') { for (let i = 0; i < 9; i++) { const a = i / 9 * TAU + r() * 0.4, L = (h - ph) * (0.75 + r() * 0.35), up = 0.5 + r() * 0.5, stem = grp(); let px = 0, py = 0;
+        for (let k = 0; k < 4; k++) { const ang = up - k * 0.42, sl = L / 4, lf = leaf(sl * 1.12, 0.2 - k * 0.035, shade(lc, 0.9 + r() * 0.3), 0, 0.06); lf.rotation.x = -ang; lf.position.set(0, py, px); stem.add(lf); px += Math.cos(ang) * sl; py += Math.sin(ang) * sl; }
+        stem.rotation.y = a; stem.position.y = ph * 0.9; g.add(stem); } }
+    else { const n = small ? 7 : 12, th = small ? 0.02 : (h - ph) * 0.55; if (!small) g.add(rodAB([0, ph * 0.9, 0], [0.03, ph + th, -0.02], 0.016, '#6a4a30', undefined, 5));
+      for (let i = 0; i < n; i++) { const a = i * 2.4 + r() * 0.5, k = small ? 0 : i / (n - 1), y = ph * 0.9 + th * (0.35 + 0.65 * k), L = small ? 0.11 + r() * 0.07 : (0.3 + r() * 0.14) * (1.1 - k * 0.35), up = small ? 0.5 + r() * 0.5 : 0.25 + k * 0.7 + r() * 0.2;
+        add(leaf(L, L * 0.55, shade(lc, 0.85 + r() * 0.35), 0.2, 0.14), 0.03 * k, y, -0.02 * k, a, -up); } }
+    return done(g, 'plant', [small ? 0.3 : 0.75, h, small ? 0.3 : 0.75], { ...o, v: 0.06 });
+  }
+
+  const clockFace = (col, roman) => ctex('clock|' + col + '|' + roman, 128, 128, c => { c.fillStyle = col; c.beginPath(); c.arc(64, 64, 64, 0, 7); c.fill(); c.fillStyle = '#1e1f24'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.font = '800 17px Inter, sans-serif'; for (let i = 1; i <= 12; i++) { const a = i / 12 * TAU; if (i % 3 === 0) c.fillText(roman ? ['III', 'VI', 'IX', 'XII'][i / 3 - 1] : String(i), 64 + Math.sin(a) * 46, 65 - Math.cos(a) * 46); else { c.save(); c.translate(64 + Math.sin(a) * 50, 64 - Math.cos(a) * 50); c.rotate(a); c.fillRect(-1.5, -5, 3, 10); c.restore(); } } });
+  /** Wall clock (BACK on z = 0, origin on the floor below). o: {r 0.16, y 2.0 (centre height), color (rim), face, time [10, 10] (hours, minutes), run true (ticks with update), roman false}. userData: setTime(h, m, s), update(t) */
+  function wallClock(o = {}) {
+    const R = o.r ?? 0.16, y = o.y ?? 2.0, rim = o.color || C.black, g = grp(), U = g.userData, tm = o.time || [10, 10];
+    g.add(cyl(R, R, 0.045, 16, rim, SATIN).rot(HP, 0, 0).at(0, y, 0.0225));
+    const face = mesh(new T.CircleGeometry(R * 0.9, 16), new T.MeshStandardMaterial({ map: clockFace(o.face || '#f1ede2', !!o.roman), roughness: 0.6, flatShading: true })); face.position.set(0, y, 0.0462); face.castShadow = false; g.add(face);
+    const hand = (len, wd, col, z) => { const p = keep(grp(box(wd, len, 0.004, col).at(0, len * 0.4, 0))); p.position.set(0, y, z); g.add(p); return p; }, hh = hand(R * 0.48, 0.014, '#1e1f24', 0.05), mh = hand(R * 0.72, 0.01, '#1e1f24', 0.055), sh = hand(R * 0.78, 0.004, '#c2261e', 0.06);
+    g.add(cyl(0.012, 0.012, 0.016, 6, '#1e1f24').rot(HP, 0, 0).at(0, y, 0.057));
+    U.setTime = (h, m, s = 0) => { hh.rotation.z = -((h % 12) + m / 60) / 12 * TAU; mh.rotation.z = -(m + s / 60) / 60 * TAU; sh.rotation.z = -Math.floor(s) / 60 * TAU; return g; };
+    U.update = t => { const s = (o.run === false ? 0 : t) + (tm[2] || 0), m = tm[1] + s / 60; U.setTime(tm[0] + Math.floor(m / 60), m % 60, s % 60); }; U.update(0);
+    return done(g, 'wallClock', [R * 2, y + R, 0.06], o);
+  }
+
+  /**
+   * Fireplace with a mantel and a fire that flickers. o: {w 1.5, h 1.2, d 0.42, color (surround), lit true, breast 0 (chimney-breast top height, e.g. the ceiling height), breastColor, decor true, seed}
+   * userData: flames (group), update(t), setLit(k), lightPos / lightColor / lit
+   */
+  function fireplace(o = {}) {
+    const w = o.w ?? 1.5, h = o.h ?? 1.2, d = o.d ?? 0.42, col = o.color || '#e6dfd0', g = grp(), U = g.userData, r = rng((o.seed || 1) * 37 + 9), ow = w * 0.52, oh = h * 0.6, pw = (w - ow) / 2, dk = '#2b221d', lc = o.light || '#ff9a4a';
+    g.add(boxB(w + 0.24, 0.05, d + 0.4, '#4f4b47').at(0, 0, 0.14), boxB(pw, h - 0.07, d, col).at(-(ow + pw) / 2, 0, 0), boxB(pw, h - 0.07, d, col).at((ow + pw) / 2, 0, 0), boxB(ow, h - 0.07 - oh, d, col).at(0, oh, 0));
+    g.add(boxB(w + 0.18, 0.07, d + 0.1, shade(col, 1.06)).at(0, h - 0.07, 0.03), boxB(w + 0.08, 0.05, d + 0.04, shade(col, 0.92)).at(0, h - 0.12, 0.012), boxB(pw - 0.1, h - 0.4, 0.02, shade(col, 0.93)).at(-(ow + pw) / 2, 0.14, d / 2 + 0.004), boxB(pw - 0.1, h - 0.4, 0.02, shade(col, 0.93)).at((ow + pw) / 2, 0.14, d / 2 + 0.004), boxB(pw + 0.02, 0.12, d + 0.03, shade(col, 0.95)).at(-(ow + pw) / 2, 0, 0.008), boxB(pw + 0.02, 0.12, d + 0.03, shade(col, 0.95)).at((ow + pw) / 2, 0, 0.008));
+    g.add(boxB(ow, oh, 0.03, dk).at(0, 0.05, -d / 2 + 0.03), boxB(0.03, oh, d - 0.06, shade(dk, 1.25)).at(-ow / 2 + 0.015, 0.05, 0).rot(0, 0.0, 0), boxB(0.03, oh, d - 0.06, shade(dk, 1.25)).at(ow / 2 - 0.015, 0.05, 0), boxB(ow, 0.012, d - 0.04, '#1c1714').at(0, 0.05, 0));
+    for (let i = 0; i < 5; i++) g.add(rod(0.008, d * 0.55, C.iron, IRON, 4).rot(HP, 0, 0).at(-ow * 0.3 + i * ow * 0.15, 0.13, 0.0)); g.add(box(ow * 0.7, 0.016, 0.016, C.iron, IRON).at(0, 0.13, d * 0.26), boxB(0.016, 0.08, 0.016, C.iron, IRON).at(-ow * 0.33, 0.05, d * 0.26), boxB(0.016, 0.08, 0.016, C.iron, IRON).at(ow * 0.33, 0.05, d * 0.26));
+    const log = (len, x, y, z, ry) => g.add(cyl(0.045, 0.05, len, 6, '#4a3323').rot(HP, 0, ry).at(x, y, z)); log(ow * 0.62, -0.03, 0.185, 0.02, HP + 0.12); log(ow * 0.55, 0.04, 0.19, -0.07, HP - 0.2); log(ow * 0.5, 0.0, 0.27, -0.02, HP + 0.35);
+    const fl = keep(grp()), fm = [glow('#ffd27a', 1.6), glow('#ff8a2a', 1.5), glow('#ff5a1a', 1.3)], em = glow('#ff6a1a', 1.1);
+    for (let i = 0; i < 6; i++) { const m = keep(coneB(0.07 - i * 0.006, 0.2 + r() * 0.2, 5, fm[i % 3])); m.position.set((r() - 0.5) * ow * 0.5, 0, (r() - 0.5) * 0.1 - 0.02); m.userData.ph = r() * 9; fl.add(m); }
+    fl.position.set(0, 0.2, 0); g.add(fl); const emb = keep(box(ow * 0.55, 0.02, d * 0.36, em)); emb.position.set(0, 0.15, -0.02); g.add(emb); const hal = keep(flare(lc, 1.5, 0.4)); hal.position.set(0, 0.36, d / 2 - 0.05); g.add(hal);
+    if (o.breast) g.add(boxB(w + 0.3, o.breast - h, d * 0.62, o.breastColor || C.wall).at(0, h, -d * 0.19));
+    if (o.decor !== false) { g.add(cylB(0.025, 0.035, 0.02, 6, C.brass, MET).at(-w * 0.36, h, 0.03), cylB(0.008, 0.012, 0.16, 5, C.brass, MET).at(-w * 0.36, h + 0.02, 0.03), cylB(0.011, 0.011, 0.11, 5, '#efe8d6').at(-w * 0.36, h + 0.18, 0.03), cylB(0.025, 0.035, 0.02, 6, C.brass, MET).at(w * 0.36, h, 0.03), cylB(0.008, 0.012, 0.16, 5, C.brass, MET).at(w * 0.36, h + 0.02, 0.03), cylB(0.011, 0.011, 0.11, 5, '#efe8d6').at(w * 0.36, h + 0.18, 0.03));
+      g.add(boxB(0.2, 0.26, 0.09, C.woodDark).at(0, h, 0.0), disc(0.07, '#efe9d9', undefined, 10).at(0, h + 0.16, 0.046), box(0.008, 0.05, 0.004, C.black).at(0, h + 0.18, 0.049), box(0.16, 0.2, 0.012, '#b08d3c', MET).rot(-0.12, 0.2, 0).at(-w * 0.18, h + 0.1, 0.0), box(0.13, 0.17, 0.006, '#c7d6de').rot(-0.12, 0.2, 0).at(-w * 0.18 + 0.002, h + 0.1, 0.008)); }
+    const mats = [...fm, em]; U.flames = fl; U.lit = o.lit !== false; const base = mats.map(m => m.color.clone());
+    U.setLit = k => { fl.visible = k > 0.02; hal.material.opacity = 0.4 * Math.min(1, k); mats.forEach((m, i) => m.color.copy(base[i]).multiplyScalar(i === 3 ? Math.max(0.05, k) : k)); U.lit = k > 0.02; return g; };
+    U.update = t => { fl.children.forEach((m, i) => { const a = S3.noise1(t * 7 + m.userData.ph, i), b = S3.noise1(t * 11 + m.userData.ph * 2, i + 9); m.scale.set(1 + a * 0.2, 1 + b * 0.35, 1 + a * 0.2); m.rotation.z = a * 0.12; }); };
+    U.update(0); U.setLit(U.lit ? 1 : 0); U.lightPos = [0, 0.45, d / 2 + 0.3]; U.lightColor = lc; U.lightPower = 0.85; U.lightRange = 7;
+    U.anchors = { front: { pos: [0, 0, d / 2 + 0.9], rot: PI, kind: 'stand' } };
+    return done(g, 'fireplace', [w + 0.24, Math.max(h + 0.3, o.breast || 0), d + 0.4], o);
+  }
+
+  const mirrorTex = () => ctex('mirror', 128, 128, (c, W) => { const g = c.createLinearGradient(0, 0, W, W); g.addColorStop(0, '#8fa3ad'); g.addColorStop(0.35, '#c9d6db'); g.addColorStop(0.5, '#eef4f5'); g.addColorStop(0.62, '#b3c2c9'); g.addColorStop(1, '#7c8f9a'); c.fillStyle = g; c.fillRect(0, 0, W, W); c.fillStyle = 'rgba(255,255,255,0.35)'; c.beginPath(); c.moveTo(W * 0.1, W); c.lineTo(W * 0.5, 0); c.lineTo(W * 0.62, 0); c.lineTo(W * 0.22, W); c.fill(); });
+  /** Mirror. style 'wall' (BACK on z = 0, centre at y), 'round' (wall) or 'floor' (free-standing cheval mirror). o: {w 0.6, h 0.9, y 1.5, style, frame (colour)}. userData: glass (mesh), setScreen(quad) */
+  function mirror(o = {}) {
+    const st = o.style || 'wall', fl = st === 'floor', round = st === 'round', w = o.w ?? (fl ? 0.55 : round ? 0.7 : 0.6), h = o.h ?? (fl ? 1.55 : round ? 0.7 : 0.9), fc = o.frame || (fl ? C.woodDark : '#b08d3c'), g = grp(), fw = 0.045, fm = fl ? undefined : MET;
+    const gm = new T.MeshStandardMaterial({ map: mirrorTex(), roughness: 0.15, metalness: 0.1, emissiveMap: mirrorTex(), emissive: new T.Color('#ffffff'), emissiveIntensity: 0.22, flatShading: true }), hold = fl ? grp() : g, y = fl ? 0 : (o.y ?? 1.5);
+    const glass = keep(mesh(round ? new T.CircleGeometry(w / 2 - fw * 0.6, 16) : new T.PlaneGeometry(w - fw * 2, h - fw * 2), gm)); glass.castShadow = false;
+    if (round) { hold.add(cyl(w / 2, w / 2, 0.03, 16, fc, MET).rot(HP, 0, 0).at(0, y, 0.015)); glass.position.set(0, y, 0.0312); }
+    else { const cy = fl ? h / 2 : y; hold.add(box(w, fw, 0.035, fc, fm).at(0, cy + h / 2 - fw / 2, 0.0175), box(w, fw, 0.035, fc, fm).at(0, cy - h / 2 + fw / 2, 0.0175), box(fw, h - fw * 2, 0.035, fc, fm).at(-w / 2 + fw / 2, cy, 0.0175), box(fw, h - fw * 2, 0.035, fc, fm).at(w / 2 - fw / 2, cy, 0.0175), box(w - fw, h - fw, 0.01, shade(fc, 0.6)).at(0, cy, 0.005)); glass.position.set(0, cy, 0.0125); }
+    hold.add(glass);
+    if (fl) { hold.rotation.x = -0.12; hold.position.set(0, 0.16, 0.06); g.add(hold); for (const s of [-1, 1]) g.add(boxB(0.045, h * 0.86, 0.045, fc).at(s * (w / 2 + 0.03), 0, 0), box(0.05, 0.04, 0.46, fc).at(s * (w / 2 + 0.03), 0.02, 0), cyl(0.02, 0.02, 0.05, 6, C.brass, MET).rot(0, 0, HP).at(s * (w / 2 + 0.005), h * 0.6, 0)); }
+    const U = g.userData; U.glass = glass; screenApi(g, { mesh: glass }, round ? w - fw * 1.2 : w - fw * 2, round ? w - fw * 1.2 : h - fw * 2);
+    U.anchors = { look: { pos: [0, 0, 0.8], rot: PI, kind: 'stand' } };
+    return done(g, 'mirror', [w + (fl ? 0.1 : 0), fl ? h + 0.16 : y + h / 2, fl ? 0.46 : 0.04], o);
+  }
+
   return { room, door, frontDoor, doubleDoors, slidingDoor, liftDoors, cellarDoor, vaultDoor, bars, window: windowB, stairs, ladder,
-    world, anchor, adopt, lights, windowLight, fuse, keep, shade, mix, wallMat, floorMat };
+    sofa, armchair, coffeeTable, tv, bookcase, floorLamp, tableLamp, ceilingLamp, rug, picture, plant, wallClock, fireplace, mirror,
+    world, anchor, adopt, lights, windowLight, fuse, keep, shade, mix, wallMat, floorMat, paintShow };
 })();

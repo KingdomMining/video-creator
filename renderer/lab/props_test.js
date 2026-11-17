@@ -38,20 +38,20 @@
       post: { bloom: 0.14, vignette: 0.22, grain: 0 },
       build(s) {
         look(s); const pts = [], live = [], cols = o.cols || 3, rows = Math.ceil(items.length / cols), stand = o.mode !== 'floor';
-        const cw = o.cell || (stand ? 0.37 : 0.95), cd = o.depth || (stand ? 0.34 : 1.0), y0 = o.y0 ?? 0.42, rise = o.rise ?? 0.24, lh = o.lh || (stand ? 0.05 : 0.1);
+        const cw = o.cell || (stand ? 0.33 : 0.95), cd = o.depth || (stand ? 0.31 : 1.0), y0 = o.y0 ?? 0.75, rise = o.rise ?? 0.07, lh = o.lh || (stand ? 0.034 : 0.1);
         s.sun({ dir: o.sun || [2.2, 6, 4.5], color: '#fff3e2', intensity: 0.95, area: stand ? 2.4 : 4.2, center: [0, 0.6, 0] });
         const zc = i => ((rows - 1) / 2 - i) * cd, W = cols * cw + (stand ? 0.05 : 0);
-        if (stand) for (let i = 0; i < rows; i++) { const b = s.add(boxB(W, y0 + i * rise, cd, '#727982', { vary: 0.02 }), { pos: [0, 0, zc(i)] }); pts.push(...corners(b)); }
+        if (stand) { for (let i = 0; i < rows; i++) s.add(boxB(W + 0.08, 0.05 + i * rise, cd + (i ? 0 : 0.04), i % 2 ? '#6b727b' : '#737a83', { vary: 0.02 }), { pos: [0, y0 - 0.05, zc(i) + (i ? 0 : 0.02)] }); for (const sx of [-1, 1]) for (const sz of [-1, 1]) s.add(boxB(0.06, y0 - 0.05, 0.06, '#4b5159'), { pos: [sx * (W / 2 - 0.02), 0, sz * (rows * cd / 2 - 0.04)] }); }
         items.forEach((it, k) => {
           const { name, p, tf } = make(it), c = k % cols, i = Math.floor(k / cols), x = (c - (cols - 1) / 2) * cw, y = stand ? y0 + i * rise : 0;
-          s.add(p, { pos: [x + (tf.dx || 0), y + (tf.dy || 0), zc(i) + (tf.dz || 0) - (stand ? 0.02 : 0)] }); if (tf.scale) p.scale.setScalar(tf.scale); pts.push(...corners(p)); if (p.userData.update) live.push(p);
+          s.add(p, { pos: [x + (tf.dx || 0), y + (tf.dy || 0), zc(i) + (tf.dz || 0) - (stand ? 0.03 : 0)] }); if (tf.scale) p.scale.setScalar(tf.scale); pts.push(...corners(p)); if (p.userData.update) live.push(p);
           const lb = label(name, lh, { bg: '#10151c', color: '#f3f5f7', font: '700 80px Inter', pad: 22 });
-          if (stand) s.add(lb, { pos: [x, y - lh * 0.75, zc(i) + cd / 2 + 0.003] }); else s.add(lb, { pos: [x, lh * 0.55, zc(i) + cd * 0.47], rot: [-0.5, 0, 0] });
+          if (stand) s.add(lb, { pos: [x, y + lh * 0.3, zc(i) + cd / 2 - lh * 0.55], rot: [-0.95, 0, 0] }); else s.add(lb, { pos: [x, lh * 0.55, zc(i) + cd * 0.47], rot: [-0.5, 0, 0] });
           pts.push(...corners(lb));
         });
-        const fg = s.add(figure(), { pos: o.fig || (stand ? [0, 0, zc(rows - 1) - cd / 2 - 0.22] : [((items.length % cols) - (cols - 1) / 2) * cw, 0, zc(rows - 1)]) }); pts.push(...corners(fg));
+        const fg = s.add(figure(), { pos: o.fig || (stand ? [0, 0, zc(rows - 1) - cd / 2 - 0.2] : [((items.length % cols) - (cols - 1) / 2) * cw, 0, zc(rows - 1)]) }); pts.push(...corners(fg));
         if (!stand && items.length % cols === 0) fg.position.set(W / 2 + 0.35, 0, zc(rows - 1)), pts.push(...corners(fg));
-        this.view = fit(pts, { fov: o.fov || 38, yaw: o.yaw ?? (stand ? 0.2 : 0.3), pitch: o.pitch ?? (stand ? 0.36 : 0.42), pad: [40, 130, 40, 50] });
+        this.view = fit(pts, { fov: o.fov || (stand ? 50 : 36), yaw: o.yaw ?? (stand ? 0.12 : 0.3), pitch: o.pitch ?? (stand ? 0.6 : 0.42), pad: [36, 124, 36, 40] });
         K.animate(s, live);
       },
       update(s, lt) { s.cam.set(this.view); },
@@ -65,7 +65,7 @@
     key: p => JSON.stringify(p),
     build(s, p) {
       look(s); const items = (p.items || ['mug']).map(make), pts = [], live = [];
-      const sizes = items.map(i => Math.max(i.p.userData.size[0], i.p.userData.size[2], i.p.userData.size[1] * 0.6)), cell = p.cell || Math.max(...sizes) * 1.45 + 0.02, cols = p.cols || (items.length <= 3 ? items.length : items.length <= 4 ? 2 : 3), rows = Math.ceil(items.length / cols), lh = p.lh || cell * 0.1;
+      const sizes = items.map(i => Math.max(i.p.userData.size[0], i.p.userData.size[2], i.p.userData.size[1] * 0.5)), cell = p.cell || Math.max(...sizes) * 1.3 + 0.02, cols = p.cols || (items.length <= 3 ? 1 : 2), rows = Math.ceil(items.length / cols), lh = p.lh || cell * 0.09;
       s.sun({ dir: p.sun || [2.2, 6, 4.5], color: '#fff3e2', intensity: p.dim ? 0.25 : 0.95, area: Math.max(0.6, cell * Math.max(cols, rows) * 0.9), center: [0, 0, 0] }); if (p.dim) s.exposure = 0.7;
       items.forEach((it, k) => { const c = k % cols, i = Math.floor(k / cols), x = (c - (cols - 1) / 2) * cell, z = ((rows - 1) / 2 - i) * cell; s.add(it.p, { pos: [x, 0, z] }); if (p.held) it.p.userData.held(), it.p.position.y = cell * 0.5; pts.push(...corners(it.p)); if (it.p.userData.update) live.push(it.p);
         const lb = s.add(label(it.name, lh, { bg: '#10151c', color: '#f3f5f7', font: '700 80px Inter', pad: 22 }), { pos: [x, lh * 0.55, z + cell * 0.47], rot: [-0.6, 0, 0] }); pts.push(...corners(lb)); });
@@ -92,5 +92,7 @@
   });
 
   // ---------------- catalogue ----------------
+  cat(2, 'tech', [['smartphone', {}, { label: 'smartphone' }], ['smartphone', { screen: 'chat' }, { label: 'screen: chat' }], ['smartphone', { screen: 'call', caller: 'MUM' }, { label: 'screen: call', rot: [0, 0.5, 0] }], 'walkieTalkie', 'camera', 'tvRemote', 'usbStick', ['keyCard', { lanyard: false }], 'gameController']);
+  cat(3, 'tech 2', ['headphones', ['tablet', { screen: 'map' }], ['headphones', { pose: 'worn', color: '#eef0f2', accent: '#2f6fb5' }, { label: 'pose: worn' }], ['laptop', {}, {}], 'radio', ['laptop', { screen: 'cctv', open: 0.55, color: '#2b2e34', backlit: true }, { label: 'laptop cctv' }]], { cell: 0.42 });
   cat(1, 'light sources', ['flashlight', 'lantern', 'candle', ['candle', { style: 'pillar' }, { label: 'candle pillar' }], 'fireTorch', 'glowStick', 'match', ['candle', { style: 'tea' }, { label: 'candle tea' }], ['flashlight', { on: false, color: '#b8322a', accent: '#f0c330' }, { rot: [0, -0.9, 0], label: 'flashlight off' }]]);
 })();
